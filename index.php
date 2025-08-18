@@ -230,6 +230,8 @@ $myuser = cuser::singleton();
 				break;
 		case 'faqManager':	$myuser->showFAQManager();
 				break;
+		case 'faq':	$myuser->showSupport();
+				break;
         default:
 				header('HTTP/1.0 404 Not Found');
 				include_once ('pages/header.php');

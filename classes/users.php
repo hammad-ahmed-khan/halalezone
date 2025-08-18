@@ -368,11 +368,18 @@ class cuser {
 		include_once('pages/training.php');
 	}
 
-		public function showFAQManager()
+	public function showFAQManager()
 	{
 		$this->checkSession();
 		$this->getUserData();
 		include_once('pages/faq_manager.php');
 	}
+
+	public function showSupport()
+	{
+		$this->checkSession();
+		$this->getUserData();
+		include_once('pages/faq.php');
+	}	
 }
 ?>

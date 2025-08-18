@@ -179,5 +179,12 @@ $routes = array
 		'class' => 'Index',
 		'method' => 'faqManager',
 	),
+
+	array(
+    'pattern' => '~^/support$~',
+    'class' => 'Index',
+    'method' => 'faq',
+),
+
 );
 ?>
