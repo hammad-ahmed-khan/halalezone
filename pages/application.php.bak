@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <?php include_once('pages/header.php');
+    include_once ('includes/func.php');?>
+    <title>Applications and Documents - Halal e-Zone</title>
+</head>
+
+<body>
+<?php include_once('pages/navigation.php');?>
+<div class="main-container ace-save-state" id="main-container">
+    <div class="main-content">
+        <div class="main-content-inner">
+            <div class="page-content">
+                <div class="row no-gutters">
+                    <div class="col-xs-12">
+                        <?php $myuser = cuser::singleton();
+                        $myuser->getUserData();?>
+                        <?php if($myuser->userdata['isclient']):?>
+                            <input type="hidden" id="app-clientid" value=<?php echo $_SESSION['halal']['id']; ?> data-clientname="<?php echo $myuser->userdata['name']," (",$myuser->userdata['prefix'],$myuser->userdata['id'],")"; ?>"/>
+                        <?php else: ?>
+                            <div class="form-inline"><div class="form-group"><label>Clients&nbsp;&nbsp;<select class="form-control clientslist" id="app-clientid"></select></label></div></div>
+                        <?php endif;?>
+                    </div>
+                    <div class="col-xs-12">
+                        <!-- PAGE CONTENT BEGINS -->
+                        <table id="appGrid"></table>
+                        <div id="appPager"></div>
+
+                        <!-- PAGE CONTENT ENDS -->
+                    </div><!-- /.col -->
+                </div><!-- /.row -->
+            </div><!-- /.page-content -->
+        </div>
+    </div><!-- /.main-content -->
+	<?php include_once('pages/footer.php');?>
+</div><!-- /.main-container -->
+<!-- Application Modal -->
+<div class="modal fade" id="appModal" tabindex="-1" role="dialog"  data-backdrop="static" aria-labelledby="myModalLabel">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">x</span></button>
+                <h4 class="modal-title" id="appModal-cycle"></h4>
+            </div>
+            <div class="modal-body row">
+                <from id="app-form" class="col-sm-12 form-horizontal">
+                    <div class="row form-group">
+                        <label class="col-xs-12 col-sm-4">Initial application</label>
+                        <div class='col-xs-12 col-sm-8'>
+        		        <span class="fileinput-button" id="dropzone1">Drop files here or click to upload
+                    	<input class="fileupload" id="fileupload1" foldertype="app" type="file" name="files[]" multiple="">
+							</span><span class="loader"></span>
+                            <ul id="ulapp"></ul>
+                        </div></div>
+                    <div class="row form-group">
+                        <label class="col-xs-12 col-sm-4">Offer</label>
+                        <div class='col-xs-12 col-sm-8'>
+        		        <span class="fileinput-button" id="dropzone2">Drop files here or click to upload
+                    	<input class="fileupload" id="fileupload2" foldertype="offer" type="file" name="files[]" multiple="">
+               			 </span><span class="loader"></span>
+                            <ul id="uloffer"></ul>
+                        </div></div>
+                    <div class="row form-group">
+                        <label class="col-xs-12 col-sm-4 text-bold">Signed offer</label>
+                        <div class='col-xs-12 col-sm-8'>
+        		        <span class="fileinput-button" id="dropzone3">Drop files here or click to upload
+                    	<input class="fileupload" id="fileupload3" foldertype="soffer" type="file" name="files[]" multiple="">
+               			 </span><span class="loader"></span>
+                            <ul id="ulsoffer"></ul>
+                        </div></div>
+                    <div class="row form-group">
+                        <label class="col-xs-12 col-sm-4">Audit plan</label>
+                        <div class='col-xs-12 col-sm-8'>
+        		        <span class="fileinput-button" id="dropzone4">Drop files here or click to upload
+                    	<input class="fileupload" id="fileupload4" foldertype="plan" type="file" name="files[]" multiple="">
+               			 </span><span class="loader"></span>
+                            <ul id="ulplan"></ul>
+                        </div></div>
+                    <div class="row form-group">
+                        <label class="col-xs-12 col-md-4">Auditor ID/name</label>
+                        <div class='col-xs-10 col-md-6'>
+                            <input type="text" class="form-control" id="auditorname" maxlength="100"/>
+                            <div class="alert-string"></div>
+                        </div></div>
+                    <div class="row form-group">
+                        <label class="col-xs-12 col-sm-4">Check list</label>
+                        <div class='col-xs-12 col-sm-8'>
+        		        <span class="fileinput-button" id="dropzone5">Drop files here or click to upload
+                    	<input class="fileupload" id="fileupload5" foldertype="checklist" type="file" name="files[]" multiple="">
+               			 </span><span class="loader"></span>
+                            <ul id="ulchecklist"></ul>
+                        </div></div>
+                    <div class="row form-group">
+                        <label class="col-xs-12 col-sm-4">Audit report</label>
+                        <div class='col-xs-12 col-sm-8'>
+        		        <span class="fileinput-button" id="dropzone6">Drop files here or click to upload
+                    	<input class="fileupload" id="fileupload6" foldertype="report" type="file" name="files[]" multiple="">
+               			 </span><span class="loader"></span>
+                            <ul id="ulreport"></ul>
+                        </div></div>
+                    <div class="row form-group">
+                        <label class="col-xs-12 col-sm-4 text-bold">Corrective action</label>
+                        <div class='col-xs-12 col-sm-8'>
+        		        <span class="fileinput-button" id="dropzone7">Drop files here or click to upload
+                    	<input class="fileupload" id="fileupload7" foldertype="action" type="file" name="files[]" multiple="">
+               			 </span><span class="loader"></span>
+                            <ul id="ulaction"></ul>
+                        </div></div>
+                    <div class="row form-group">
+                        <label class="col-xs-12 col-sm-4 text-bold">List of products</label>
+                        <div class='col-xs-12 col-sm-8'>
+        		        <span class="fileinput-button" id="dropzone8">Drop files here or click to upload
+                    	<input class="fileupload" id="fileupload8" foldertype="list" type="file" name="files[]" multiple="">
+               			 </span><span class="loader"></span>
+                            <ul id="ullist"></ul>
+                        </div></div>
+                    <div class="row form-group">
+                        <label class="col-xs-12 col-sm-4 text-bold">Proof of payment</label>
+                        <div class='col-xs-12 col-sm-8'>
+        		        <span class="fileinput-button" id="dropzone13">Drop files here or click to upload
+                    	<input class="fileupload" id="fileupload13" foldertype="payment" type="file" name="files[]" multiple="">
+               			 </span><span class="loader"></span>
+                            <ul id="ulpayment"></ul>
+                        </div></div>
+                    <div class="row form-group">
+                        <label class="col-xs-12 col-sm-4">Certificate</label>
+                        <div class='col-xs-12 col-sm-8'>
+        		        <span class="fileinput-button" id="dropzone9">Drop files here or click to upload
+                    	<input class="fileupload" id="fileupload9" foldertype="cert" type="file" name="files[]" multiple="">
+               			 </span><span class="loader"></span>
+                            <ul id="ulcert"></ul>
+                        </div></div>
+                    <div class="row form-group">
+                        <label class="col-xs-12 col-md-4">Issue date</label>
+                        <div class='col-xs-10 col-md-6'>
+                            <input type="text" class="form-control datepicker" id="issuedate"/>
+                            <div class="alert-string"></div>
+                        </div></div>
+                    <div class="row form-group">
+                        <label class="col-xs-12 col-sm-4 text-bold">New applications</label>
+                        <div class='col-xs-12 col-sm-8'>
+        		        <span class="fileinput-button" id="dropzone10">Drop files here or click to upload
+                    	<input class="fileupload" id="fileupload10" foldertype="newapp" type="file" name="files[]" multiple="">
+               			 </span><span class="loader"></span>
+                            <ul id="ulnewapp"></ul>
+                        </div></div>
+                    <div class="row form-group">
+                        <label class="col-xs-12 col-sm-4">New certificates</label>
+                        <div class='col-xs-12 col-sm-8'>
+        		        <span class="fileinput-button" id="dropzone11">Drop files here or click to upload
+                    	<input class="fileupload" id="fileupload11" foldertype="newcert" type="file" name="files[]" multiple="">
+               			 </span><span class="loader"></span>
+                            <ul id="ulnewcert"></ul>
+                        </div></div>
+                    <div class="row form-group">
+                        <label class="col-xs-12 col-sm-4">Halal training</label>
+                        <div class='col-xs-12 col-sm-8'>
+        		        <span class="fileinput-button" id="dropzone12">Drop files here or click to upload
+                    	<input class="fileupload" id="fileupload12" foldertype="halaltraining" type="file" name="files[]" multiple="">
+               			 </span><span class="loader"></span>
+                            <ul id="ulhalaltraining"></ul>
+                        </div></div>
+                    <div class="row form-group">
+                        <label class="col-xs-12 col-sm-4 text-bold"></label>
+                        <div class='col-xs-12 col-sm-8'>
+                        <div id="cycleswitch"><span class="align-tbottom">Cycle compeleted&nbsp;&nbsp;</span>
+                        <label>
+                           <input id="cycleconf" class="ace ace-switch ace-switch-4" type="checkbox" value="0">
+                                    <span class="lbl"></span>
+                        </label></div>
+                        </div>
+                    </div>
+                </from>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="APP.onSave();" >Save changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="js/jquery-2.1.4.min.js"></script>
+
+<!-- <![endif]-->
+
+<!--[if IE]>
+<script src="js/jquery-1.11.3.min.js"></script>
+<![endif]-->
+<script src="js/bootstrap.min.js"></script>
+
+<!-- page specific plugin scripts -->
+<script src="js/bootstrap-datepicker.min.js"></script>
+<script src="js/jquery.jqGrid.min.js"></script>
+<script src="js/grid.locale-en.js"></script>
+
+<!-- ace scripts -->
+<script src="js/ace-elements.min.js"></script>
+<script src="js/ace.min.js"></script>
+<script src="js/select2.full.min.js"></script>
+<script src="js/vendor/jquery.ui.widget.js"></script>
+<script src="js/jquery.iframe-transport.js"></script>
+<script src="js/jquery.fileupload.js"></script>
+<script src="js/all.js?v=<?php echo $GLOBALS['appVersion']?>"></script>
+
+<!-- Menu Toggle Script -->
+<script>
+    var userId = <?php echo $_SESSION['halal']['id'] ?>;
+    Common.onDocumentReady();
+    APP.onDocumentReady();
+</script>
+
+</body>
+</html>

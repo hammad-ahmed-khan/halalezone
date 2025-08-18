@@ -1,0 +1,3321 @@
+<?php
+include_once "../config/config.php";
+include_once "../classes/users.php";
+include_once "../notifications/notifyfuncs.php";
+include_once "../includes/func.php";
+include_once "../reports/reports.php";
+
+//ini_set('max_execution_time', 5000);
+//ini_set('safe_mode', 'off');
+
+//error_reporting(E_ALL);
+//ini_set('display_errors', 1);
+
+/* login */
+function cors() {
+
+    // Allow from any origin
+    if (isset($_SERVER['HTTP_ORIGIN'])) {
+        // Decide if the origin in $_SERVER['HTTP_ORIGIN'] is one
+        // you want to allow, and if so:
+        header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
+        header('Access-Control-Allow-Credentials: true');
+        header('Access-Control-Max-Age: 86400');    // cache for 1 day
+    }
+
+    // Access-Control headers are received during OPTIONS requests
+    if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+
+        if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_METHOD']))
+            // may also be using PUT, PATCH, HEAD etc
+            header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+
+        if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']))
+            header("Access-Control-Allow-Headers: {$_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']}");
+
+        exit(0);
+    }
+}
+
+function sendClientLogin($data) { 
+	$dbo = &$GLOBALS['dbo'];
+	$myuser = cuser::singleton();
+	$myuser->getUserData();
+	$iduser = $myuser->userdata['id'];
+	//$myuser->sec_session_start();
+	//$res = $myuser->login($data['email'], $data['password']);
+	$errors = "";
+	$idclient = $data["idclient"];
+	$idapp = $data["idapp"];
+
+	$query = "SELECT id
+	FROM tdocs WHERE category='soffer' AND idclient=:idclient AND idapp=:idapp
+
+	LIMIT 0, 1";
+	$stmt = $dbo->prepare($query);
+	$stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);  
+	$stmt->bindParam(':idapp', $idapp, PDO::PARAM_STR);  
+	$stmt->execute();
+	if (!$stmt->fetchColumn()) {
+		$errors .= '<li>No record found, signed offer not uploaded.</li>';
+	}
+
+	$sql = "SELECT * FROM tusers WHERE id=:idclient";
+	$stmt = $dbo->prepare($sql);
+	$stmt->setFetchMode(PDO::FETCH_ASSOC);
+	$stmt->bindValue(':idclient', $idclient);
+	$stmt->execute();
+	$user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+	if ($user["login"]!="" && $user["pass"]!="") {
+		$errors .= '<li>Client Login already sent.</li>';
+	}
+
+	if ($errors == "") { 
+	
+		$name = slugify($user["name"]);
+		$num = strlen($name) ;
+		$num = intval($num/2);
+		$first_half = substr($name,0, $num);
+		$second_half = substr($name, $num);
+		$name = $first_half . ' '.$second_half;
+
+		$username =  random_username($name);
+		$password = getToken(8);
+		$encrypted = hash('sha512', $password);	
+
+		$sql = "UPDATE tusers SET login=:login, pass=:password WHERE id=:idclient";
+		$stmt = $dbo->prepare($sql);
+		$stmt->bindValue(':login', $username);
+		$stmt->bindValue(':password', $encrypted);
+		$stmt->bindValue(':idclient', $idclient);
+		$stmt->execute();
+		
+		$data = ['name' => $user["name"],
+				 'username' => $username,
+				 'password' => $password,
+				];
+
+		$ownerEmailAddress = "halal.ezone@gmail.com";
+		$fromEmailAddress = "noreply@halal-e.zone";
+
+		$decode = file_get_contents( __DIR__ ."/../config.json"); 
+		$config=json_decode($decode, TRUE);
+		$attach = '../files/docs/05access data Halal eZone.pdf';
+		$ext = "pdf";
+		$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".$user['name']." (".$idclient.")/application/";
+		$absolutePath = __DIR__ ."/../".$hostPath;
+		
+		mkdir($absolutePath, 0777, true);
+		$filename = str_replace(".".$ext, '_'.$idapp.'.'.$ext, basename($attach));
+		$dest_path = $absolutePath . $filename; 
+		saveAccessDataPDF($data, $attach, $dest_path);
+
+		//sendEmailWithAttach
+		$body['name'] = 'Halal e-Zone';
+		$body['email'] =  $fromEmailAddress;
+		$body['to'] = 'alrahmahsolutions@gmail.com';
+		
+		$body['attachhostpath'] = $dest_path;
+		$body['attach'] = $filename;
+		
+		// sending notification
+		$body['subject'] = "Halal e-Zone New Registration";
+		//$body['header'] = "Client ".getClientInfo($prod['idclient'])." added a new product:";
+		$body['message'] = "Salam Mustafa!<br /><br />";
+		$body['message'] .= "How are you doing?<br /><br />";
+		$body['message'] .= "We kindly would like to inform you of having a new customer. The registration form is attached.<br /><br />";
+		$body['message'] .= "Wsalam,<br />";
+		$body['message'] .= "Mona";
+
+		sendEmailWithAttach($body);
+
+		$title = "Client Questionnaire";
+		$category = "declarations";
+
+		$query = "INSERT INTO tdocs (idapp, idclient, iduser, title, category, hostpath, signature) 
+							 VALUES (:idapp, :idclient, :iduser, :title, :category, :hostpath, 1)";
+		$stmt = $dbo->prepare($query);
+		
+		$stmt->bindParam(':idapp', $idapp, PDO::PARAM_STR);	
+		$stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);
+		$stmt->bindParam(':iduser', $iduser, PDO::PARAM_STR);
+		$stmt->bindParam(':title', $title, PDO::PARAM_STR);			
+		$stmt->bindParam(':category', $category, PDO::PARAM_STR);
+		$stmt->bindParam(':hostpath', $hostPath, PDO::PARAM_STR);
+		$stmt->execute();
+		$iddoc = $dbo->lastInsertId();
+				
+		$industry = $user["industry"];
+		$filetoattach = "";
+		if ($industry == "Meat Processing") {
+			$filetoattach = "F0435-1 Customer Questionnaire Meat Processing.pdf";
+		}
+		else if ($industry == "Slaughter Houses") {
+			$filetoattach = "F0434-1 Customer Questionnaire Slaughtering Plants.pdf";
+		}
+		else  {
+			$filetoattach = "F0427-1 Questionnaire Manufacturing Plants.pdf";
+		} 
+		$attach = '../files/docs/'.$filetoattach;
+		$ext = "pdf";
+		$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".$user['name']." (".$idclient.")/application/questionnaire/";
+		$absolutePath = __DIR__ ."/../".$hostPath;
+		mkdir($absolutePath, 0777, true);
+		$filename = str_replace(".".$ext, '_'.$iddoc.'.'.$ext, basename($attach));
+		$dest_path = $absolutePath . $filename; 
+		
+		saveQuestionnairePDF($data, $attach, $dest_path, $industry);
+
+		$query = "UPDATE tdocs SET filename = :filename WHERE id=:id";
+		$stmt = $dbo->prepare($query);
+		$stmt->bindParam(':filename', $filename, PDO::PARAM_STR);   
+		$stmt->bindParam(':id', $iddoc, PDO::PARAM_STR);   
+		$stmt->execute(); 
+		
+		///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		$title = "Pork Free Declaration";
+		$category = "declarations";
+
+		$filetoattach = "F0451 Pork-Free Declaration.pdf";
+		$attach = '../files/docs/'.$filetoattach;
+		$ext = "pdf";
+		$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".$user['name']." (".$idclient.")/application/declarations/";
+		$absolutePath = __DIR__ ."/../".$hostPath;
+		mkdir($absolutePath, 0777, true);
+
+
+		$query = "INSERT INTO tdocs (idapp, idclient, iduser, title, category, hostpath, signature) 
+							 VALUES (:idapp, :idclient, :iduser, :title, :category, :hostpath, 1)";
+		$stmt = $dbo->prepare($query);
+		$stmt->bindParam(':idapp', $idapp, PDO::PARAM_STR);	
+		$stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);
+		$stmt->bindParam(':iduser', $iduser, PDO::PARAM_STR);
+		$stmt->bindParam(':title', $title, PDO::PARAM_STR);			
+		$stmt->bindParam(':category', $category, PDO::PARAM_STR);
+		$stmt->bindParam(':hostpath', $hostPath, PDO::PARAM_STR);
+		$stmt->execute();
+		$iddoc = $dbo->lastInsertId();
+				
+		$filename = str_replace(".".$ext, '_'.$iddoc.'.'.$ext, basename($attach));
+		$dest_path = $absolutePath . $filename; 
+		
+		copy($attach, $dest_path);
+
+		$query = "UPDATE tdocs SET filename = :filename WHERE id=:id";
+		$stmt = $dbo->prepare($query);
+		$stmt->bindParam(':filename', $filename, PDO::PARAM_STR);   
+		$stmt->bindParam(':id', $iddoc, PDO::PARAM_STR);   
+		$stmt->execute(); 
+
+		///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+		$title = "Animal Feedstuff Declaration";
+		$category = "declarations";
+		$filetoattach = "F0460 Animal Feedstuff Declaration Form.pdf";
+		$attach = '../files/docs/'.$filetoattach;
+		$ext = "pdf";
+		$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".$user['name']." (".$idclient.")/application/declarations/";
+		$absolutePath = __DIR__ ."/../".$hostPath;
+
+		mkdir($absolutePath, 0777, true);
+
+		$query = "INSERT INTO tdocs (idapp, idclient, iduser, title, category, hostpath, signature) 
+							 VALUES (:idapp, :idclient, :iduser, :title, :category, :hostpath, 1)";
+		$stmt = $dbo->prepare($query);
+		
+		$stmt->bindParam(':idapp', $idapp, PDO::PARAM_STR);	
+		$stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);
+		$stmt->bindParam(':iduser', $iduser, PDO::PARAM_STR);
+		$stmt->bindParam(':title', $title, PDO::PARAM_STR);			
+		$stmt->bindParam(':category', $category, PDO::PARAM_STR);
+		$stmt->bindParam(':hostpath', $hostPath, PDO::PARAM_STR);
+		$stmt->execute();
+		$iddoc = $dbo->lastInsertId();
+				
+		$filename = str_replace(".".$ext, '_'.$iddoc.'.'.$ext, basename($attach));
+		$dest_path = $absolutePath . $filename; 
+		
+		copy($attach, $dest_path);
+
+		$query = "UPDATE tdocs SET filename = :filename WHERE id=:id";
+		$stmt = $dbo->prepare($query);
+		$stmt->bindParam(':filename', $filename, PDO::PARAM_STR);   
+		$stmt->bindParam(':id', $iddoc, PDO::PARAM_STR);   
+		$stmt->execute(); 
+		///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+
+		echo json_encode(generateSuccessResponse(array("id" => $idclient, 'errorInfo' => $dbo->errorInfo())));
+		exit;
+	}
+	
+		echo json_encode(generateSuccessResponse(array("errors" => "<ul>$errors</ul>", 'errorInfo' => $dbo->errorInfo())));
+}
+
+
+function sendOffer($data){
+	$dbo = &$GLOBALS['dbo'];
+	$myuser = cuser::singleton();
+	//$myuser->sec_session_start();
+	//$res = $myuser->login($data['email'], $data['password']);
+	$errors = array();
+	$recpatcha_secret = '6Ld8HiIhAAAAACAWLM1dPaqbmkJIMatPMRnO_SOG';	
+	
+	if (trim($data['name']) == "") { 
+		$errors['name'] = "Company name is required.";
+	}
+	if (trim($data['address']) == "") { 
+		$errors['address'] = "Address is required.";
+	}
+	if (trim($data['country']) == "") { 
+		$errors['country'] = "Country is required.";
+	}
+	if (trim($data['industry']) == "") { 
+		$errors['industry'] = "Industry is required.";
+	}
+	if (trim($data['email']) == "") { 
+		$errors['email'] = "Email is required.";
+	}
+	else if (!filter_var(trim($data['email']), FILTER_VALIDATE_EMAIL)) {
+	  $errors['email'] = "Invalid Email Address.";
+	}
+	else {
+		$sql = "SELECT id FROM tusers WHERE email=:email LIMIT 0,1";
+		$stmt = $dbo->prepare($sql);
+		$stmt->setFetchMode(PDO::FETCH_ASSOC);
+		$stmt->bindValue(':email', $data['email']);
+		$stmt->execute();
+		if ($stmt->fetchColumn()) {
+		  $errors['email'] = "Email address already exists.";
+		}	
+	}
+	if (trim($data['contact_person']) == "") { 
+		$errors['contact_person'] = "Contact person name is required.";
+	}
+	if (trim($data['cemail']) == "" ) { 
+		$errors['cemail'] = "Confirm Email is required.";
+	}
+	if (trim($data['email']) != "" && trim($data['cemail']) != "" && (trim($data['email']) != trim($data['cemail']))) {
+		$errors['email'] = "Email Address and Confirm Email Address mismatch.";
+	}
+	if(!isset($data['captcha']) || $data['captcha'] == "") {
+		$errors['captcha'] = "Error verifying reCAPTCHA, Please try again.";
+	}
+	else {
+        $ip = $_SERVER['REMOTE_ADDR'];
+        // post request to server
+        $url = 'https://www.google.com/recaptcha/api/siteverify?secret=' . urlencode($recpatcha_secret) .  '&response=' . urlencode($data['captcha']);
+        $response = file_get_contents($url);
+        $responseKeys = json_decode($response,true);
+        // should return JSON with success as true
+        if(!$responseKeys["success"]) { 
+			$errors['captcha'] = 'Error verifying reCAPTCHA, Please try again.';
+        }
+	}
+
+	$datax = [];
+	if (count($errors) != 0) { 
+		$datax['errors'] = $errors;
+	}
+	else {
+		$appToken = getToken();
+
+		$dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+		$sql = "INSERT INTO tusers (name, login, email, address, country, industry, category, prodnumber, ingrednumber, vat, contact_person, phone, lang, isclient, app_token) VALUES (:name, :login, :email, :address, :country, :industry, :category, :prodnumber, :ingrednumber, :vat, :contact_person, :phone, :lang, 1, :app_token)";
+		$stmt = $dbo->prepare($sql);
+		$stmt->bindValue(':name', $data['name']);
+		$stmt->bindValue(':login', $data['email']);
+		$stmt->bindValue(':email', $data['email']);
+		$stmt->bindValue(':address', $data['address']);		
+		$stmt->bindValue(':country', $data['country']);
+		$stmt->bindValue(':industry', $data['industry']);
+		$stmt->bindValue(':category', $data['category']);
+		$stmt->bindValue(':prodnumber', $data['prodnumber']);
+		$stmt->bindValue(':ingrednumber', $data['ingrednumber']);		
+		$stmt->bindValue(':vat', $data['vat']);						
+		$stmt->bindValue(':contact_person', $data['contact_person']);						
+		$stmt->bindValue(':phone', $data['phone']);								
+		$stmt->bindValue(':lang', $data['lang']);
+		$stmt->bindValue(':app_token', $appToken);
+		if(!$stmt->execute()) die(json_encode(generateErrorResponse("Unknown error!")));
+		$idclient = $dbo->lastInsertId();
+
+		$query = "INSERT INTO tapplications (idclient, prodnumber, ingrednumber) VALUES (:idclient, :prodnumber, :ingrednumber)";
+		$stmt = $dbo->prepare($query);
+		$stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);  
+		$stmt->bindValue(':prodnumber', $data['prodnumber']);
+		$stmt->bindValue(':ingrednumber', $data['ingrednumber']);		
+		$stmt->execute();
+		$idapp = $dbo->lastInsertId();
+		
+		$ownerEmailAddress = "halal.ezone@gmail.com";
+		$fromEmailAddress = "noreply@halal-e.zone";
+
+		$decode = file_get_contents( __DIR__ ."/../config.json"); 
+		$config=json_decode($decode, TRUE);
+		$attach = 'F0422_Application_Form_it.pdf';
+		$ext = "pdf";
+		$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".$data['name']." (".$idclient.")/application/";
+		mkdir($hostPath, 0777, true);
+		$filename = str_replace(".".$ext, '_'.$idapp.'.'.$ext, $attach);
+		$dest_path = $hostPath . $filename; 
+		saveApplicationPDF($data, $attach, $dest_path);
+
+		//sendEmailWithAttach
+		$body['name'] = 'Halal e-Zone';
+		$body['email'] =  $fromEmailAddress;
+		$body['to'] = $data['email'];
+		
+		$body['attachhostpath'] = $dest_path;
+		$body['attach'] = $filename;
+		
+		// sending notification
+		$body['subject'] = "Halal e-Zone Registration Confirmation";
+		//$body['header'] = "Client ".getClientInfo($prod['idclient'])." added a new product:";
+		$body['message'] = "Thank you for your registration. Please download the “Application Form” attached, fill it out and upload it at the link below. ";
+		$body['message'] .= "<br /><br />";
+		$body['message'] .= '<a href="http://test2022.halal-e.zone/upload?code='.$appToken.'">http://test2022.halal-e.zone/upload?code='.$appToken.'</a>';
+		
+		sendEmailWithAttach($body);
+
+		echo json_encode(generateSuccessResponse(array("id" => $idclient, 'errorInfo' => $dbo->errorInfo())));
+		exit;
+	}
+	
+	echo json_encode(generateSuccessResponse($datax));	
+}
+
+
+function deleteOffer($data){
+	$dbo = &$GLOBALS['dbo'];
+	$myuser = cuser::singleton();
+	//$myuser->sec_session_start();
+	//$res = $myuser->login($data['email'], $data['password']);
+	$errors = "";
+	$idclient = $data["idclient"];
+	$idapp = $data["idapp"];
+	$ID = $data["ID"];		
+	if ($ID != "") {
+		$dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+		$sql = "DELETE FROM toffers WHERE id =:ID AND idclient=:idclient AND idapp=:idapp";
+		$stmt = $dbo->prepare($sql); 
+		$stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);  
+		$stmt->bindParam(':idapp', $idapp, PDO::PARAM_STR);  
+		$stmt->bindValue(':ID', $ID);
+		if(!$stmt->execute()) die(json_encode(generateErrorResponse("Unknown error!")));								
+	}
+	echo json_encode(generateSuccessResponse(array("id" => $ID, 'errorInfo' => $dbo->errorInfo())));
+}
+
+
+function saveDeviation($data){
+
+	$dbo = &$GLOBALS['dbo'];
+	$myuser = cuser::singleton();
+	$Deviation = trim($data["Deviation"]);
+	
+	$errors = "";
+	$id = "";
+	
+	if ($Deviation == "" ) {
+		$errors .= "<li>Deviation is required.</li>";
+	}
+
+	if ($errors == "") {
+		$query = "INSERT INTO tdeviations (deviation) VALUES (:Deviation)";
+		$stmt = $dbo->prepare($query);
+		$stmt->bindParam(':Deviation', $Deviation, PDO::PARAM_STR);  
+		$stmt->execute();
+		$id = $dbo->lastInsertId();
+	}
+	echo json_encode(generateSuccessResponse(array("errors" => $errors, "id" => $id)));
+}
+
+function saveOffer($data){
+
+	$dbo = &$GLOBALS['dbo'];
+	$myuser = cuser::singleton();
+	$idclient = $data["idclient"];
+	$idapp = $data["idapp"];
+	$Service = trim($data["Service"]);
+	$NewService = trim($data["NewService"]);
+	$Fee = trim($data["Fee"]);
+	
+	$errors = "";
+	$id = "";
+
+	if ($Service == "" && $NewService == "") {
+		$errors .= "<li>Service is required.</li>";
+	}
+	if ($Fee == "") {  
+		$errors .= "<li>Fee is required.</li>";
+	}
+	elseif (!is_numeric($Fee)) {  
+		$errors .= "<li>Fee must be numeric.</li>";
+	}
+	if ($errors == "") {
+		if ($NewService != "") {
+			$query = "INSERT INTO tservices (service) VALUES (:Service)";
+			$stmt = $dbo->prepare($query);
+			$stmt->bindParam(':Service', $NewService, PDO::PARAM_STR);  
+			$stmt->execute();
+			$Service = $NewService;
+		}
+		$Service = str_replace("\n",'<br />', $Service);
+		$query = "INSERT INTO toffers (idclient, idapp, Service, Fee) VALUES (:idclient, :idapp, :Service, :Fee)";
+		$stmt = $dbo->prepare($query);
+		$stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);  
+		$stmt->bindParam(':idapp', $idapp, PDO::PARAM_STR);  
+		$stmt->bindParam(':Service', $Service, PDO::PARAM_STR);  
+		$stmt->bindParam(':Fee', $Fee, PDO::PARAM_STR);  
+		$stmt->execute();
+		$id = $dbo->lastInsertId();		
+	}
+	echo json_encode(generateSuccessResponse(array("errors" => $errors, "id" => $id)));
+}
+
+
+function saveAuditReport($data){
+
+	$dbo = &$GLOBALS['dbo'];
+	$myuser = cuser::singleton();
+	$idclient = $data["idclient"];
+	$idapp = $data["idapp"];
+	$Type = trim($data["Type"]);
+	$Deviation = trim($data["Deviation"]);
+	$NewDeviation = trim($data["NewDeviation"]);
+	$Reference = trim($data["Reference"]);
+	
+	$errors = "";
+	$id = "";
+	
+	if ($Type == "") {
+		$errors .= "<li>Type of Finding is required.</li>";
+	}
+	if ($Deviation == "" && $NewDeviation == "") {
+		$errors .= "<li>NC/OBS Statement is required.</li>";
+	}
+	if ($Reference == "") {  
+		$errors .= "<li>Reference to Checklist is required.</li>";
+	}
+	if ($errors == "") {
+		if ($NewDeviation != "") {
+			$query = "INSERT INTO tdeviations (deviation) VALUES (:Deviation)";
+			$stmt = $dbo->prepare($query);
+			$stmt->bindParam(':Deviation', $NewDeviation, PDO::PARAM_STR);  
+			$stmt->execute();
+			$Deviation = $NewDeviation;
+		}
+		$query = "INSERT INTO tauditreport (idclient, idapp, Type, Deviation, Reference) VALUES (:idclient, :idapp, :Type, :Deviation, :Reference)";
+		$stmt = $dbo->prepare($query);
+		$stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);  
+		$stmt->bindParam(':idapp', $idapp, PDO::PARAM_STR);  
+		$stmt->bindParam(':Type', $Type, PDO::PARAM_STR);  
+		$stmt->bindParam(':Deviation', $Deviation, PDO::PARAM_STR);  
+		$stmt->bindParam(':Reference', $Reference, PDO::PARAM_STR);  
+		$stmt->execute();
+		$id = $dbo->lastInsertId();		
+	}
+	echo json_encode(generateSuccessResponse(array("errors" => $errors, "id" => $id)));
+}
+
+function save_event($data){
+	$dbo = &$GLOBALS['dbo'];
+	$myuser = cuser::singleton();
+	//$myuser->sec_session_start();
+	//$res = $myuser->login($data['email'], $data['password']);
+	$errors = "";
+	$ID = $data["ID"];
+	$idclient = $data["idclient"] ?? "-1";	
+	$idapp = $data["idapp"] ?? "-1";
+	$dateError = false;
+	if (trim($data['Title']) == "") { 
+		$errors .= "<li>Title is required.</li>";
+	}
+	if (trim($data['StartDate']) == "") { 
+		$errors .= "<li>Start Date is required.</li>";
+		$dateError=true;
+	}
+	else if($dateTime = DateTime::createFromFormat('Y-m-d', $data['StartDate']) == FALSE) {
+		$errors .= "<li>Start Date is invalid.";
+		$dateError=true;
+	}	
+	if (trim($data['EndDate']) == "") { 
+		$errors .= "<li>End Date is required.</li>";
+		$dateError=true;
+	}
+	else if($dateTime = DateTime::createFromFormat('Y-m-d', $data['EndDate']) == FALSE) {
+		$errors .= "<li>End Date is invalid.";
+		$dateError=true;
+	}
+	
+	if (!$dateError) { 
+		$query = "SELECT id FROM tevents WHERE :new_start <= end_date AND :new_end  >= start_date ".($ID != "" ?" AND id<>:ID" : "")." LIMIT 0,1";
+		$stmt = $dbo->prepare($query);
+		$stmt->bindParam(':new_start', $data['StartDate'], PDO::PARAM_STR);  
+		$stmt->bindParam(':new_end', $data['EndDate'], PDO::PARAM_STR);  
+		if ($ID != "") {
+			$stmt->bindParam(':ID', $ID, PDO::PARAM_STR);  
+		}
+		$stmt->execute();
+		if ($stmt->fetchColumn()) {
+			$errors .= "<li>Date is not available.</li>";		
+		}		
+	}
+
+	$datax = [];
+	if ($errors != "") { 
+		$datax['errors'] = "<ul>".$errors."</ul>";
+	}
+	else {
+		if ($ID == "") {
+			$dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+			$sql = "INSERT INTO tevents (idclient, idapp, title, start_date, end_date) VALUES (:idclient, :idapp, :title, :start_date, :end_date)";
+			$stmt = $dbo->prepare($sql); 
+			$stmt->bindValue(':idclient', $idclient);
+			$stmt->bindValue(':idapp', $idapp);		
+			$stmt->bindValue(':title', $data['Title']);
+			$stmt->bindValue(':start_date', $data['StartDate']);						
+			$stmt->bindValue(':end_date', $data['EndDate']);								
+			if(!$stmt->execute()) die(json_encode(generateErrorResponse("Unknown error!")));
+			$ID = $dbo->lastInsertId();
+		}
+		else {
+			$dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+			$sql = "UPDATE tevents SET title = :title, start_date=:start_date, end_date=:end_date WHERE id =:ID";
+			$stmt = $dbo->prepare($sql); 
+			$stmt->bindValue(':title', $data['Title']);
+			$stmt->bindValue(':start_date', $data['StartDate']);						
+			$stmt->bindValue(':end_date', $data['EndDate']);								
+			$stmt->bindValue(':ID', $ID);
+			if(!$stmt->execute()) die(json_encode(generateErrorResponse("Unknown error!")));								
+		}
+		echo json_encode(generateSuccessResponse(array("id" => $ID, 'errorInfo' => $dbo->errorInfo())));
+		exit;
+	}
+	
+	echo json_encode(generateSuccessResponse($datax));	
+}
+
+
+function delete_event($data){
+	$dbo = &$GLOBALS['dbo'];
+	$myuser = cuser::singleton();
+	//$myuser->sec_session_start();
+	//$res = $myuser->login($data['email'], $data['password']);
+	$errors = "";
+	$ID = $data["ID"];
+	
+	if ($ID != "") {
+		$dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+
+		$sql = "SELECT * FROM tevents WHERE id =:ID AND idclient>0 AND idapp>0";
+		$stmt = $dbo->prepare($sql);
+		$stmt->bindValue(':ID', $ID);
+		$stmt->setFetchMode(PDO::FETCH_ASSOC);
+		$stmt->execute();
+		if ($events = $stmt->fetchAll()) {
+			$errors = "<li>Approved audit dates cannot be deleted.</li>";
+		}
+		if ($errors == "") {
+
+			$sql = "DELETE FROM tevents WHERE id =:ID";
+			$stmt = $dbo->prepare($sql); 
+			$stmt->bindValue(':ID', $ID);
+			if(!$stmt->execute()) die(json_encode(generateErrorResponse("Unknown error!")));								
+		}
+		echo json_encode(generateSuccessResponse(array("errors" => "<ul>$errors</ul>", 'errorInfo' => $dbo->errorInfo())));
+	}
+	echo json_encode(generateSuccessResponse(array("id" => $ID, 'errorInfo' => $dbo->errorInfo())));
+}
+
+
+function getDeviations(){
+	$dbo = &$GLOBALS['dbo'];
+	$myuser = cuser::singleton();
+	$sql = "SELECT * FROM tdeviations WHERE 1 = 1";
+	$stmt = $dbo->prepare($sql);
+	$stmt->setFetchMode(PDO::FETCH_ASSOC);
+	$stmt->execute();
+	$deviations = $stmt->fetchAll();
+	echo json_encode(generateSuccessResponse(array("deviations" => $deviations, 'errorInfo' => $dbo->errorInfo())));
+}
+
+function getServices(){
+	$dbo = &$GLOBALS['dbo'];
+	$myuser = cuser::singleton();
+	$sql = "SELECT * FROM tservices WHERE 1 = 1";
+	$stmt = $dbo->prepare($sql);
+	$stmt->setFetchMode(PDO::FETCH_ASSOC);
+	$stmt->execute();
+	$services = $stmt->fetchAll();
+	echo json_encode(generateSuccessResponse(array("services" => $services, 'errorInfo' => $dbo->errorInfo())));
+}
+
+function getAppData($data){
+	$dbo = &$GLOBALS['dbo'];
+	$myuser = cuser::singleton();
+	$idclient = $data["idclient"];
+	$query = "SELECT * FROM tapplications WHERE idclient = :idclient";
+	$stmt = $dbo->prepare($query);
+	$stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);  
+	$stmt->execute();
+	$appData = $stmt->fetch();
+	if (!$appData) { 
+		$query = "INSERT INTO tapplications (idclient) VALUES (:idclient)";
+		$stmt = $dbo->prepare($query);
+		$stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);  
+		$stmt->execute();
+		$idapp = $dbo->lastInsertId();
+		$query = "SELECT * FROM tapplications WHERE id = :idapp";
+		$stmt = $dbo->prepare($query);
+		$stmt->bindParam(':idapp', $idapp, PDO::PARAM_STR);  
+		$stmt->execute();
+		$appData = $stmt->fetch();
+	}
+	if($appData) echo json_encode(generateSuccessResponse(array("appData" => $appData, 'errorInfo' => $dbo->errorInfo())));
+	else echo json_encode(generateErrorResponse());
+}
+
+function getDisabledDates(){
+
+	$dbo = &$GLOBALS['dbo'];
+	$myuser = cuser::singleton();
+
+	$query = "SELECT  start_date, end_date FROM tevents WHERE end_date >= CURDATE()";
+	$stmt = $dbo->prepare($query);
+	$stmt->execute();
+	$rows = $stmt->fetchAll();
+	$dates = [];
+	foreach ($rows as $row) {
+		$period = new DatePeriod(
+			 new DateTime($row['start_date']),
+			 new DateInterval('P1D'),
+			 new DateTime($row['end_date'])
+		);
+		foreach ($period as $key => $value) {
+			$dates[] = $value->format('Y-m-d');
+		}
+		$dates[] = $row['end_date'];			
+	}
+	echo json_encode(generateSuccessResponse(['disabledDates'=>$dates]));
+}
+
+function saveAuditDates($data){
+
+	$dbo = &$GLOBALS['dbo'];
+	$myuser = cuser::singleton();
+	$idclient = $data["idclient"];
+	$idapp = $data["idapp"];
+	$AuditDate1 = $data["AuditDate1"];
+	$AuditDate2 = $data["AuditDate2"];
+	$AuditDate3 = $data["AuditDate3"];
+	$SameDatesCheck = array();
+	$errors = "";
+	
+	$SameDatesCheck[$AuditDate1] = "1";
+	$SameDatesCheck[$AuditDate2] = "1";
+	$SameDatesCheck[$AuditDate3] = "1";
+	
+	$dateTime = "";
+	
+	if ($AuditDate1 == "") {  
+		$errors .= "<li>Date #1 is required.</li>";
+	}
+	else if(($dateTime = DateTime::createFromFormat('Y-m-d', $AuditDate1)) === FALSE) {
+		$errors .= "<li>Date #1 is invalid.";
+	}	
+	else { 
+		$query = "SELECT id FROM tevents WHERE :new_start <= end_date AND :new_end  >= start_date LIMIT 0,1";
+		$stmt = $dbo->prepare($query);
+		$stmt->bindParam(':new_start', $AuditDate1, PDO::PARAM_STR);  
+		$stmt->bindParam(':new_end', $AuditDate1, PDO::PARAM_STR);  
+		$stmt->execute();
+		if ($stmt->fetchColumn()) {
+			$errors .= "<li>Date #1 is not available.</li>";		
+		}
+	}
+	if ($AuditDate2 == "") {  
+		$errors .= "<li>Date #2 is required.</li>";
+	}
+	else if(($dateTime = DateTime::createFromFormat('Y-m-d', $AuditDate2)) === FALSE) {
+		$errors .= "<li>Date #2 is invalid.</li>";
+	}	
+	else { 
+		$query = "SELECT id FROM tevents WHERE :new_start <= end_date AND :new_end  >= start_date LIMIT 0,1";
+		$stmt = $dbo->prepare($query);
+		$stmt->bindParam(':new_start', $AuditDate2, PDO::PARAM_STR);
+		$stmt->bindParam(':new_end', $AuditDate2, PDO::PARAM_STR);
+		$stmt->execute();
+		if ($stmt->fetchColumn()) {
+			$errors .= "<li>Date #2 is not available.</li>";		
+		}
+	}
+	if ($AuditDate3 == "") {  
+		$errors .= "<li>Date #3 is required.</li>";
+	}
+	else if(($dateTime = DateTime::createFromFormat('Y-m-d', $AuditDate3)) === FALSE) {
+		$errors .= "<li>Date #3 is invalid.</li>";
+	}
+	else {
+		$query = "SELECT id FROM tevents WHERE :new_start <= end_date AND :new_end  >= start_date LIMIT 0,1";
+		$stmt = $dbo->prepare($query);
+		$stmt->bindParam(':new_start', $AuditDate3, PDO::PARAM_STR);  
+		$stmt->bindParam(':new_end', $AuditDate3, PDO::PARAM_STR);  
+		$stmt->execute();
+		if ($stmt->fetchColumn()) { 
+			$errors .= "<li>Date #3 is not available.</li>";		
+		}
+	}
+	
+	if ($errors == "" && count($SameDatesCheck)<3) {
+		$errors .= "<li>Please select different dates.</li>";
+	}	
+
+	if ($errors== "") {
+		$query = "UPDATE tapplications SET audit_date_1=:AuditDate1,  audit_date_2=:AuditDate2,  audit_date_3=:AuditDate3 WHERE idclient=:idclient AND id=:idapp";
+		$stmt = $dbo->prepare($query);
+		$stmt->bindParam(':AuditDate1', $AuditDate1, PDO::PARAM_STR);  
+		$stmt->bindParam(':AuditDate2', $AuditDate2, PDO::PARAM_STR);  
+		$stmt->bindParam(':AuditDate3', $AuditDate3, PDO::PARAM_STR);  
+		$stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);  
+		$stmt->bindParam(':idapp', $idapp, PDO::PARAM_STR);  
+		$stmt->execute();
+		
+		$sql = "SELECT * FROM tusers WHERE id=:idclient";
+		$stmt = $dbo->prepare($sql);
+		$stmt->setFetchMode(PDO::FETCH_ASSOC);
+		$stmt->bindValue(':idclient', $idclient);
+		$stmt->execute();
+		$user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+		$ownerEmailAddress = "halal.ezone@gmail.com";
+		$fromEmailAddress = "noreply@halal-e.zone";
+
+		//sendEmailWithAttach
+		$body['name'] = 'Halal e-Zone';
+		$body['email'] =  $fromEmailAddress; 
+		$body['to'] = "alrahmahsolutions@gmail.com";
+		
+		//$body['attachhostpath'] = $dest_path;
+		//$body['attach'] = $filename;
+		
+		// sending notification
+		$body['subject'] = "Halal e-Zone - Audit Date Proposals";
+		//$body['header'] = "Client ".getClientInfo($prod['idclient'])." added a new product:";
+		$body['message'] = "Dear Admin,";
+		$body['message'] .= "<br /><br />";
+		$body['message'] = "<strong>".$user["name"]." (".$idclient.")</strong> has selected the following 3 audit date proposals for the on-site audit for their facility.";
+		$body['message'] .= "<br /><br />";
+		$body['message'] .= $AuditDate1;
+		$body['message'] .= "<br />";
+		$body['message'] .= $AuditDate2;
+		$body['message'] .= "<br />";
+		$body['message'] .= $AuditDate3;
+		$body['message'] .= "<br /><br />";		
+		$body['message'] .= "Kind Regards";		
+		sendEmail($body);
+
+		echo json_encode(generateSuccessResponse());
+	}
+	else {
+		echo json_encode(generateErrorResponse("<ul>".$errors."</ul>"));	
+	}
+}
+
+function approveAuditDates($data){
+
+	$dbo = &$GLOBALS['dbo'];
+	$myuser = cuser::singleton();
+	$myuser->getUserData();
+	$idclient = $data["idclient"];
+	$idapp = $data["idapp"];
+	$ApprovedDate1 = $data["ApprovedDate1"];
+	//$ApprovedDate2 = $data["ApprovedDate2"] ?? "";
+	//$ApprovedDate3 = $data["ApprovedDate3"] ?? "";
+	$errors = "";
+	$dateTime = "";
+	
+//	if ($ApprovedDate1 == "" && $ApprovedDate2 == "" && $ApprovedDate3 == "") {  
+	if ($ApprovedDate1 == "") {  
+		$errors .= "<li>Please select a date to approve.</li>";
+	}
+	else if(($dateTime = DateTime::createFromFormat('Y-m-d', $ApprovedDate1)) === FALSE) {
+		$errors .= "<li>Date is invalid.</li>";
+	}
+	else { 
+		if ($errors == "") {
+			//$EndDate = $dateTime->modify('+1 day')->format('Y-m-d');
+			$query = "SELECT id FROM tevents WHERE idclient<>:idclient AND idapp<>:idapp AND (:new_start <= end_date AND :new_end  >= start_date) LIMIT 0,1";
+			$stmt = $dbo->prepare($query);
+			$stmt->bindParam(':new_start', $ApprovedDate1, PDO::PARAM_STR);  
+			$stmt->bindParam(':new_end', $ApprovedDate1, PDO::PARAM_STR);  
+			$stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);
+			$stmt->bindParam(':idapp', $idapp, PDO::PARAM_STR);
+			$stmt->execute();
+			if ($stmt->fetchColumn()) { 
+				$errors .= "<li>Date is not available.</li>";		
+			}
+		}	
+	}
+	/*
+	if($ApprovedDate2 != "" && $dateTime = DateTime::createFromFormat('Y-m-d', $ApprovedDate2) == FALSE) {
+		$errors .= "<li>Date #2 is invalid.</li>";
+	}
+	else if ($ApprovedDate2 != "") {
+		if ($errors == "") {
+			$query = "SELECT id FROM tapplications WHERE idclient=:idclient AND id=:idapp AND ((audit_date_1=:ApprovedDate1 OR audit_date_2=:ApprovedDate2 OR  audit_date_3=:ApprovedDate3)) LIMIT 0,1";
+			$stmt = $dbo->prepare($query);
+			$stmt->bindParam(':ApprovedDate1', $ApprovedDate2, PDO::PARAM_STR);  
+			$stmt->bindParam(':ApprovedDate2', $ApprovedDate2, PDO::PARAM_STR);  
+			$stmt->bindParam(':ApprovedDate3', $ApprovedDate2, PDO::PARAM_STR);  
+			$stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);  
+			$stmt->bindParam(':idapp', $idapp, PDO::PARAM_STR);  
+			$stmt->execute();
+			if (!$stmt->fetchColumn()) {
+				$errors .= "<li>Date #2 is not available.</li>";			
+			}
+		}	
+	}
+	if($ApprovedDate3 != "" && $dateTime = DateTime::createFromFormat('Y-m-d', $ApprovedDate3) == FALSE) {
+		$errors .= "<li>Date #3 is invalid.</li>";
+	}
+	else if ($ApprovedDate3 != "") {
+		if ($errors == "") {
+			$query = "SELECT id FROM tapplications WHERE idclient=:idclient AND id=:idapp AND (audit_date_1=:ApprovedDate1 OR audit_date_2=:ApprovedDate2 OR  audit_date_3=:ApprovedDate3) LIMIT 0,1";
+			$stmt = $dbo->prepare($query);
+			$stmt->bindParam(':ApprovedDate1', $ApprovedDate3, PDO::PARAM_STR);  
+			$stmt->bindParam(':ApprovedDate2', $ApprovedDate3, PDO::PARAM_STR);  
+			$stmt->bindParam(':ApprovedDate3', $ApprovedDate3, PDO::PARAM_STR);  
+			$stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);  
+			$stmt->bindParam(':idapp', $idapp, PDO::PARAM_STR);  
+			$stmt->execute();
+			if (!$stmt->fetchColumn()) {
+				$errors .= "<li>Date #3 is not available.</li>";			
+			}
+		}	
+	}
+	*/
+
+	if ($errors== "") { 
+	
+		$sql = "SELECT * FROM tusers WHERE id=:idclient";
+		$stmt = $dbo->prepare($sql);
+		$stmt->setFetchMode(PDO::FETCH_ASSOC);
+		$stmt->bindValue(':idclient', $idclient);
+		$stmt->execute();
+		$user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+		$query = "UPDATE tapplications SET approved_date1=:ApprovedDate1, approved_by=:approved_by WHERE idclient=:idclient AND id=:idapp";
+		$stmt = $dbo->prepare($query);
+		$approved_by = $myuser->userdata['name'];
+		$stmt->bindParam(':ApprovedDate1', $ApprovedDate1, PDO::PARAM_STR);
+		$stmt->bindParam(':approved_by', $approved_by, PDO::PARAM_STR);
+		$stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);
+		$stmt->bindParam(':idapp', $idapp, PDO::PARAM_STR);
+		$stmt->execute();
+
+		$sql = "DELETE FROM tevents WHERE idclient=:idclient AND idapp=:idapp";
+		$stmt = $dbo->prepare($sql);
+		$stmt->bindValue(':idclient', $idclient);
+		$stmt->bindValue(':idapp', $idapp);
+		if(!$stmt->execute()) die(json_encode(generateErrorResponse("Unknown error!")));
+
+		$sql = "INSERT INTO tevents (idclient, idapp, title, start_date, end_date) VALUES (:idclient, :idapp, :title, :start_date, :end_date)";
+		$stmt = $dbo->prepare($sql);
+		$stmt->bindValue(':idclient', $idclient);
+		$stmt->bindValue(':idapp', $idapp);
+		$stmt->bindValue(':title', $user['name']);
+		$stmt->bindValue(':start_date', $ApprovedDate1);
+		$stmt->bindValue(':end_date', $ApprovedDate1);							
+		if(!$stmt->execute()) die(json_encode(generateErrorResponse("Unknown error!")));
+		$ID = $dbo->lastInsertId();
+
+		$ownerEmailAddress = "halal.ezone@gmail.com";
+		$fromEmailAddress = "noreply@halal-e.zone";
+
+		//sendEmailWithAttach
+		$body['name'] = 'Halal e-Zone';
+		$body['email'] =  $fromEmailAddress; 
+		$body['to'] = $user["email"];
+		
+		//$body['attachhostpath'] = $dest_path;
+		//$body['attach'] = $filename;
+		
+		// sending notification
+		$body['subject'] = "Halal e-Zone - Audit Date Approval";
+		//$body['header'] = "Client ".getClientInfo($prod['idclient'])." added a new product:";
+		$body['message'] = "Dear Customer,";
+		$body['message'] .= "<br /><br />";
+		$body['message'] = "We are glad to confirm you the following date for your on-site audit. Please save the date and contact us for any assistance or clarification.";
+		$body['message'] .= "<br /><br />";
+		$body['message'] .= "<strong>".$ApprovedDate1."</strong>";
+		$body['message'] .= "<br /><br />";		
+		$body['message'] .= "Your HQC Team ";	
+		
+		sendEmail($body);
+
+		echo json_encode(generateSuccessResponse(['approved_date1' => $ApprovedDate1, 'approved_by' =>$approved_by]));
+	}
+	else {
+		echo json_encode(generateErrorResponse("<ul>".$errors."</ul>"));
+	}
+}
+
+function login($data){
+	$myuser = cuser::singleton();
+	$myuser->sec_session_start();
+	$res = $myuser->login($data['email'], $data['password']);
+	if($res === 0) echo json_encode(generateSuccessResponse());
+	else echo json_encode(generateErrorResponse($res));
+}
+
+function register($data){
+	$dbo = &$GLOBALS['dbo'];
+	$myuser = cuser::singleton();
+	//$myuser->sec_session_start();
+	//$res = $myuser->login($data['email'], $data['password']);
+	$errors = array();
+	$recpatcha_secret = '6Ld8HiIhAAAAACAWLM1dPaqbmkJIMatPMRnO_SOG';	
+	
+	if (trim($data['name']) == "") { 
+		$errors['name'] = "Company name is required.";
+	}
+	if (trim($data['address']) == "") { 
+		$errors['address'] = "Address is required.";
+	}
+	if (trim($data['country']) == "") { 
+		$errors['country'] = "Country is required.";
+	}
+	if (trim($data['industry']) == "") { 
+		$errors['industry'] = "Industry is required.";
+	}
+	if (trim($data['category']) == "") { 
+		$errors['category'] = "Product Category is required.";
+	}
+	if (trim($data['email']) == "") { 
+		$errors['email'] = "Email is required.";
+	}
+	else if (!filter_var(trim($data['email']), FILTER_VALIDATE_EMAIL)) {
+	  $errors['email'] = "Invalid Email Address.";
+	}
+	else {
+		$sql = "SELECT id FROM tusers WHERE email=:email LIMIT 0,1";
+		$stmt = $dbo->prepare($sql);
+		$stmt->setFetchMode(PDO::FETCH_ASSOC);
+		$stmt->bindValue(':email', $data['email']);
+		$stmt->execute();
+		if ($stmt->fetchColumn()) {
+		  $errors['email'] = "Email address already exists.";
+		}	
+	}
+	if (trim($data['contact_person']) == "") { 
+		$errors['contact_person'] = "Contact person name is required.";
+	}
+	if (trim($data['cemail']) == "" ) { 
+		$errors['cemail'] = "Confirm Email is required.";
+	}
+	if (trim($data['email']) != "" && trim($data['cemail']) != "" && (trim($data['email']) != trim($data['cemail']))) {
+		$errors['email'] = "Email Address and Confirm Email Address mismatch.";
+	}
+	if(!isset($data['captcha']) || $data['captcha'] == "") {
+		$errors['captcha'] = "Error verifying reCAPTCHA, Please try again.";
+	}
+	else {
+        $ip = $_SERVER['REMOTE_ADDR'];
+        // post request to server
+        $url = 'https://www.google.com/recaptcha/api/siteverify?secret=' . urlencode($recpatcha_secret) .  '&response=' . urlencode($data['captcha']);
+        $response = file_get_contents($url);
+        $responseKeys = json_decode($response,true);
+        // should return JSON with success as true
+        if(!$responseKeys["success"]) { 
+			$errors['captcha'] = 'Error verifying reCAPTCHA, Please try again.';
+        }
+	}
+
+	$datax = [];
+	if (count($errors) != 0) { 
+		$datax['errors'] = $errors;
+	}
+	else {
+		$appToken = getToken();
+
+		$dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+		$sql = "INSERT INTO tusers (name, login, email, address, country, industry, category, prodnumber, ingrednumber, vat, contact_person, phone, lang, isclient, app_token) VALUES (:name, :login, :email, :address, :country, :industry, :category, :prodnumber, :ingrednumber, :vat, :contact_person, :phone, :lang, 1, :app_token)";
+		$stmt = $dbo->prepare($sql);
+		$stmt->bindValue(':name', $data['name']);
+		$stmt->bindValue(':login', $data['email']);
+		$stmt->bindValue(':email', $data['email']);
+		$stmt->bindValue(':address', $data['address']);		
+		$stmt->bindValue(':country', $data['country']);
+		$stmt->bindValue(':industry', $data['industry']);
+		$stmt->bindValue(':category', $data['category']);
+		$stmt->bindValue(':prodnumber', $data['prodnumber']);
+		$stmt->bindValue(':ingrednumber', $data['ingrednumber']);		
+		$stmt->bindValue(':vat', $data['vat']);						
+		$stmt->bindValue(':contact_person', $data['contact_person']);						
+		$stmt->bindValue(':phone', $data['phone']);								
+		$stmt->bindValue(':lang', $data['lang']);
+		$stmt->bindValue(':app_token', $appToken);
+		if(!$stmt->execute()) die(json_encode(generateErrorResponse("Unknown error!")));
+		$idclient = $dbo->lastInsertId();
+
+		$query = "INSERT INTO tapplications (idclient, prodnumber, ingrednumber) VALUES (:idclient, :prodnumber, :ingrednumber)";
+		$stmt = $dbo->prepare($query);
+		$stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);  
+		$stmt->bindValue(':prodnumber', $data['prodnumber']);
+		$stmt->bindValue(':ingrednumber', $data['ingrednumber']);		
+		$stmt->execute();
+		$idapp = $dbo->lastInsertId();
+		
+		$ownerEmailAddress = "halal.ezone@gmail.com";
+		$fromEmailAddress = "noreply@halal-e.zone";
+
+		$decode = file_get_contents( __DIR__ ."/../config.json"); 
+		$config=json_decode($decode, TRUE);
+		$attach = 'F0422_Application_Form_it.pdf';
+		$ext = "pdf";
+		$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".$data['name']." (".$idclient.")/application/";
+		mkdir($hostPath, 0777, true);
+		$filename = str_replace(".".$ext, '_'.$idapp.'.'.$ext, $attach);
+		$dest_path = $hostPath . $filename; 
+		saveApplicationPDF($data, $attach, $dest_path);
+
+		//sendEmailWithAttach
+		$body['name'] = 'Halal e-Zone';
+		$body['email'] =  $fromEmailAddress;
+		$body['to'] = $data['email'];
+		
+		$body['attachhostpath'] = $dest_path;
+		$body['attach'] = $filename;
+		
+		// sending notification
+		$body['subject'] = "Halal e-Zone Registration Confirmation";
+		//$body['header'] = "Client ".getClientInfo($prod['idclient'])." added a new product:";
+		$body['message'] = "Thank you for your registration. Please download the “Application Form” attached, fill it out and upload it at the link below. ";
+		$body['message'] .= "<br /><br />";
+		$body['message'] .= '<a href="http://test2022.halal-e.zone/upload?code='.$appToken.'">http://test2022.halal-e.zone/upload?code='.$appToken.'</a>';
+		
+		sendEmailWithAttach($body);
+
+		echo json_encode(generateSuccessResponse(array("id" => $idclient, 'errorInfo' => $dbo->errorInfo())));
+		exit;
+	}
+	
+	echo json_encode(generateSuccessResponse($datax));	
+}
+
+
+function logout(){
+	//$_SESSION = array();
+	//$params = session_get_cookie_params();
+	/*
+	setcookie(session_name(),
+		'', time() - 42000,
+		$params["path"],
+		$params["domain"],
+		$params["secure"],
+		$params["httponly"]);
+	*/
+	session_destroy();
+	echo json_encode(generateSuccessResponse());
+}
+
+/*
+ * 	Products
+ *
+ * */
+function getClients(){
+	try{
+		$dbo = &$GLOBALS['dbo'];
+		$dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+		$myuser = cuser::singleton();
+		$myuser->getUserData();
+		//print_r($userdata);
+		if ($myuser->userdata['isclient'] == '2') { // Auditor
+			$ids = [-1];
+			$clients_audit = $myuser->userdata['clients_audit'];
+			if ($clients_audit != "") {
+				$ids = json_decode($clients_audit);
+			}
+   			$sql = "SELECT id, name, prefix FROM tusers WHERE isclient=1 AND id IN (".implode(",", $ids).") ORDER BY name";
+		}
+		else {
+			$sql = "SELECT id, name, prefix FROM tusers WHERE isclient=1 ORDER BY name";
+		}
+		$stmt = $dbo->prepare($sql);
+		$stmt->setFetchMode(PDO::FETCH_ASSOC);
+		if(!$stmt->execute()) {
+			//echo json_encode(generateErrorResponse("Getting clients list failed"));
+			die();
+		}
+		return $stmt->fetchAll();
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+function sendClientsData() {
+	echo json_encode(generateSuccessResponse(array("clients"=>getClients())));
+}
+
+function getIngredientsForProduct($prod){
+	try{
+		$dbo = &$GLOBALS['dbo'];
+		$dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+		$sql = 'SELECT id, CONCAT("RMC_", id, "/", rmcode, "/", name) as text '.
+			'from tingredients where idclient=:idclient and deleted=0 order by name';
+		$stmt = $dbo->prepare($sql);
+		$stmt->setFetchMode(PDO::FETCH_ASSOC);
+		$stmt->bindValue(':idclient', $prod['idclient']);
+		if(!$stmt->execute()) {
+			echo json_encode(generateErrorResponse("Getting ingredients list failed"));
+			die();
+		}
+		return $stmt->fetchAll();
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+function sendIngredientsForProductData($prod) {
+	echo json_encode(generateSuccessResponse(array("ingredients"=>getIngredientsForProduct($prod))));
+}
+
+function sendNextProdIdData($prod){
+	try{
+		$dbo = &$GLOBALS['dbo'];
+		$dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+		$sql = "INSERT INTO tproducts (idclient) VALUES (:idclient)";
+		$stmt = $dbo->prepare($sql);
+		$stmt->setFetchMode(PDO::FETCH_ASSOC);
+		$stmt->bindValue(':idclient', $prod['idclient']);
+		if(!$stmt->execute()) die(json_encode(generateErrorResponse("Adding new product failed")));
+		echo json_encode(generateSuccessResponse(array("id" => $dbo->lastInsertId())));
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+function getClientInfo($idclient)
+{
+	try {
+		$dbo = &$GLOBALS['dbo'];
+		$dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+		$sql = "SELECT CONCAT(name,' (',prefix,id,')') as info FROM tusers WHERE id=:id";
+		$stmt = $dbo->prepare($sql);
+		$stmt->setFetchMode(PDO::FETCH_ASSOC);
+		$stmt->bindValue(':id', $idclient);
+		$stmt->execute();
+		return $stmt->fetch()['info'];
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+function saveProductData($prod){
+	try{
+		$dbo = &$GLOBALS['dbo'];
+		$sql = "UPDATE tproducts SET item=:item, ean=:ean, spec=:spec, addoc=:addoc WHERE id=:id";
+		$stmt = $dbo->prepare($sql);
+		$stmt->bindValue(':item', $prod['item']);
+		$stmt->bindValue(':ean', $prod['ean']);
+		$stmt->bindValue(':spec', $prod['spec']);
+		$stmt->bindValue(':addoc', $prod['addoc']);
+		$stmt->bindValue(':id', $prod['id']);
+		if (!$stmt->execute()){
+			echo json_encode(generateErrorResponse('Product updating failed'));
+			die();
+		}
+		$sql = "DELETE FROM tp2i WHERE idp=".$prod['id'];
+		$stmt = $dbo->prepare($sql);
+		if (!$stmt->execute()){
+			echo json_encode(generateErrorResponse('Product updating failed'));
+			die();
+		}
+		if(isset($prod['ingredients']) && !empty($prod['ingredients']))
+		foreach($prod['ingredients'] as $i){
+			$sql = "INSERT INTO tp2i (idp, idi) VALUES (:id, :idi)";
+			$stmt = $dbo->prepare($sql);
+			$stmt->bindValue(':idi', $i);
+			$stmt->bindValue(':id', $prod['id']);
+			if (!$stmt->execute()){
+				echo json_encode(generateErrorResponse('Product ingredients list updating failed'));
+				die();
+			}
+		}
+		echo json_encode(generateSuccessResponse('Product was updated'));
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+function addProductData($prod){
+	try{
+					echo json_encode(generateErrorResponse('asdasd lalsdlasldls'));
+			die();
+
+		$dbo = &$GLOBALS['dbo'];
+		$sql = "UPDATE tproducts SET item=:item, ean=:ean, spec=:spec, addoc=:addoc WHERE id=:id";
+		$stmt = $dbo->prepare($sql);
+		$stmt->bindValue(':item', $prod['item']);
+		$stmt->bindValue(':ean', $prod['ean']);
+		$stmt->bindValue(':spec', $prod['spec']);
+		$stmt->bindValue(':addoc', $prod['addoc']);
+		$stmt->bindValue(':id', $prod['id']);
+		if (!$stmt->execute()){
+			echo json_encode(generateErrorResponse('New product adding failed'));
+			die();
+		}
+		if(isset($prod['ingredients']) && !empty($prod['ingredients']))
+		foreach($prod['ingredients'] as $i){
+			$sql = "INSERT INTO tp2i (idp, idi) VALUES (:id, :idi)";
+			$stmt = $dbo->prepare($sql);
+			$stmt->bindValue(':idi', $i);
+			$stmt->bindValue(':id', $prod['id']);
+			if (!$stmt->execute()){
+				echo json_encode(generateErrorResponse('Product ingredients list updating failed'));
+				die();
+			}
+		}
+		// sending notification
+		$body['subject'] = "New Product notification";
+		$body['header'] = "Client ".getClientInfo($prod['idclient'])." added a new product:";
+		$body['body'] = $prod['item']." (HCP_".$prod['id'].")";
+		sendEmail($body);
+		echo json_encode(generateSuccessResponse('Product was updated'));
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+function removeProductData($prod){
+	try{
+		$dbo = &$GLOBALS['dbo'];
+		$sql = "DELETE FROM tproducts WHERE id=:id";
+		$stmt = $dbo->prepare($sql);
+		$stmt->bindValue(':id', $prod['id']);
+		if (!$stmt->execute()){
+			echo json_encode(generateErrorResponse('Product removing failed'));
+			die();
+		}
+		echo json_encode(generateSuccessResponse('Product was removed'));
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+function markDeletedProductData($prod){
+	try{
+		$dbo = &$GLOBALS['dbo'];
+		$sql = "UPDATE tproducts SET deleted = 1, deleted_at=NOW() WHERE id=:id";
+		$stmt = $dbo->prepare($sql);
+		$stmt->bindValue(':id', $prod['id']);
+		if (!$stmt->execute()){
+			echo json_encode(generateErrorResponse('Product removing failed'));
+			die();
+		}
+		echo json_encode(generateSuccessResponse('Product was removed'));
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+function productsExcelReportData($data){
+    try{
+        $ids = implode(',', $data['ids']);
+        $result = array();
+        $dbo = &$GLOBALS['dbo'];
+		//$deleted = 0;
+        $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+        $sql = 'SELECT p.id, CONCAT("HCP_", p.id) as hcpid, p.item as product, p.ean, MIN(IFNULL(r.conf, 0)) as conf from tproducts p '.
+            'left join tp2i on (tp2i.idp=p.id) '.
+            'left join tingredients i on (i.id=tp2i.idi) '.
+            'left join (SELECT i.id, (IF(MIN(s.conf) is NULL, 1, MIN(s.conf))*i.conf) as conf, GREATEST(IF(MAX(s.status) is NULL, 0, MAX(s.status)), i.status) as status from tingredients i '.
+            'left join ti2i on (ti2i.idi1=i.id) '.
+            'left join tingredients s on (s.id=ti2i.idi2) '.
+            'Group by i.id) r on (r.id=i.id) '.
+            'WHERE p.id in ('.$ids.') AND p.deleted=:deleted GROUP BY p.id';
+        $res = $dbo->prepare($sql);
+        $res->setFetchMode(PDO::FETCH_ASSOC);
+        $res->bindValue(':deleted', $data['displaymode']);
+        //$res->bindValue(':deleted', $deleted);
+        $res->execute();        
+        while($row = $res->fetch(PDO::FETCH_ASSOC)) {        
+            $sql='SELECT (IF(MIN(s.conf) is NULL, 1 , MIN(s.conf))*i.conf) as conf from tproducts p '.
+                'left join tp2i on (tp2i.idp=p.id) '.
+                'left join tingredients i on (i.id=tp2i.idi) '.
+                'left join ti2i on (ti2i.idi1=i.id) '.
+                'left join tingredients s on (s.id=ti2i.idi2) WHERE p.id='.$row['id'];
+            $stmt = $dbo->prepare($sql);
+            $stmt->execute();
+            $ingr = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $str = "[";
+            $allconf = 1;
+            foreach($ingr as $st){
+                if(empty($st['ingred'])) continue;
+                $str .= $st['ingred'] . ",";
+                $allconf *= $st['conf'];
+            }
+            $str = rtrim($str, ',')."]";
+            if($str == "[]"){
+                $allconf = 0;
+            }
+            // return only nonconformed if filter is set
+            if($data['conformed'] == 1) {
+                if($allconf == 0) {
+                    $result[] = $row;
+                }
+            }else{
+                $result[] = $row;
+            }
+        }
+/*
+
+        $sql = 'SELECT CONCAT("HCP_", p.id) as hcpid, p.item as product, p.ean, MIN(r.conf) as conf from tproducts p '.
+            'left join tp2i on (tp2i.idp=p.id) '.
+            'left join tingredients i on (i.id=tp2i.idi) '.
+            'left join (SELECT i.id, (IF(MIN(s.conf) is NULL, 1, MIN(s.conf))*i.conf) as conf, GREATEST(IF(MAX(s.status) is NULL, 0, MAX(s.status)), i.status) as status from tingredients i '.
+            'left join ti2i on (ti2i.idi1=i.id) '.
+            'left join tingredients s on (s.id=ti2i.idi2) '.
+            'Group by i.id) r on (r.id=i.id) '.
+            ' WHERE p.idclient=:idclient AND p.deleted=:deleted GROUP BY p.id having (conf=:conf)  ORDER BY p.item';
+        $stmt = $dbo->prepare($sql);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        $stmt->bindValue(':idclient', $data['idclient']);
+        $stmt->bindValue(':deleted', $data['displaymode']);
+        $stmt->bindValue(':conf', $data['conformed']);
+
+        if(!$stmt->execute()) {
+            echo json_encode(generateErrorResponse("Getting products list failed"));
+            die();
+        }*/
+        
+        echo json_encode(generateSuccessResponse(getProductsExcelReport($result)));
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+function confirmedProductsExcelReportData($data){ // ONLY CONFIRMED!
+    try{ 
+        $ids = count($data['ids']) > 0 ? implode(',', $data['ids']) : "";
+        $result = array();
+        $dbo = &$GLOBALS['dbo'];
+        $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+        $sql = 'SELECT p.id, p.item as product, p.ean, MIN(i.conf) as c from tproducts p '.
+               'left join tp2i on (tp2i.idp=p.id) '.
+               'left join tingredients i on (i.id=tp2i.idi) '.
+               'where '.($ids != "" ? 'p.id in ('.$ids.') AND ': '').' i.deleted=0 and p.deleted=0 and p.idclient=:idclient GROUP BY p.id having c=1';
+        $res = $dbo->prepare($sql);
+        $res->setFetchMode(PDO::FETCH_ASSOC);
+        $res->bindValue(':idclient', $data['idclient']);
+        $res->execute();
+        echo json_encode(generateSuccessResponse(getConfirmedProductsExcelReport($res)));
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+/* Ingredients */
+
+function getIngredientsForIngredient($prod){
+	try{
+		$dbo = &$GLOBALS['dbo'];
+        $sql = 'SELECT id, CONCAT("RMC_", id, "/", rmcode, "/", name) as text from tingredients where  idclient=:idclient AND sub=1 AND deleted = 0 ORDER BY name';
+		$stmt = $dbo->prepare($sql);
+		$stmt->setFetchMode(PDO::FETCH_ASSOC);
+		$stmt->bindValue(':idclient', $prod['idclient']);
+		if(!$stmt->execute()) {
+			echo json_encode(generateErrorResponse("Getting ingredients list failed"));
+			die();
+		}
+		return $stmt->fetchAll();
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+function sendIngredientsForIngredientData($prod) {
+	echo json_encode(generateSuccessResponse(array("ingredients"=>getIngredientsForIngredient($prod))));
+}
+
+function sendNextIngredIdData($prod){
+	try{
+		$dbo = &$GLOBALS['dbo'];
+		$dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+		$sql = "INSERT INTO tingredients (idclient) VALUES (:idclient)";
+		$stmt = $dbo->prepare($sql);
+		$stmt->setFetchMode(PDO::FETCH_ASSOC);
+		$stmt->bindValue(':idclient', $prod['idclient']);
+		if(!$stmt->execute()) die(json_encode(generateErrorResponse("Adding new ingredient failed")));
+		echo json_encode(generateSuccessResponse(array("id" => $dbo->lastInsertId())));
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+function saveIngredientData($prod){
+	try{
+		$status=0;
+		if($prod['halalcert'] == 1) {
+			if(isset($prod['halalexp']) && !empty($prod['halalexp'])){
+			$date = date("Y-m-d", strtotime($prod['halalexp']));
+			// count difference in dates to alarm expiry
+			$now = time(); // or your date as well
+			$certdate = strtotime($date);
+			$datediff = floor(($certdate - $now) / (60 * 60 * 24));
+
+			if ($datediff <= 7) $status = 3;
+			elseif ($datediff <= 28) $status = 2;
+			elseif ($datediff <= 56) $status = 1;
+			}
+		}
+
+		$dbo = &$GLOBALS['dbo'];
+		$sql = "SELECT * FROM tingredients WHERE id=".$prod['id'];
+		$stmt = $dbo->prepare($sql);
+		$stmt->bindValue(':id', $prod['id']);
+		$stmt->execute();
+		$ingredient = $stmt->fetch();
+
+		$sql = "UPDATE tingredients SET sub=:sub, name=:name, supplier=:supplier, statement=:statement, halalcert=:halalcert, ".
+					"cert=:cert, cb=:cb, halalexp=:halalexp, rmposition=:rmposition, rmcode=:rmcode, material=:material, spec=:spec, quest=:quest, ".
+					"conf=:conf, note=:note, status=:status, addoc=:addoc, producer=:producer WHERE id=:id";
+		$stmt = $dbo->prepare($sql);
+		$stmt->bindValue(':sub', $prod['sub']);
+		$stmt->bindValue(':name', $prod['name']);
+		$stmt->bindValue(':supplier', $prod['supplier']);
+		$stmt->bindValue(':producer', $prod['producer']);
+		$stmt->bindValue(':statement', $prod['state']);
+		if($prod['halalcert'] == 1){
+			$stmt->bindValue(':halalcert', 1);
+			$stmt->bindValue(':cert', $prod['cert']);
+			$stmt->bindValue(':cb', $prod['cb']);
+			$stmt->bindValue(':halalexp', $date);
+            $stmt->bindValue(':rmposition', $prod['rmposition']);
+		}else{
+			$stmt->bindValue(':halalcert', 0);
+			$stmt->bindValue(':cert', $prod['cert']);
+			$stmt->bindValue(':cb', null, PDO::PARAM_INT);
+			$stmt->bindValue(':halalexp', null, PDO::PARAM_INT);
+            $stmt->bindValue(':rmposition', null, PDO::PARAM_INT);
+		}
+		$stmt->bindValue(':spec', $prod['spec']);
+		$stmt->bindValue(':rmcode', $prod['code']);
+		if(!empty($prod['material']))
+			$stmt->bindValue(':material', $prod['material']);
+		else $stmt->bindValue(':material', null, PDO::PARAM_INT);
+		$stmt->bindValue(':quest', $prod['quest']);
+		$stmt->bindValue(':note', $prod['note']);
+		$stmt->bindValue(':status', $status);
+		$stmt->bindValue(':addoc', $prod['addoc']);
+		if (isset($ingredient['cb']) && (strtolower($ingredient['cb']) != strtolower($prod['cb']))) {
+			$stmt->bindValue(':conf', 0);
+		}
+		else { 
+			$stmt->bindValue(':conf', $prod['conf']);
+			if ($prod['conf'] == 1) {
+				$sql = "UPDATE tclientactions SET status = 1 WHERE itemid = :itemid";
+				$stmt1 = $dbo->prepare($sql);
+				$stmt1->bindValue(':itemid', $prod['id']);
+				//$stmt1->bindValue(':itemcode', $prod['code']);
+				$stmt1->execute();
+			}
+		}
+		$stmt->bindValue(':id', $prod['id']);
+		if (!$stmt->execute()){
+			echo json_encode(generateErrorResponse('Ingredient updating failed'));
+			die();
+    }
+    // remove all tasks (deviations) for the ingrediarent if it is conformed
+    if($prod['conf'] == 1){
+      if(!confirmAllTaskForIngredient($prod)){
+        echo json_encode(generateErrorResponse('Tasks updating failed'));
+		 	  die();
+      }
+		}
+		if(isset($prod['ingred']) && !empty($prod['ingred'])){
+			$sql = "DELETE FROM ti2i WHERE idi1=".$prod['id'];
+			$res = $dbo->prepare($sql);
+			if (!$res->execute()) die($sql);
+			foreach($prod['ingred'] as $i){
+				$sql = "INSERT INTO ti2i (idi1, idi2) VALUES (:id, :idi)";
+				$res = $dbo->prepare($sql);
+				$res->bindValue(':id', $prod['id']);
+				$res->bindValue(':idi', $i);
+				if (!$res->execute()){
+					echo json_encode(generateErrorResponse('Ingredient updating failed'));
+					die();
+				}
+            }
+		}
+		echo json_encode(generateSuccessResponse('Ingredient was updated'));
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+function removeIngredientData($prod){
+	try { 
+
+		$dbo = &$GLOBALS['dbo'];
+		
+		$sql = "DELETE FROM tp2i WHERE idi=:id)";
+		$stmt = $dbo->prepare($sql);
+		$stmt->bindValue(':id', $prod['id']);
+		$stmt->execute();
+		
+		$sql = "DELETE FROM ti2i WHERE idi2=:id";
+		$stmt = $dbo->prepare($sql);
+		$stmt->bindValue(':id', $prod['id']);
+		$stmt->execute();		
+		
+		$sql = "DELETE FROM tingredients WHERE id=:id";
+		$stmt = $dbo->prepare($sql);
+		$stmt->bindValue(':id', $prod['id']);
+		if (!$stmt->execute()){
+			echo json_encode(generateErrorResponse('Ingredient removing failed'));
+			die();
+		}
+
+		echo json_encode(generateSuccessResponse('Ingredient was removed'));
+		
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+function markDeletedIngredientData($prod){
+	try{
+		$dbo = &$GLOBALS['dbo'];
+		$sql = "UPDATE tingredients SET deleted = 1 WHERE id=:id";
+		$stmt = $dbo->prepare($sql);
+		$stmt->bindValue(':id', $prod['id']);
+		if (!$stmt->execute()){
+			echo json_encode(generateErrorResponse('Ingredient removing failed'));
+			die();
+		}
+		echo json_encode(generateSuccessResponse('Ingredient was removed'));
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+function changeConformityData($prod){
+	try{
+		$dbo = &$GLOBALS['dbo'];
+		$sql = "UPDATE tingredients SET conf = conf XOR 1 WHERE id=:id";
+		$stmt = $dbo->prepare($sql);
+		$stmt->bindValue(':id', $prod['id']);
+		if (!$stmt->execute()){
+			echo json_encode(generateErrorResponse('Ingredient updating failed'));
+			die();
+		}    
+		echo json_encode(generateSuccessResponse('Ingredient conformity updated'));  
+    $sql = "SELECT conf FROM tingredients WHERE id=:id";
+		$stmt = $dbo->prepare($sql);
+		$stmt->bindValue(':id', $prod['id']);
+		$stmt->execute(); 
+    if($stmt->fetch()['conf'] == 1) {
+      // if conformed, reset all the tasks and Actions 
+      if(!confirmAllTaskForIngredient($prod)){
+        echo json_encode(generateErrorResponse('Tasks updating failed'));
+        die();
+      }
+      if(!confirmAllActionsForIngredient($prod)){
+        echo json_encode(generateErrorResponse('Actions updating failed'));
+        die();
+      }
+    }
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+
+function restoreIngredData($data){
+	try{
+		$dbo = &$GLOBALS['dbo'];
+		$sql = "UPDATE tingredients SET deleted = 0 WHERE id=:id";
+		$stmt = $dbo->prepare($sql);
+		$stmt->bindValue(':id', $data['id']);
+		if (!$stmt->execute()){
+			echo json_encode(generateErrorResponse('Ingredient restoring failed'));
+			die();
+		}
+		echo json_encode(generateSuccessResponse('Ingredient was restored'));
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+function restoreProdData($data){
+	try{
+		$dbo = &$GLOBALS['dbo'];
+		$sql = "UPDATE tproducts SET deleted = 0 WHERE id=:id";
+		$stmt = $dbo->prepare($sql);
+		$stmt->bindValue(':id', $data['id']);
+		if (!$stmt->execute()){
+			echo json_encode(generateErrorResponse('Product restoring failed'));
+			die();
+		}
+		echo json_encode(generateSuccessResponse('Product was restored'));
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+function assignTaskForIngredientData($prod){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+        if (($prod['status']) == 0)
+            $sql = "DELETE FROM td2i WHERE idd=:idd AND idi=:idi"; // remove the task
+        else
+            $sql = "INSERT INTO td2i (idd, idi) VALUES (:idd, :idi)"; // assign task;
+        $stmt = $dbo->prepare($sql);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        $stmt->bindValue(':idd', $prod['idd']);
+        $stmt->bindValue(':idi', $prod['idi']);
+        if(!$stmt->execute()) die(json_encode(generateErrorResponse("Assigning new task failed")));
+        echo json_encode(generateSuccessResponse(array("id" => $dbo->lastInsertId())));
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+function ingredientsExcelReportData($data){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+        $sql = 'select DATE_FORMAT(di.created_at, \'%e %M %Y\') as time, '.
+            'CONCAT("RMC_", i.id) as rmid, REPLACE(i.name, "<br/>", "\\n\\r") as name, '.
+            'i.supplier, i.producer, GROUP_CONCAT(d.deviation) as deviation, GROUP_CONCAT(d.measure) as measure from tingredients i '.
+            ' inner join td2i di on di.idi=i.id '.
+            ' inner join tdeviations d on d.id=di.idd '.
+            ' WHERE i.idclient=:idclient AND di.status < 2 GROUP BY i.id ORDER BY i.id';
+        $stmt = $dbo->prepare($sql);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        $stmt->bindValue(':idclient', $data['idclient']);
+        //$stmt->bindValue(':deleted', $data['displaymode']);
+        if(!$stmt->execute()) {
+            echo json_encode(generateErrorResponse("Getting ingredients list failed"));
+            die();
+        }
+        echo json_encode(generateSuccessResponse(getIngredientsExcelReport($stmt->fetchAll())));
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+function ingredientsAllExcelReportData($data){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+				$sql = 'select DATE_FORMAT(di.created_at, \'%e %M %Y\') as time, '.
+            'CONCAT("RMC_", i.id) as rmid, i.name, i.rmcode, i.halalcert, i.cb, i.conf, '.
+            'i.supplier, i.producer, GROUP_CONCAT(d.deviation) as deviation, GROUP_CONCAT(d.measure) as measure from tingredients i '.
+            ' left join td2i di on di.idi=i.id '.
+            ' left join tdeviations d on d.id=di.idd '.
+            ' WHERE i.idclient=:idclient AND i.deleted = 0 GROUP BY i.id ORDER BY i.id';
+        $stmt = $dbo->prepare($sql);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        $stmt->bindValue(':idclient', $data['idclient']);
+        //$stmt->bindValue(':deleted', $data['displaymode']);
+        if(!$stmt->execute()) {
+            echo json_encode(generateErrorResponse("Getting ingredients list failed"));
+            die();
+        }
+        echo json_encode(generateSuccessResponse(getAllIngredientsExcelReport($stmt->fetchAll())));
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+/** QM */
+
+function sendNextQMIdData($prod){
+	try{
+		$dbo = &$GLOBALS['dbo'];
+		$dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+		$sql = "INSERT INTO tqm (idclient) VALUES (:idclient)";
+		$stmt = $dbo->prepare($sql);
+		$stmt->setFetchMode(PDO::FETCH_ASSOC);
+		$stmt->bindValue(':idclient', $prod['idclient']);
+		if(!$stmt->execute()) die(json_encode(generateErrorResponse("Adding new QM failed")));
+		echo json_encode(generateSuccessResponse(array("id" => $dbo->lastInsertId())));
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+function saveQMData($prod){
+	try{
+		$dbo = &$GLOBALS['dbo'];
+		$sql = "UPDATE tqm SET dt=:dt, policy=:policy, haccp=:haccp, team=:team, purchasing=:purchasing, ".
+                "cleaning=:cleaning, production=:production, flowchart=:flowchart, qcertificate=:qcertificate, ".
+			"storage=:storage, audit=:audit, analysis=:analysis, addoc=:addoc, note=:note, training=:training, handling=:handling, traceability=:traceability WHERE id=:id";
+		$stmt = $dbo->prepare($sql);
+		$stmt->bindValue(':dt', $prod['dt']);
+		$stmt->bindValue(':policy', $prod['policy']);
+		$stmt->bindValue(':haccp', $prod['haccp']);
+		$stmt->bindValue(':team', $prod['team']);
+		$stmt->bindValue(':purchasing', $prod['purchasing']);
+		$stmt->bindValue(':cleaning', $prod['cleaning']);
+		$stmt->bindValue(':production', $prod['production']);
+		$stmt->bindValue(':storage', $prod['storage']);
+		$stmt->bindValue(':audit', $prod['audit']);
+		$stmt->bindValue(':analysis', $prod['analysis']);
+		$stmt->bindValue(':addoc', $prod['addoc']);
+		$stmt->bindValue(':note', $prod['note']);
+		$stmt->bindValue(':id', $prod['id']);
+		$stmt->bindValue(':training', $prod['training']);
+		$stmt->bindValue(':handling', $prod['handling']);
+		$stmt->bindValue(':traceability', $prod['traceability']);
+		$stmt->bindValue(':flowchart', $prod['flowchart']);
+		$stmt->bindValue(':qcertificate', $prod['qcertificate']);
+		if (!$stmt->execute()){
+			echo json_encode(generateErrorResponse('QM updating failed'));
+			die();
+		}
+		echo json_encode(generateSuccessResponse('QM was updated'));
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+function removeQMData($prod){
+	try{
+		$dbo = &$GLOBALS['dbo'];
+		$sql = "DELETE FROM tqm WHERE id=:id";
+		$stmt = $dbo->prepare($sql);
+		$stmt->bindValue(':id', $prod['id']);
+		if (!$stmt->execute()){
+			echo json_encode(generateErrorResponse('QM removing failed'));
+			die();
+		}
+		echo json_encode(generateSuccessResponse('QM was removed'));
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+function markDeletedQMData($prod){
+	try{
+		$dbo = &$GLOBALS['dbo'];
+		$sql = "UPDATE tqm SET deleted = 1 WHERE id=:id";
+		$stmt = $dbo->prepare($sql);
+		$stmt->bindValue(':id', $prod['id']);
+		if (!$stmt->execute()){
+			echo json_encode(generateErrorResponse('QM removing failed'));
+			die();
+		}
+		echo json_encode(generateSuccessResponse('QM was removed'));
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+/** Audit */
+
+function sendNextAuditIdData(){
+	try{
+		$dbo = &$GLOBALS['dbo'];
+		$dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+		$sql = "INSERT INTO taudit (auditnr) VALUES ('')";
+		$stmt = $dbo->prepare($sql);
+		$stmt->setFetchMode(PDO::FETCH_ASSOC);
+		if(!$stmt->execute()) die(json_encode(generateErrorResponse("Adding new Audit failed")));
+		echo json_encode(generateSuccessResponse(array("id" => $dbo->lastInsertId())));
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+function saveAuditData($prod){
+	try{
+		$dbo = &$GLOBALS['dbo'];
+		$sql = "UPDATE taudit SET auditnr=:auditnr, auditorid=:auditorid, auditorname=:auditorname, auditeename=:auditeename, aorder=:order, ".
+				"plan=:plan, report=:report, certificate=:certificate, gtc=:gtc WHERE id=:id";
+		$stmt = $dbo->prepare($sql);
+		$stmt->bindValue(':auditnr', $prod['auditnr']);
+		$stmt->bindValue(':auditorid', $prod['auditorid']);
+		$stmt->bindValue(':auditorname', $prod['auditorname']);
+		$stmt->bindValue(':auditeename', $prod['auditeename']);
+		$stmt->bindValue(':order', $prod['order']);
+		$stmt->bindValue(':plan', $prod['plan']);
+		$stmt->bindValue(':report', $prod['report']);
+		$stmt->bindValue(':certificate', $prod['certificate']);
+		$stmt->bindValue(':gtc', $prod['gtc']);
+		$stmt->bindValue(':id', $prod['id']);
+		if (!$stmt->execute()){
+			echo json_encode(generateErrorResponse('Audit record updating failed'));
+			die();
+		}
+		echo json_encode(generateSuccessResponse('Audit record was updated'));
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+function removeAuditData($prod){
+	try{
+		$dbo = &$GLOBALS['dbo'];
+		$sql = "DELETE FROM taudit WHERE id=:id";
+		$stmt = $dbo->prepare($sql);
+		$stmt->bindValue(':id', $prod['id']);
+		if (!$stmt->execute()){
+			echo json_encode(generateErrorResponse('Audit record removing failed'));
+			die();
+		}
+		echo json_encode(generateSuccessResponse('Audit record was removed'));
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+
+/** Admin */
+
+function sendNextAdminIdData(){
+	try{
+		$dbo = &$GLOBALS['dbo'];
+		$dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+		$sql = "INSERT INTO tusers (name) VALUES ('')";
+		$stmt = $dbo->prepare($sql);
+		$stmt->setFetchMode(PDO::FETCH_ASSOC);
+		if(!$stmt->execute()) die(json_encode(generateErrorResponse("Adding new client failed")));
+		echo json_encode(generateSuccessResponse(array("id" => $dbo->lastInsertId())));
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+function saveAdminData($prod){
+	try{
+		$dbo = &$GLOBALS['dbo'];
+		$dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+		if(isset($prod['pass']) && !empty($prod['pass'])) {
+			$sql = "UPDATE tusers SET name=:name, email=:email, prefix=:prefix, login=:login, pass=:pass, isclient=:isclient, ".
+			 	" dashboard=:dashboard, application=:application,  products=:products, ingredients=:ingredients, documents=:documents, clients_audit=:clients_audit, sources_audit=:sources_audit, canadmin=:canadmin, prodnumber=:prodnumber, ingrednumber=:ingrednumber WHERE id=:id";
+			$stmt = $dbo->prepare($sql);
+			$stmt->bindValue(':pass', $prod['pass']);
+		}else{
+			$sql = "UPDATE tusers SET name=:name, email=:email, prefix=:prefix, login=:login, isclient=:isclient, ".
+				" dashboard=:dashboard, application=:application, products=:products, ingredients=:ingredients, documents=:documents, clients_audit=:clients_audit, sources_audit=:sources_audit, canadmin=:canadmin, prodnumber=:prodnumber, ingrednumber=:ingrednumber WHERE id=:id";
+			$stmt = $dbo->prepare($sql);
+		}
+		$clients_audit = json_encode($prod['clients_audit']);
+		$sources_audit = json_encode($prod['sources_audit']);
+		$stmt->bindValue(':name', $prod['name']);
+		$stmt->bindValue(':email', $prod['email']);
+		$stmt->bindValue(':prefix', $prod['prefix']);
+		$stmt->bindValue(':login', $prod['login']);
+		$stmt->bindValue(':isclient', $prod['isclient']);
+	///	$stmt->bindValue(':clients', $prod['clients']);
+		$stmt->bindValue(':dashboard', $prod['dashboard']);
+		$stmt->bindValue(':application', $prod['application']);
+		$stmt->bindValue(':products', $prod['products']);
+		$stmt->bindValue(':ingredients', $prod['ingredients']);
+		$stmt->bindValue(':documents', $prod['documents']);
+		$stmt->bindValue(':clients_audit', $clients_audit);
+		$stmt->bindValue(':sources_audit', $sources_audit);
+		$stmt->bindValue(':prodnumber', $prod['prodnumber']);
+		$stmt->bindValue(':ingrednumber', $prod['ingrednumber']);
+		$stmt->bindValue(':canadmin', $prod['canadmin']);
+		$stmt->bindValue(':id', $prod['id']);
+		if (!$stmt->execute()){
+			echo json_encode(generateErrorResponse('Client record updating failed'));
+			die();
+		}
+        addCyclesForClient(array("idclient" => $prod["id"]));
+		echo json_encode(generateSuccessResponse('Client record was updated'));
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+function getAdminData($id){
+	try{
+		$dbo = &$GLOBALS['dbo'];
+		$dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+
+		$query = "SELECT * FROM tusers AS t WHERE id = ?";
+		$stmt = $dbo->prepare($query);
+		$stmt->bindParam(1, $_POST['id'], PDO::PARAM_STR);
+		if (!$stmt->execute()){
+			echo json_encode(generateErrorResponse('Client record not found'));
+			die();
+		}
+		$row = $stmt->fetch(PDO::FETCH_ASSOC);
+		if ($row['clients_audit'] != "") { 
+			$row['clients_audit'] = json_decode($row['clients_audit']);
+		}
+		if ($row['sources_audit'] != "") { 
+			$row['sources_audit'] = json_decode($row['sources_audit']);
+		}
+		echo json_encode(generateSuccessResponse($row));
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+function removeAdminData($prod){
+	try{
+		$dbo = &$GLOBALS['dbo'];
+		$sql = "UPDATE tusers SET deleted=1 WHERE id=:id";
+		$stmt = $dbo->prepare($sql);
+		$stmt->bindValue(':id', $prod['id']);
+		if (!$stmt->execute()){
+			echo json_encode(generateErrorResponse('Client record deleting failed'));
+			die();
+		}
+		echo json_encode(generateSuccessResponse('Client record was removed'));
+	} catch (PDOException $e){
+		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+		die();
+	}
+}
+
+function changeIsClientData($data){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $sql = "UPDATE tusers SET isclient = isclient XOR 1 WHERE id=:id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':id', $data['id']);
+        if (!$stmt->execute()){
+            echo json_encode(generateErrorResponse('Record updating failed'));
+            die();
+        }
+        echo json_encode(generateSuccessResponse('Record conformity updated'));
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+function changeApplicationData($data){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $sql = "UPDATE tusers SET application = application XOR 1 WHERE id=:id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':id', $data['id']);
+        if (!$stmt->execute()){
+            echo json_encode(generateErrorResponse('Record updating failed'));
+            die();
+        }
+        echo json_encode(generateSuccessResponse('Record conformity updated'));
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+function changeClientsData($data){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $sql = "UPDATE tusers SET clients = clients XOR 1 WHERE id=:id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':id', $data['id']);
+        if (!$stmt->execute()){
+            echo json_encode(generateErrorResponse('Record updating failed'));
+            die();
+        }
+        echo json_encode(generateSuccessResponse('Record conformity updated'));
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+function changeAuditData($data){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $sql = "UPDATE tusers SET audit = audit XOR 1 WHERE id=:id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':id', $data['id']);
+        if (!$stmt->execute()){
+            echo json_encode(generateErrorResponse('Record updating failed'));
+            die();
+        }
+        echo json_encode(generateSuccessResponse('Record conformity updated'));
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+function changeCanAdminData($data){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $sql = "UPDATE tusers SET canadmin = canadmin XOR 1 WHERE id=:id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':id', $data['id']);
+        if (!$stmt->execute()){
+            echo json_encode(generateErrorResponse('Record updating failed'));
+            die();
+        }
+        echo json_encode(generateSuccessResponse('Record conformity updated'));
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+function unblockUserData($data){
+	try{
+			$dbo = &$GLOBALS['dbo'];
+			$sql = "DELETE from attempts WHERE iduser=:id";
+			$stmt = $dbo->prepare($sql);
+			$stmt->bindValue(':id', $data['id']);
+			if (!$stmt->execute()){
+					echo json_encode(generateErrorResponse('Unblocking user failed'));
+					die();
+			}
+			echo json_encode(generateSuccessResponse('User account unblocked'));
+	} catch (PDOException $e){
+			echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+			die();
+	}
+}
+
+function addCyclesForClient($prod){
+	try{
+			$dbo = &$GLOBALS['dbo'];
+			$dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+			$sql = "SELECT COUNT(id) as count FROM tcycles WHERE idclient=:idclient";
+			$stmt = $dbo->prepare($sql);
+			$stmt->bindValue(':idclient', $prod['idclient']);
+			$stmt->setFetchMode(PDO::FETCH_ASSOC);
+			if(!$stmt->execute()) return false;
+			if($stmt->fetch()['count'] == 0)
+					return addCycles($prod['idclient']);
+			return true;
+	} catch (PDOException $e){
+			echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+			die();
+	}
+}
+
+/*  Applications */
+
+function addSubCycles($cycle){
+	try{
+			$dbo = &$GLOBALS['dbo'];
+			$dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+			$sql = "INSERT INTO tapplications (idcycle, name, state) VALUES (:idcycle, :name, :state)";
+			$stmt = $dbo->prepare($sql);
+			$stmt->bindValue(':idcycle', $cycle['idcycle']);
+			$stmt->bindValue(':name', "Initial application");
+			$stmt->bindValue(':state', $cycle['state']);
+			$stmt->setFetchMode(PDO::FETCH_ASSOC);
+			if(!$stmt->execute()) return false;
+			$stmt->bindValue(':name', "Surveillance 1");
+			$stmt->bindValue(':state', 0);
+			$stmt->setFetchMode(PDO::FETCH_ASSOC);
+			if(!$stmt->execute()) return false;
+			$stmt->bindValue(':name', "Surveillance 2");
+			$stmt->bindValue(':state', 0);
+			$stmt->setFetchMode(PDO::FETCH_ASSOC);
+			if(!$stmt->execute()) return false;
+			return true;
+	} catch (PDOException $e){
+			echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+			die();
+	}
+}
+
+function addCycles($idclient){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+        $sql = "INSERT INTO tcycles (idclient, name, state) VALUES (:idclient, :name, :state)";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':idclient', $idclient);
+        $stmt->bindValue(':name', "Certification cycle 1");
+        $stmt->bindValue(':state', 1);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        if(!$stmt->execute()) return false;
+        if(!addSubCycles(array("idcycle"=>$dbo->lastInsertId(), "state"=>1))) return false;
+        $stmt->bindValue(':name', "Certification cycle 2");
+        $stmt->bindValue(':state', 0);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        if(!$stmt->execute()) return false;
+        if(!addSubCycles(array("idcycle"=>$dbo->lastInsertId(), "state"=>0))) return false;
+        $stmt->bindValue(':name', "Certification cycle 3");
+        $stmt->bindValue(':state', 0);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        if(!$stmt->execute()) return false;
+        if(!addSubCycles(array("idcycle"=>$dbo->lastInsertId(), "state"=>0))) return false;
+        $stmt->bindValue(':name', "Certification cycle 4");
+        $stmt->bindValue(':state', 0);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        if(!$stmt->execute()) return false;
+        if(!addSubCycles(array("idcycle"=>$dbo->lastInsertId(), "state"=>0))) return false;
+        $stmt->bindValue(':name', "Certification cycle 5");
+        $stmt->bindValue(':state', 0);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        if(!$stmt->execute()) return false;
+        if(!addSubCycles(array("idcycle"=>$dbo->lastInsertId(), "state"=>0))) return false;
+        $stmt->bindValue(':name', "Certification cycle 6");
+        $stmt->bindValue(':state', 0);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        if(!$stmt->execute()) return false;
+        if(!addSubCycles(array("idcycle"=>$dbo->lastInsertId(), "state"=>0))) return false;
+        $stmt->bindValue(':name', "Certification cycle 7");
+        $stmt->bindValue(':state', 0);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        if(!$stmt->execute()) return false;
+        if(!addSubCycles(array("idcycle"=>$dbo->lastInsertId(), "state"=>0))) return false;
+        $stmt->bindValue(':name', "Certification cycle 8");
+        $stmt->bindValue(':state', 0);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        if(!$stmt->execute()) return false;
+        if(!addSubCycles(array("idcycle"=>$dbo->lastInsertId(), "state"=>0))) return false;
+        $stmt->bindValue(':name', "Certification cycle 9");
+        $stmt->bindValue(':state', 0);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        if(!$stmt->execute()) return false;
+        if(!addSubCycles(array("idcycle"=>$dbo->lastInsertId(), "state"=>0))) return false;
+        $stmt->bindValue(':name', "Certification cycle 10");
+        $stmt->bindValue(':state', 0);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        if(!$stmt->execute()) return false;
+        return addSubCycles(array("idcycle"=>$dbo->lastInsertId(), "state"=>0));
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+function activateNextCycle($prod){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $sql = "UPDATE tapplications SET state=1 WHERE id=:id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':id', $prod['id']+1);
+        return $stmt->execute();
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+function saveApplicationData($prod){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $sql = "UPDATE tapplications SET app=:app, offer=:offer, soffer=:soffer, halaltraining=:halaltraining, ".
+            "plan=:plan, checklist=:checklist, report=:report, action=:action, list=:list, payment=:payment, ".
+            "cert=:cert, newapp=:newapp, newcert=:newcert, state=:state, auditorname=:auditorname, ".
+            " startdt=:startdt, enddt=:enddt WHERE id=:id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':id', $prod['id']);
+        $stmt->bindValue(':app', $prod['app']);
+        if (isset($prod['auditorname']))
+            $stmt->bindValue(':auditorname', $prod['auditorname']);
+        else
+            $stmt->bindValue(':auditorname', null, PDO::PARAM_STR);
+        $stmt->bindValue(':offer', $prod['offer']);
+        $stmt->bindValue(':soffer', $prod['soffer']);
+        $stmt->bindValue(':plan', $prod['plan']);
+        $stmt->bindValue(':checklist', $prod['checklist']);
+        $stmt->bindValue(':report', $prod['report']);
+        $stmt->bindValue(':action', $prod['action']);
+        $stmt->bindValue(':list', $prod['list']);
+        $stmt->bindValue(':payment', $prod['payment']);
+        $stmt->bindValue(':cert', $prod['cert']);
+        $stmt->bindValue(':newapp', $prod['newapp']);
+        $stmt->bindValue(':newcert', $prod['newcert']);
+        $stmt->bindValue(':halaltraining', $prod['halaltraining']);
+        $stmt->bindValue(':state', $prod['state']);
+        if (isset($prod['issuedate']) && !empty($prod['issuedate'])) {
+            $dt = new DateTime( $prod['issuedate'] );
+            $stmt->bindValue(':startdt', $dt->format('Y-m-d'));
+            $dt->add(new DateInterval('P1Y'));
+            $dt->sub(new DateInterval('P1D'));
+            $stmt->bindValue(':enddt', $dt->format('Y-m-d'));
+        } else {
+            $stmt->bindValue(':startdt', null, PDO::PARAM_STR);
+            $stmt->bindValue(':enddt', null, PDO::PARAM_STR);
+        }
+        if (!$stmt->execute()){
+            echo json_encode(generateErrorResponse('Application updating failed'));
+            die();
+        }
+        // if completed, set the next cycle active
+        if($prod['state'] == 0) {
+            activateNextCycle($prod);
+        }
+        echo json_encode(generateSuccessResponse('Application was updated'));
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+function updateApplicationField($app){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+        $sql = "UPDATE tapplications SET ".$app['name']."=:app WHERE id=:id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':id', $app['id']);
+        $stmt->bindValue(':app', $app['value']);
+        return $stmt->execute();
+    } catch (PDOException $e){
+        return false;
+    }
+}
+
+function invalidateApplicationFieldFiles($app){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+        // get files if any
+        $sql = 'select '.$app["name"]. ' from tapplications where id=:id';
+        $stmt = $dbo->prepare($sql);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        $stmt->bindValue(':id', $app['id']);
+        if(!$stmt->execute()) {
+            return false;
+        }
+        $res = json_decode( "[".$stmt->fetch()[ $app["name"] ]."]" );
+        foreach($res as $key => &$value ) {
+            $value->invalid = "1";
+        }
+        $res = json_encode($res);
+        $res = str_replace( array("[", "]"), "", $res);
+        $sql = "UPDATE tapplications SET ".$app['name']."=:app WHERE id=:id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':id', $app['id']);
+        $stmt->bindValue(':app', $res);
+        return $stmt->execute();
+    } catch (PDOException $e){
+        return false;
+    }
+}
+
+function updateCycleDate($app){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+        $sql = "UPDATE tcycles SET startdt=:startdt WHERE id=(select idcycle from tapplications WHERE id=:id)";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':id', $app['id']);
+        $stmt->bindValue(':startdt', date('Y-m-d'));
+        return $stmt->execute();
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+function updateSubCycleDate($app){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+        $sql = "UPDATE tapplications SET startdt=:startdt, enddt=:enddt WHERE id=:id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':id', $app['id']);
+        $stmt->bindValue(':startdt', date('Y-m-d'));
+        $stmt->bindValue(':enddt', (date('Y')+1).date('-m-d'));
+        if(!$stmt->execute()) return false;
+        $sql = "UPDATE tcycles SET enddt=:enddt WHERE id=(select idcycle from tapplications WHERE id=:id)";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':id', $app['id']);
+        $stmt->bindValue(':enddt', (date('Y')+3).date('-m-d'));
+        return $stmt->execute();
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+function completeApplicationData($app){
+    sendCompleteApplicationNotification($app);
+    /*
+    if($app['name'] == 'certstate'){
+        if (!updateSubCycleDate($app)) {
+            echo json_encode(generateErrorResponse('Cycle date updating failed'));
+            die();
+        }
+    }
+    */
+    $app['value'] = 2;
+    if (!updateApplicationField($app)) {
+        echo json_encode(generateErrorResponse('Application completing failed'));
+        die();
+    }
+    if (!empty($app['nextname'])) {
+        $app['name'] = $app['nextname'];
+        $app['value'] = 1;
+        if (!updateApplicationField($app)) {
+            echo json_encode(generateErrorResponse('Application updating failed'));
+            die();
+        }
+    }
+    echo json_encode(generateSuccessResponse('Application was updated'));
+}
+
+function confirmApplicationData($app){
+    sendConfirmApplicationNotification($app);
+    /*
+    if($app['name'] == 'appstate'){
+        if (!updateCycleDate($app)) {
+            echo json_encode(generateErrorResponse('Cycle date updating failed'));
+            die();
+        }
+    }
+    */
+    $app['value'] = 3;
+    if(!updateApplicationField($app)){
+        echo json_encode(generateErrorResponse('Application updating failed'));
+        die();
+    }
+    $app['name'] = $app['nextname'];
+    $app['value'] = 1;
+    if(!updateApplicationField($app)) {
+       echo json_encode(generateErrorResponse('Application updating failed'));
+       die();
+    }
+    echo json_encode(generateSuccessResponse('Application was updated'));
+}
+
+function cancelApplicationData($app){
+    //sendConfirmApplicationNotification($app);
+    if ( $app["name"] == "report" )
+        $res = cancelApplicationFromAuditReport($app);
+    elseif ( $app["name"] == "checklist" )
+            $res = cancelApplicationFromCheckList($app);
+        elseif ( $app["name"] == "plan" )
+                $res = cancelApplicationFromAuditPlan($app);
+            else
+                $res = cancelApplicationFromOffer($app);
+    if ( $res )
+        echo json_encode(generateSuccessResponse('Application was cancelled'));
+    else
+        echo json_encode(generateErrorResponse('Application cancelling failed'));
+}
+
+function cancelApplicationFromAuditReport($app) {
+    // cancel all the step from this
+    $app['name'] = 'report';
+    $app['value'] = 1;
+    if ( !invalidateApplicationFieldFiles($app) )
+        return false;
+    $app['name'] = 'reportstate';
+    if ( !updateApplicationField($app) )
+        return false;
+    $app['name'] = 'action';
+    $app['value'] = 0;
+    if ( !invalidateApplicationFieldFiles($app) )
+        return false;
+    $app['name'] = 'actionstate';
+    if ( !updateApplicationField($app) )
+        return false;
+    $app['name'] = 'list';
+    $app['value'] = 0;
+    if ( !invalidateApplicationFieldFiles($app) )
+        return false;
+    $app['name'] = 'liststate';
+    if ( !updateApplicationField($app) )
+        return false;
+    $app['name'] = 'payment';
+    $app['value'] = 0;
+    if ( !invalidateApplicationFieldFiles($app) )
+        return false;
+    $app['name'] = 'paymentstate';
+    if ( !updateApplicationField($app) )
+        return false;
+    return true;
+}
+
+function cancelApplicationFromCheckList($app) {
+    $app['name'] = 'checklist';
+    $app['value'] = 1;
+    if ( !invalidateApplicationFieldFiles($app) )
+        return false;
+    $app['name'] = 'checkliststate';
+    if ( !updateApplicationField($app) )
+        return false;
+
+    $app['name'] = 'report';
+    $app['value'] = 0;
+    if ( !invalidateApplicationFieldFiles($app) )
+        return false;
+    $app['name'] = 'reportstate';
+    if ( !updateApplicationField($app) )
+        return false;
+
+    $app['name'] = 'action';
+    $app['value'] = 0;
+    if ( !invalidateApplicationFieldFiles($app) )
+        return false;
+    $app['name'] = 'actionstate';
+    if ( !updateApplicationField($app) )
+        return false;
+
+    $app['name'] = 'list';
+    $app['value'] = 0;
+    if ( !invalidateApplicationFieldFiles($app) )
+        return false;
+    $app['name'] = 'liststate';
+    if ( !updateApplicationField($app) )
+        return false;
+
+    $app['name'] = 'payment';
+    $app['value'] = 0;
+    if ( !invalidateApplicationFieldFiles($app) )
+        return false;
+    $app['name'] = 'paymentstate';
+    if ( !updateApplicationField($app) )
+        return false;
+    return true;
+}
+
+function cancelApplicationFromAuditPlan($app) {
+    $app['name'] = 'plan';
+    $app['value'] = 1;
+    if ( !invalidateApplicationFieldFiles($app) )
+        return false;
+    $app['name'] = 'planstate';
+    if ( !updateApplicationField($app) )
+        return false;
+
+    $app['value'] = 0;
+    $app['name'] = 'auditornamestate';
+    if ( !updateApplicationField($app) )
+        return false;
+
+    $app['name'] = 'checklist';
+    $app['value'] = 0;
+    if ( !invalidateApplicationFieldFiles($app) )
+        return false;
+    $app['name'] = 'checkliststate';
+    if ( !updateApplicationField($app) )
+        return false;
+
+    $app['name'] = 'report';
+    $app['value'] = 0;
+    if ( !invalidateApplicationFieldFiles($app) )
+        return false;
+    $app['name'] = 'reportstate';
+    if ( !updateApplicationField($app) )
+        return false;
+
+    $app['name'] = 'action';
+    $app['value'] = 0;
+    if ( !invalidateApplicationFieldFiles($app) )
+        return false;
+    $app['name'] = 'actionstate';
+    if ( !updateApplicationField($app) )
+        return false;
+
+    $app['name'] = 'list';
+    $app['value'] = 0;
+    if ( !invalidateApplicationFieldFiles($app) )
+        return false;
+    $app['name'] = 'liststate';
+    if ( !updateApplicationField($app) )
+        return false;
+
+    $app['name'] = 'payment';
+    $app['value'] = 0;
+    if ( !invalidateApplicationFieldFiles($app) )
+        return false;
+    $app['name'] = 'paymentstate';
+    if ( !updateApplicationField($app) )
+        return false;
+    return true;
+}
+
+function cancelApplicationFromOffer($app) {
+    $app['name'] = 'offer';
+    $app['value'] = 1;
+    if ( !invalidateApplicationFieldFiles($app) )
+        return false;
+    $app['name'] = 'offerstate';
+    if ( !updateApplicationField($app) )
+        return false;
+
+    $app['name'] = 'soffer';
+    $app['value'] = 0;
+    if ( !invalidateApplicationFieldFiles($app) )
+        return false;
+    $app['name'] = 'sofferstate';
+    if ( !updateApplicationField($app) )
+        return false;
+
+    $app['name'] = 'plan';
+    $app['value'] = 0;
+    if ( !invalidateApplicationFieldFiles($app) )
+        return false;
+    $app['name'] = 'planstate';
+    if ( !updateApplicationField($app) )
+        return false;
+
+    $app['value'] = 0;
+    $app['name'] = 'auditornamestate';
+    if ( !updateApplicationField($app) )
+        return false;
+
+    $app['name'] = 'checklist';
+    $app['value'] = 0;
+    if ( !invalidateApplicationFieldFiles($app) )
+        return false;
+    $app['name'] = 'checkliststate';
+    if ( !updateApplicationField($app) )
+        return false;
+
+    $app['name'] = 'report';
+    $app['value'] = 0;
+    if ( !invalidateApplicationFieldFiles($app) )
+        return false;
+    $app['name'] = 'reportstate';
+    if ( !updateApplicationField($app) )
+        return false;
+
+    $app['name'] = 'action';
+    $app['value'] = 0;
+    if ( !invalidateApplicationFieldFiles($app) )
+        return false;
+    $app['name'] = 'actionstate';
+    if ( !updateApplicationField($app) )
+        return false;
+
+    $app['name'] = 'list';
+    $app['value'] = 0;
+    if ( !invalidateApplicationFieldFiles($app) )
+        return false;
+    $app['name'] = 'liststate';
+    if ( !updateApplicationField($app) )
+        return false;
+
+    $app['name'] = 'payment';
+    $app['value'] = 0;
+    if ( !invalidateApplicationFieldFiles($app) )
+        return false;
+    $app['name'] = 'paymentstate';
+    if ( !updateApplicationField($app) )
+        return false;
+    return true;
+}
+
+function getClientDataByApplication($app){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+        $sql = "select u.name, u.email FROM tapplications a ".
+            " inner join tcycles c on a.idcycle = c.id ".
+            " inner join tusers u on u.id = c.idclient ".
+            " WHERE a.id=:id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        $stmt->bindValue(':id', $app['id']);
+        if(!$stmt->execute()) return false;
+        return $stmt->fetch();
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+function sendCompleteApplicationNotification($app){
+    $clientData = getClientDataByApplication($app);
+    $body['subject'] = 'New document notification';
+    switch($app['name']){
+        case 'offerstate': $body['header'] = 'New Offer has been uploaded to '.$app['cycle']; break;
+        case 'planstate': $body['header'] = 'New Audit plan has been uploaded to '.$app['cycle']; break;
+        case 'checkliststate': $body['header'] = 'New Check List has been uploaded to '.$app['cycle']; break;
+        case 'reportstate': $body['header'] = 'New Audit report has been uploaded to '.$app['cycle']; break;
+        default : $body['header'] = 'New Certificate has been uploaded to '.$app['cycle']; break;
+    }
+    $body['body'] = '';
+    return sendEmailCycleNotificationToClient($clientData, $body);
+}
+
+function sendConfirmApplicationNotification($app){
+    $clientData = getClientDataByApplication($app);
+    $body['subject'] = 'New document confirmation notification';
+    if($app['isclient'] == 0){
+        switch($app['name']){
+            case 'sofferstate': $body['header'] = 'New Signed offer has been confirmed in '.$app['cycle']; break;
+            case 'actionstate': $body['header'] = 'New Corrective actions plan offer has been confirmed in '.$app['cycle']; break;
+            case 'liststate': $body['header'] = 'New List of products has been confirmed in '.$app['cycle']; break;
+            default : $body['header'] = 'New Application has been confirmed in '.$app['cycle']; break;
+        }
+        $body['body'] = '';
+        return sendEmailCycleNotificationToClient($clientData, $body);
+    }else{
+        switch($app['name']){
+            case 'planstate': $body['header'] = 'New Audit plan has been confirmed by '.$clientData['name'].' in '.$app['cycle']; break;
+            case 'reportstate': $body['header'] = 'New Audit report has been confirmed by '.$clientData['name'].' in '.$app['cycle']; break;
+            default : $body['header'] = 'New Certificate has been confirmed by '.$clientData['name'].' in '.$app['cycle']; break;
+        }
+        $body['body'] = '';
+        return sendEmail($body);
+    }
+}
+
+function stopApplicationNotificationData($app){
+    $app['name'] = 'notifystatus';
+    $app['value'] = 3;
+    if (!updateApplicationField($app)) {
+       echo json_encode(generateErrorResponse('Application completing failed'));
+       die();
+    }
+    echo json_encode(generateSuccessResponse('Application was updated'));
+}
+
+function skipApplicationData($app){
+    $app['name'] = 'state';
+    $app['value'] = 0;
+    if (!updateApplicationField($app)) {
+       echo json_encode(generateErrorResponse('Application completing failed'));
+       die();
+    }
+    activateNextCycle($app);
+    echo json_encode(generateSuccessResponse('Application was updated'));
+}
+
+/*  Dashboard Data */
+function getClientStatistics($data){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+
+        // all clients ingredients
+        $sql = "select count(id) count from tingredients WHERE idclient=:idclient";
+        $stmt = $dbo->prepare($sql);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        $stmt->bindValue(':idclient', $data['id']);
+        if(!$stmt->execute()) return false;
+        $result['ingredPublished'] = $stmt->fetch()['count']*1;
+
+        // all client confirmed ingredients
+        $sql = "select count(id) count from tingredients WHERE idclient=:idclient and conf=1";
+        $stmt = $dbo->prepare($sql);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        $stmt->bindValue(':idclient', $data['id']);
+        if(!$stmt->execute()) return false;
+        $result['ingredConfirmed'] = $stmt->fetch()['count']*1;
+
+        // all client allowed
+        $sql = "select ingrednumber from tusers WHERE id=:idclient";
+        $stmt = $dbo->prepare($sql);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        $stmt->bindValue(':idclient', $data['id']);
+        if(!$stmt->execute()) return false;
+        $result['ingredNumber'] = $stmt->fetch()['ingrednumber']*1;
+
+        // all clients products
+        $sql = "select count(id) count from tproducts WHERE idclient=:idclient";
+        $stmt = $dbo->prepare($sql);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        $stmt->bindValue(':idclient', $data['id']);
+        if(!$stmt->execute()) return false;
+        $result['prodPublished'] = $stmt->fetch()['count']*1;
+
+        // all client confirmed products
+        $sql = "select count(pp.id) as count from ".
+            " (SELECT p.id, IF(count(i.id)-SUM(IF(i.conf is NULL, 0, i.conf))=0 AND count(si.id)-SUM(IF(si.conf is NULL, 0, si.conf))=0, 1, 0) as conf from tproducts p ".
+            " left join tp2i on (tp2i.idp=p.id) ".
+            " left join tingredients i on (i.id=tp2i.idi) ".
+            " left join ti2i on (ti2i.idi1=i.id) ".
+            " left join tingredients si on (si.id=ti2i.idi2) ".
+            " where p.idclient=:idclient group by p.id ) pp WHERE pp.conf=1";
+        $stmt = $dbo->prepare($sql);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        $stmt->bindValue(':idclient', $data['id']);
+        if(!$stmt->execute()) return false;
+        $result['prodConfirmed'] = $stmt->fetch()['count']*1;
+
+        // all client remained
+        $sql = "select prodnumber from tusers WHERE id=:idclient";
+        $stmt = $dbo->prepare($sql);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        $stmt->bindValue(':idclient', $data['id']);
+        if(!$stmt->execute()) return false;
+        $result['prodNumber'] = $stmt->fetch()['prodnumber']*1;
+
+        return $result;
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+function sendDashboardData($data){
+    $r = getClientStatistics($data);
+    if ($r)
+        $result['statistics'] = $r;
+    else
+        die(json_encode(generateErrorResponse("Getting client statistics failed")));
+
+    echo json_encode(generateSuccessResponse($result));
+}
+
+function addCertificateData($app){
+    try{
+        $status = 0;
+        $certdate = strtotime($app['expdate']);
+        $datediff = get_month_diff($certdate);
+
+        if ($datediff <= 0) $status = 4;
+        elseif ($datediff <= 30) $status = 3;
+        elseif ($datediff <= 60) $status = 2;
+        elseif ($datediff <= 90) $status = 1;
+
+        $dbo = &$GLOBALS['dbo'];
+        $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+        $sql = "INSERT INTO tcertificates (filename, url, hostpath, gdrivepath, expdate, status, idclient) ".
+            " VALUES (:filename, :url, :hostpath, :gdrivepath, :expdate, :status, :idclient)";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':filename', $app['filename']);
+        $stmt->bindValue(':idclient', $app['idclient']);
+        $stmt->bindValue(':url', $app['url']);
+        $stmt->bindValue(':hostpath', $app['hostpath']);
+        $stmt->bindValue(':gdrivepath', $app['gdrivepath']);
+        $stmt->bindValue(':expdate', date("Y-m-d", $certdate));
+        $stmt->bindValue(':status', $status);
+        if(!$stmt->execute()) die(json_encode(generateErrorResponse("Certificate inserting failed")));
+        echo json_encode(generateSuccessResponse('Certificate was inserted'));
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+function editCertificateData($app){
+    try{
+        $status = 0;
+        $certdate = strtotime($app['expdate']);
+        $datediff = get_month_diff($certdate);
+
+        if ($datediff <= 0) $status = 4;
+        elseif ($datediff <= 30) $status = 3;
+        elseif ($datediff <= 60) $status = 2;
+        elseif ($datediff <= 90) $status = 1;
+
+        $dbo = &$GLOBALS['dbo'];
+        $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+        $sql = "UPDATE tcertificates SET expdate=:expdate, status=:status WHERE id=:id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':id', $app['id']);
+        $stmt->bindValue(':expdate', date("Y-m-d", $certdate));
+        $stmt->bindValue(':status', $status);
+        if(!$stmt->execute()) die(json_encode(generateErrorResponse("Date updating failed")));
+        echo json_encode(generateSuccessResponse('Expiry date was updated'));
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+function removeCertificateData($data){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $sql = "DELETE FROM tcertificates WHERE id=:id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':id', $data['id']);
+        if (!$stmt->execute()){
+            echo json_encode(generateErrorResponse('Certificate removing failed'));
+            die();
+        }
+        echo json_encode(generateSuccessResponse('Certificate was removed'));
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+function addFileData($app){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+        $sql = "INSERT INTO tfiles (filename, url, hostpath, gdrivepath, idclient) ".
+            " VALUES (:filename, :url, :hostpath, :gdrivepath, :idclient)";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':filename', $app['filename']);
+        $stmt->bindValue(':idclient', 0);
+        $stmt->bindValue(':url', "");
+        $stmt->bindValue(':hostpath', "");
+        $stmt->bindValue(':gdrivepath', $app['gdrivepath']);
+        if(!$stmt->execute()) die(json_encode(generateErrorResponse("File info adding failed")));
+        echo json_encode(generateSuccessResponse('File was inserted'));
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+function editFileStatusData($app){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+        $sql = "UPDATE tfiles SET status=:status WHERE id=:id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':id', $app['id']);
+        $stmt->bindValue(':status', $app['status']);
+        if(!$stmt->execute()) die(json_encode(generateErrorResponse("Status updating failed")));
+        echo json_encode(generateSuccessResponse('Share status was updated'));
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+function sendEmailMessage($data){
+    if(sendEmailWithAttach($data))
+        echo json_encode(generateSuccessResponse());
+    else
+        echo json_encode(generateErrorResponse("Sending email failed"));
+}
+
+function completeTask($app){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+        $sql = "UPDATE td2i SET status=1, completed_at=current_timestamp() WHERE id=:id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':id', $app['id']);
+        if(!$stmt->execute()) die(json_encode(generateErrorResponse("Status updating failed")));
+        echo json_encode(generateSuccessResponse('Share status was updated'));
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+function undoneTask($app){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+        $sql = "UPDATE td2i SET status=0, completed_at=NULL WHERE id=:id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':id', $app['id']);
+        if(!$stmt->execute()) die(json_encode(generateErrorResponse("Status updating failed")));
+        echo json_encode(generateSuccessResponse('Share status was updated'));
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+function confirmTask($app){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+        $sql = "UPDATE td2i SET status=2 WHERE id=:id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':id', $app['id']);
+        if(!$stmt->execute()) die(json_encode(generateErrorResponse("Status updating failed")));
+        echo json_encode(generateSuccessResponse('Share status was updated'));
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+function confirmAllTaskForIngredient($app){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+        $sql = "UPDATE td2i SET status=2 WHERE idi=:id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':id', $app['id']);
+        return $stmt->execute();
+    } catch (PDOException $e){
+        return false;
+    }
+}
+
+function confirmAllActionsForIngredient($app){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+        $sql = "UPDATE tclientactions SET status=1 WHERE itemid=:id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':id', $app['id']);
+        return $stmt->execute();
+    } catch (PDOException $e){
+        return false;
+    }
+}
+
+function addTaskData($app){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+        $sql = "INSERT INTO tdeviations (deviation, measure) ".
+            " VALUES (:deviation, :measure)";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':deviation', $app['deviation']);
+        $stmt->bindValue(':measure', $app['measure']);
+        if(!$stmt->execute()) die(json_encode(generateErrorResponse("New task adding failed")));
+        echo json_encode(generateSuccessResponse('New task was inserted'));
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+function confirmClientAction($app){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+        $sql = "UPDATE tclientactions SET status=1 WHERE id=:id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':id', $app['id']);
+        if(!$stmt->execute()) die(json_encode(generateErrorResponse("Status updating failed")));
+        echo json_encode(generateSuccessResponse('Share status was updated'));
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+function addClientAction($data){
+    if ($data['itemtype']=='products'){
+        die();
+    }
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+        $sql = "INSERT INTO tclientactions (idclient, itemtype, itemid, itemcode, itemname, action) ".
+            " VALUES (:idclient, :itemtype, :itemid, :itemcode, :itemname, :action)";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':idclient', $data['idclient']);
+        $stmt->bindValue(':itemtype', $data['itemtype']);
+        $stmt->bindValue(':itemid', $data['itemid']);
+        $stmt->bindValue(':itemcode', $data['itemcode']);
+        $stmt->bindValue(':itemname', $data['itemname']);
+        if (isset($data['documents'])){
+            $ds =  json_decode($data['documents']);
+            foreach ($ds as $d){
+                $stmt->bindValue(':action', 'New document ('.$d->file.')');
+                if(!$stmt->execute()) die(json_encode(generateErrorResponse("Action inserting failed")));
+            }
+        }else {
+            $stmt->bindValue(':action', $data['action']);
+            if (!$stmt->execute()) die(json_encode(generateErrorResponse("Action inserting failed")));
+        }
+        echo json_encode(generateSuccessResponse('Action was inserted'));
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+/* Other functions */
+
+function validateUserId($uid){
+	return $uid == $GLOBALS['userId'] ? true : false;
+}
+
+function generateSuccessResponse($data = null){
+	return array("status"=>"1","statusDescription"=>"SUCCESS","data"=>$data);
+}
+
+function generateErrorResponse($description=""){
+	return array("status"=>"0","statusDescription"=>$description);
+}
+
+
+// ----------- Incoming data processing ------------
+
+function processGetRequests() {
+	//$requestData = array("uid"=>$_GET['uid']);
+	/*
+	if (!validateRequest($requestData)) {
+		die();
+	}
+	*/
+	switch ($_GET['rtype']) {
+		case 'clients':
+			sendClientsData();
+			break;
+		/** Products */
+		case 'nextProdId':
+			sendNextProdIdData($_GET['data']);
+			break;
+		case 'ingredientsForProduct':
+			sendIngredientsForProductData($_GET['data']);
+			break;
+		/** Ingredients */
+		case 'nextIngredId':
+			sendNextIngredIdData($_GET['data']);
+			break;
+		case 'ingredientsForIngredient':
+			sendIngredientsForIngredientData($_GET['data']);
+			break;
+		/** QM */
+		case 'nextQMId':
+			sendNextQMIdData($_GET['data']);
+			break;
+		/** Audit */
+		case 'nextAuditId':
+			sendNextAuditIdData();
+			break;
+		/** Admin */
+		case 'nextAdminId':
+			sendNextAdminIdData();
+			break;
+		//  Dashboard
+        case 'dashboardData':
+            sendDashboardData($_GET['data']);
+            break;
+		/** Groups */
+		case 'nextGroupId':
+			sendNextGroupIdData();
+			break;
+	}
+}
+
+function processPostRequests() {
+	$requestData = array("uid"=>$_POST['uid']);
+	switch ($_POST['rtype']) {
+		case 'sendClientLogin':
+			sendClientLogin($_POST['data']);
+			break;
+		case 'deleteOffer':
+			deleteOffer($_POST['data']);
+			break;
+		case 'saveOffer':
+			saveOffer($_POST['data']);
+			break;
+		case 'getServices':
+			getServices();
+			break;
+		case 'delete_event':
+			delete_event($_POST['data']);
+			break;
+		case 'save_event':
+			save_event($_POST['data']);
+			break;
+		case 'saveDeviation':
+			saveDeviation($_POST['data']);
+			break;
+		case 'saveAuditReport':
+			saveAuditReport($_POST['data']);
+			break;
+		case 'getDeviations':
+			getDeviations();
+			break;
+		case 'getDisabledDates':
+			getDisabledDates();
+			break;
+		case 'saveAuditDates':
+			saveAuditDates($_POST['data']);
+			break;
+		case 'approveAuditDates':
+			approveAuditDates($_POST['data']);
+			break;
+		case 'getAppData':
+			getAppData($_POST['data']);
+			break;
+		/* Login */
+		case 'login':
+			login($_POST['data']);
+			break;
+		case 'register':
+			register($_POST['data']);
+			break;
+		case 'logout':
+			logout();
+			break;
+		/* Product */
+		case 'saveProduct':
+			saveProductData($_POST['data']);
+			break;
+		case 'addProduct':
+			addProductData($_POST['data']);
+			break;
+		case 'removeProduct':
+			removeProductData($_POST['data']);
+			break;
+		case 'markDeletedProduct':
+			markDeletedProductData($_POST['data']);
+			break;
+		case 'sendProductsExcelReportRequest':
+            productsExcelReportData($_POST['data']);
+			break;
+        case 'sendConfirmedProductsExcelReportRequest': // change?
+            confirmedProductsExcelReportData($_POST['data']);
+            break;
+		/* Ingredient */
+		case 'saveIngredient':
+			saveIngredientData($_POST['data']);
+			break;
+		case 'removeIngredient':
+			removeIngredientData($_POST['data']);
+			break;
+		case 'markDeletedIngredient':
+			markDeletedIngredientData($_POST['data']);
+			break;
+		case 'changeConformity':
+			changeConformityData($_POST['data']);
+			break;
+		case 'assignTaskForIngredient':
+      assignTaskForIngredientData($_POST['data']);
+			break;
+    case 'sendIngredientsExcelReportRequest':
+      ingredientsExcelReportData($_POST['data']);
+    break;
+    case 'sendAllIngredientsExcelReportRequest':
+      ingredientsAllExcelReportData($_POST['data']);
+    break;
+    case 'restoreIngred':
+      restoreIngredData($_POST['data']);
+	  break;
+    case 'restoreProd':
+        restoreProdData($_POST['data']);      
+  break;    
+		/* QM */
+		case 'saveQM':
+			saveQMData($_POST['data']);
+			break;
+		case 'removeQM':
+			removeQMData($_POST['data']);
+			break;
+		case 'markDeletedQM':
+			markDeletedQMData($_POST['data']);
+			break;
+		/* Audit */
+		case 'saveAudit':
+			saveAuditData($_POST['data']);
+			break;
+		case 'removeAudit':
+			removeAuditData($_POST['data']);
+			break;
+		/* Admin */
+		case 'saveAdmin':
+			saveAdminData($_POST['data']);
+			break;
+		case 'getAdmin':
+			getAdminData($_POST['id']);
+			break;			
+		case 'removeAdmin':
+			removeAdminData($_POST['data']);
+			break;
+        case 'changeIsClient':
+            changeIsClientData($_POST['data']);
+            break;
+        case 'changeApplication':
+            changeApplicationData($_POST['data']);
+            break;
+        case 'changeClients':
+            changeClientsData($_POST['data']);
+            break;
+        case 'changeAudit':
+            changeAuditData($_POST['data']);
+            break;
+        case 'changeCanAdmin':
+            changeCanAdminData($_POST['data']);
+            break;
+		case 'unblockUser':
+            unblockUserData($_POST['data']);
+			break;
+        /* Application */
+        case 'saveApplication':
+            saveApplicationData($_POST['data']);
+            break;
+        case 'completeApplication':
+            completeApplicationData($_POST['data']);
+            break;
+        case 'confirmApplication':
+            confirmApplicationData($_POST['data']);
+            break;
+        case 'cancelApplication':
+            cancelApplicationData($_POST['data']);
+            break;
+        case 'stopApplicationNotification':
+            stopApplicationNotificationData($_POST['data']);
+            break;
+        case 'skipApplication':
+            skipApplicationData($_POST['data']);
+            break;
+        /* Dashboard */
+        case 'addCertificate':
+            addCertificateData($_POST['data']);
+            break;
+        case 'editCertificate':
+            editCertificateData($_POST['data']);
+            break;
+        case 'removeCertificate':
+            removeCertificateData($_POST['data']);
+            break;
+        case 'addFile':
+            addFileData($_POST['data']);
+            break;
+        case 'editFileStatus':
+            editFileStatusData($_POST['data']);
+            break;
+        case 'sendEmailMessage':
+            sendEmailMessage($_POST['data']);
+            break;
+        case 'completeTask':
+            completeTask($_POST['data']);
+            break;
+        case 'undoneTask':
+            undoneTask($_POST['data']);
+            break;
+        case 'confirmTask':
+            confirmTask($_POST['data']);
+            break;
+				case 'addTask':
+		        addTaskData($_POST['data']);
+		        break;
+        case 'confirmClientAction':
+            confirmClientAction($_POST['data']);
+            break;
+        case 'addClientAction':
+            addClientAction($_POST['data']);
+            break;
+    }
+}
+
+$db = acsessDb :: singleton();
+$dbo =  $db->connect();
+
+cors();
+
+switch ($_SERVER['REQUEST_METHOD']) {
+	case "POST":
+		processPostRequests();
+		break;
+	case "GET":
+		processGetRequests();
+}

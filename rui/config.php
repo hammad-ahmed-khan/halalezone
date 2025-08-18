@@ -1,0 +1,6 @@
+<?php
+define('EBAY_CLIENT_ID', 'TTELECTR-Precific-PRD-4fcce2f20-37228697');
+define('EBAY_CLIENT_SECRET', 'PRD-fcce2f20df4d-b190-459a-a242-2b05');
+define('EBAY_REDIRECT_URI', 'T_T_ELECTRONICS-TTELECTR-Precif-yfisgyuz');
+define('EBAY_REQUESTED_SCOPES', 'https://api.ebay.com/oauth/api_scope https://api.ebay.com/oauth/api_scope/sell.marketing.readonly https://api.ebay.com/oauth/api_scope/sell.marketing https://api.ebay.com/oauth/api_scope/sell.inventory.readonly https://api.ebay.com/oauth/api_scope/sell.inventory https://api.ebay.com/oauth/api_scope/sell.account.readonly https://api.ebay.com/oauth/api_scope/sell.account https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly https://api.ebay.com/oauth/api_scope/sell.fulfillment https://api.ebay.com/oauth/api_scope/sell.analytics.readonly https://api.ebay.com/oauth/api_scope/sell.finances https://api.ebay.com/oauth/api_scope/sell.payment.dispute https://api.ebay.com/oauth/api_scope/commerce.identity.readonly https://api.ebay.com/oauth/api_scope/commerce.notification.subscription https://api.ebay.com/oauth/api_scope/commerce.notification.subscription.readonly');
+?>

@@ -1,0 +1,108 @@
+﻿<?php
+@session_start();
+include_once "../config/config.php";
+include_once "../classes/users.php";
+include_once "../includes/func.php";
+
+//error_reporting(E_ALL);
+//ini_set('display_errors', 1);
+
+try {
+	$db = acsessDb :: singleton();
+	$dbo =  $db->connect(); // Создаем объект подключения к БД
+    $myuser = cuser::singleton();
+    $myuser->getUserData();
+    print_r($myuser->userdata);
+    $user_id = $myuser->userdata['id'];
+    $username = $myuser->userdata['name'];
+    $email = $myuser->userdata['email'];
+
+    $curPage = $_POST["start"];
+    $rowsPerPage = $_POST['length'];
+    /*
+    $sortingField = $_POST['sidx'];
+    $sortingOrder = $_POST['sord'];
+    */
+    
+    $idclient = getPostParam('idclient');
+   
+	if(!is_numeric(getGetParam('displaymode'))) $displaymode = 0;
+    else $displaymode = getGetParam('displaymode');
+
+    if ($idclient != "") {
+	    $filter=" WHERE t.user_id='".$idclient."'";
+    }
+    else {
+        $filter=" WHERE 1 ";
+    }
+
+    if ($idclient!='') $filter.=" AND t.user_id = '".$idclient."'";
+  
+ 
+    $sortColumnIndex = $_POST['order'][0]['column'];
+$sortDirection = $_POST['order'][0]['dir'];
+
+// Map DataTables column index to database column name
+$columns = array(
+    't.id',
+    't.issue_type',
+    't.issue_description',
+    't.status',
+    't.created_at'
+);
+
+// Get the corresponding column name from the columns array
+$sortBy = $columns[$sortColumnIndex];
+
+	$sql = 'SELECT COUNT(id) AS count FROM ttickets AS t '.$filter;
+	$rows = $dbo->prepare($sql);
+	$rows->execute();
+    $totalRows = $rows->fetch(PDO::FETCH_ASSOC);
+
+    $firstRowIndex = $curPage * $rowsPerPage - $rowsPerPage;
+    
+    $sql = 'SELECT t.id, t.user_id, t.username, t.email, t.status, t.issue_type, t.issue_description, t.current_url, t.viewed, date_format(t.created_at, \'%d/%m/%Y %h:%i %p\') AS date_created, date_format(t.updated_at, \'%d/%m/%Y %h:%i %p\') AS last_updated, last_updated_by, last_updated_by_name, last_updated_by_email
+    from ttickets t ' . $filter . '  ORDER BY ' . $sortBy . ' ' . $sortDirection . '  LIMIT ' . $curPage . ', ' . $rowsPerPage;
+
+    $totalCount = $totalRows['count'];
+    $data = [];
+    $i=0;
+	$res = $dbo->prepare($sql);
+	if (!$res->execute()) die($sql);
+        while($row = $res->fetch(PDO::FETCH_ASSOC)) {
+
+            if ($user_id == $row['last_updated_by']) {
+                $row['viewed'] = '1';
+            }
+
+            $row['id'] = '<a href="#" id="'. $row['id'].'" class="post-reply">'. $row['id'].'</a>';
+
+            if ($row['last_updated_by_name'] == "") {
+                $row['last_updated'] =  "";
+            }
+            else {
+                $row['last_updated'] =  $row['last_updated'] . ' by ' . $row['last_updated_by_name'];
+            }
+            
+            if ($row['status'] == '1') {
+                $row['status'] = '<span class="badge badge-success">Open</span>';
+            } else {
+                $row['status'] = '<span class="badge badge-danger">Closed</span>';
+            }
+            
+            $data[] = $row;
+        }
+
+        $responseData = [
+            'data' => $data, 
+            'recordsTotal' => $totalCount,
+            'recordsFiltered' => $totalCount,
+        ];
+
+        echo json_encode($responseData);
+
+}
+catch (PDOException $e) {
+    echo 'Database error: '.$e->getMessage();
+}
+?>

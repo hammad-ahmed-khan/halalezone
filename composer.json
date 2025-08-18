@@ -1,0 +1,8 @@
+{
+    "require": {
+        "setasign/fpdi": "^2.3",
+        "mpdf/mpdf": "^8.1",
+        "dompdf/dompdf": "^2.0",
+        "mikehaertl/php-pdftk": "^0.13.0"
+    }
+}

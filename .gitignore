@@ -1,0 +1,17 @@
+# Excluded folders
+files/
+temp/
+vendor/
+vendor1/
+includes/fpdm/
+includes/tcpdf/
+includes/fpdi1/
+includes/fpdi2/
+includes/fpdf/
+js/fullcalendar/
+js/fine-uploader-5/
+js/fine-uploader/
+js/chosen/
+js/vendor/
+screencasts/
+fonts/

@@ -1,0 +1,40 @@
+AddType application/x-httpd-php .php
+
+### No Direct Access to All files ###
+#<IfModule mod_authz_host.c>
+#	<Files *.php>
+#	order allow,deny
+#	deny from all
+#	</Files>
+#	
+#	<Files index.php>
+#	order allow,deny
+#	allow from all
+#	</Files>
+#</IfModule>
+
+## One of the alternative ways with mod_rewrite ###
+<IfModule mod_rewrite.c>
+	Options -Indexes
+	Options +FollowSymlinks	
+	RewriteEngine On
+	#RewriteBase /
+	RewriteCond %{SERVER_PORT} !=443
+	RewriteCond %{REQUEST_FILENAME} !-f
+	RewriteCond %{REQUEST_FILENAME} !-d
+	RewriteRule ^(.*)$ index.php [L,QSA]
+</IfModule>
+
+#MAINTENANCE-PAGE REDIRECT
+<IfModule mod_rewrite.c>
+ RewriteEngine on
+ RewriteCond %{REMOTE_ADDR} !^123\.456\.789\.000
+ RewriteCond %{REQUEST_URI} !/maintenance.html$ [NC]
+ RewriteCond %{REQUEST_URI} !\.(jpe?g?|png|gif) [NC]
+ RewriteRule .* /pages/maintenance.html [R=302,L]
+</IfModule>
+
+
+<IfModule mod_rewrite.c>
+
+</IfModule>
