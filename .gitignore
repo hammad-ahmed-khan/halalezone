@@ -15,9 +15,9 @@ js/chosen/
 js/vendor/
 screencasts/
 fonts/
-notifications/vendor
-reports/vendor
-rui
-fileupload/vendor
-fileupload/files
-fileupload/fonts
+notifications/vendor/
+reports/vendor/
+rui/
+fileupload/vendor/
+fileupload/files/
+fileupload/fonts/
