@@ -1,11 +1,20 @@
 <?php if ($is_login_page == false): ?>
-<div class="customer-service-button" data-toggle="modal" data-target="#customerServiceModal" title="Click here for assistance with all matters related to raw materials, certificate issuance, standards, and more.">
-<i class="fa fa-envelope"></i>
+<!-- Fixed Action Buttons Container -->
+<div class="action-buttons-container">
+    <!-- FAQ Button -->
+    <a href="/support" class="action-button faq-button" title="Browse our comprehensive FAQ section to find answers to common questions about raw materials, certification, and system usage.">
+        <i class="fa fa-question-circle"></i> <span>FAQs & Help</span>
+    </a>
 
- <span>Customer Support</span>
-</div>  
-<div class="report-issue-button" data-toggle="modal" data-target="#reportIssueModal" title="Use this button to report any bugs or issues you encounter in the system. We appreciate your help in keeping our system running smoothly.">
-    <i class="fa fa-bug"></i> <span>Report Issue</span>
+    <!-- Customer Service Button -->
+    <div class="action-button customer-service-button" data-toggle="modal" data-target="#customerServiceModal" title="Click here for assistance with all matters related to raw materials, certificate issuance, standards, and more.">
+        <i class="fa fa-envelope"></i> <span>Customer Support</span>
+    </div>  
+
+    <!-- Report Issue Button -->
+    <div class="action-button report-issue-button" data-toggle="modal" data-target="#reportIssueModal" title="Use this button to report any bugs or issues you encounter in the system. We appreciate your help in keeping our system running smoothly.">
+        <i class="fa fa-bug"></i> <span>Report Issue</span>
+    </div>
 </div>
 <div class="modal fade" id="customerServiceModal" tabindex="-1" role="dialog" aria-labelledby="customerServiceModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">

@@ -67,10 +67,8 @@ function get_public_faqs($dbo, $category_id = null) {
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-// Search FAQs
-function search_faqs($dbo, $search_term, $category_id = null) {
-    $search_term = '%' . $search_term . '%';
-    
+// Get filtered FAQs with search and category filtering
+function get_filtered_faqs($dbo, $category_id = null, $search_term = null) {
     $sql = "SELECT 
                 f.id,
                 f.question,
@@ -81,14 +79,22 @@ function search_faqs($dbo, $search_term, $category_id = null) {
                 c.name as category_name
             FROM faqs f
             LEFT JOIN faq_categories c ON f.category_id = c.id
-            WHERE f.is_active = 1
-            AND (f.question LIKE ? OR f.answer LIKE ?)";
+            WHERE f.is_active = 1";
     
-    $params = [$search_term, $search_term];
+    $params = [];
     
+    // Category filtering
     if ($category_id && $category_id !== 'all') {
         $sql .= " AND f.category_id = ?";
         $params[] = $category_id;
+    }
+    
+    // Search filtering
+    if ($search_term && !empty(trim($search_term))) {
+        $search_term = '%' . trim($search_term) . '%';
+        $sql .= " AND (f.question LIKE ? OR f.answer LIKE ?)";
+        $params[] = $search_term;
+        $params[] = $search_term;
     }
     
     $sql .= " ORDER BY f.priority DESC, f.created_at DESC";
@@ -98,70 +104,125 @@ function search_faqs($dbo, $search_term, $category_id = null) {
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-// Track FAQ view for analytics
+// Get FAQ statistics
+function get_faq_stats($dbo, $category_id = null, $search_term = null) {
+    // Get total count (all active FAQs)
+    $total_sql = "SELECT COUNT(*) as total_count FROM faqs WHERE is_active = 1";
+    $total_stmt = $dbo->query($total_sql);
+    $total_count = $total_stmt->fetch(PDO::FETCH_ASSOC)['total_count'];
+    
+    // Get visible count (filtered FAQs)
+    $visible_sql = "SELECT COUNT(*) as visible_count FROM faqs f WHERE f.is_active = 1";
+    $params = [];
+    
+    // Apply same filters as get_filtered_faqs
+    if ($category_id && $category_id !== 'all') {
+        $visible_sql .= " AND f.category_id = ?";
+        $params[] = $category_id;
+    }
+    
+    if ($search_term && !empty(trim($search_term))) {
+        $search_term_count = '%' . trim($search_term) . '%';
+        $visible_sql .= " AND (f.question LIKE ? OR f.answer LIKE ?)";
+        $params[] = $search_term_count;
+        $params[] = $search_term_count;
+    }
+    
+    $visible_stmt = $dbo->prepare($visible_sql);
+    $visible_stmt->execute($params);
+    $visible_count = $visible_stmt->fetch(PDO::FETCH_ASSOC)['visible_count'];
+    
+    return [
+        'total_count' => $total_count,
+        'visible_count' => $visible_count
+    ];
+}
+
+// Get category counts for current search
+function get_category_counts($dbo, $search_term = null) {
+    $counts = [];
+    
+    // Get count for "All Categories"
+    $all_sql = "SELECT COUNT(*) as count FROM faqs WHERE is_active = 1";
+    $all_params = [];
+    
+    if ($search_term && !empty(trim($search_term))) {
+        $search_term_all = '%' . trim($search_term) . '%';
+        $all_sql .= " AND (question LIKE ? OR answer LIKE ?)";
+        $all_params[] = $search_term_all;
+        $all_params[] = $search_term_all;
+    }
+    
+    $all_stmt = $dbo->prepare($all_sql);
+    $all_stmt->execute($all_params);
+    $counts['all'] = $all_stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    
+    // Get counts for each category
+    $cat_sql = "SELECT 
+                    c.id,
+                    COUNT(f.id) as count
+                FROM faq_categories c
+                LEFT JOIN faqs f ON c.id = f.category_id AND f.is_active = 1";
+    
+    $cat_params = [];
+    
+    if ($search_term && !empty(trim($search_term))) {
+        $search_term_cat = '%' . trim($search_term) . '%';
+        $cat_sql .= " AND (f.question LIKE ? OR f.answer LIKE ?)";
+        $cat_params[] = $search_term_cat;
+        $cat_params[] = $search_term_cat;
+    }
+    
+    $cat_sql .= " WHERE c.is_active = 1 GROUP BY c.id";
+    
+    $cat_stmt = $dbo->prepare($cat_sql);
+    $cat_stmt->execute($cat_params);
+    $category_counts = $cat_stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    foreach ($category_counts as $cat) {
+        $counts[$cat['id']] = $cat['count'];
+    }
+    
+    return $counts;
+}
+
+// Search FAQs (legacy function for backward compatibility)
+function search_faqs($dbo, $search_term, $category_id = null) {
+    return get_filtered_faqs($dbo, $category_id, $search_term);
+}
+
+// Track FAQ view
 function track_faq_view($dbo, $faq_id) {
     try {
-        // Get current date
-        $today = date('Y-m-d');
-        
-        // Check if record exists for today
-        $sql = "SELECT id, view_count FROM faq_analytics 
-                WHERE faq_id = ? AND date_viewed = ?";
+        $sql = "UPDATE faqs SET view_count = view_count + 1 WHERE id = ? AND is_active = 1";
         $stmt = $dbo->prepare($sql);
-        $stmt->execute([$faq_id, $today]);
-        $existing = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($existing) {
-            // Update existing record
-            $sql = "UPDATE faq_analytics 
-                    SET view_count = view_count + 1,
-                        last_viewed = NOW()
-                    WHERE id = ?";
-            $stmt = $dbo->prepare($sql);
-            $stmt->execute([$existing['id']]);
-        } else {
-            // Insert new record
-            $sql = "INSERT INTO faq_analytics (faq_id, date_viewed, view_count, last_viewed) 
-                    VALUES (?, ?, 1, NOW())";
-            $stmt = $dbo->prepare($sql);
-            $stmt->execute([$faq_id, $today]);
-        }
-        
-        return true;
+        return $stmt->execute([$faq_id]);
     } catch (Exception $e) {
-        error_log("FAQ Analytics Error: " . $e->getMessage());
+        error_log('Error tracking FAQ view: ' . $e->getMessage());
         return false;
     }
 }
 
-// Get FAQ statistics
-function get_faq_stats($dbo) {
-    $stats = [];
-    
-    // Total active FAQs
-    $sql = "SELECT COUNT(*) as total FROM faqs WHERE is_active = 1";
-    $stmt = $dbo->query($sql);
-    $stats['total_faqs'] = $stmt->fetchColumn();
-    
-    // Total categories
-    $sql = "SELECT COUNT(*) as total FROM faq_categories WHERE is_active = 1";
-    $stmt = $dbo->query($sql);
-    $stats['total_categories'] = $stmt->fetchColumn();
-    
-    // Most viewed FAQ this month
-    $sql = "SELECT f.question, SUM(fa.view_count) as total_views
-            FROM faq_analytics fa
-            JOIN faqs f ON fa.faq_id = f.id
-            WHERE MONTH(fa.date_viewed) = MONTH(NOW()) 
-            AND YEAR(fa.date_viewed) = YEAR(NOW())
-            GROUP BY fa.faq_id, f.question
-            ORDER BY total_views DESC
+// Get most viewed FAQ
+function get_most_viewed_faq($dbo) {
+    $sql = "SELECT id, question, view_count 
+            FROM faqs 
+            WHERE is_active = 1 
+            ORDER BY view_count DESC 
             LIMIT 1";
     $stmt = $dbo->query($sql);
-    $mostViewed = $stmt->fetch(PDO::FETCH_ASSOC);
-    $stats['most_viewed'] = $mostViewed ? $mostViewed : null;
-    
-    return $stats;
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
+// Validate required fields
+function validate_required($required_fields, $data) {
+    $errors = [];
+    foreach ($required_fields as $field) {
+        if (!isset($data[$field]) || empty(trim($data[$field]))) {
+            $errors[] = "Field '$field' is required";
+        }
+    }
+    return $errors;
 }
 
 // Handle the request
@@ -184,6 +245,32 @@ switch ($action) {
             json_response(true, '', $faqs);
         } catch (Exception $e) {
             json_response(false, 'Error fetching FAQs: ' . $e->getMessage());
+        }
+        break;
+        
+    case 'get_filtered_faqs':
+        try {
+            $category_id = $_GET['category_id'] ?? null;
+            $search_term = sanitize_input($_GET['search'] ?? '');
+            
+            // Get filtered FAQs
+            $faqs = get_filtered_faqs($dbo, $category_id, $search_term);
+            
+            // Get statistics
+            $stats = get_faq_stats($dbo, $category_id, $search_term);
+            
+            // Get category counts
+            $category_counts = get_category_counts($dbo, $search_term);
+            
+            $response_data = [
+                'faqs' => $faqs,
+                'stats' => $stats,
+                'category_counts' => $category_counts
+            ];
+            
+            json_response(true, '', $response_data);
+        } catch (Exception $e) {
+            json_response(false, 'Error fetching filtered FAQs: ' . $e->getMessage());
         }
         break;
         
@@ -220,8 +307,19 @@ switch ($action) {
         
     case 'get_stats':
         try {
-            $stats = get_faq_stats($dbo);
-            json_response(true, '', $stats);
+            $category_id = $_GET['category_id'] ?? null;
+            $search_term = sanitize_input($_GET['search'] ?? '');
+            
+            $stats = get_faq_stats($dbo, $category_id, $search_term);
+            $category_counts = get_category_counts($dbo, $search_term);
+            
+            $response_data = [
+                'stats' => $stats,
+                'category_counts' => $category_counts,
+                'most_viewed' => get_most_viewed_faq($dbo)
+            ];
+            
+            json_response(true, '', $response_data);
         } catch (Exception $e) {
             json_response(false, 'Error fetching stats: ' . $e->getMessage());
         }
@@ -253,8 +351,30 @@ switch ($action) {
         }
         break;
         
+    case 'get_category_faqs':
+        try {
+            $category_id = intval($_GET['category_id'] ?? 0);
+            
+            if (!$category_id) {
+                json_response(false, 'Invalid category ID');
+            }
+            
+            $faqs = get_filtered_faqs($dbo, $category_id);
+            $stats = get_faq_stats($dbo, $category_id);
+            
+            $response_data = [
+                'faqs' => $faqs,
+                'stats' => $stats
+            ];
+            
+            json_response(true, '', $response_data);
+        } catch (Exception $e) {
+            json_response(false, 'Error fetching category FAQs: ' . $e->getMessage());
+        }
+        break;
+        
     default:
-        json_response(false, 'Invalid action');
+        json_response(false, 'Invalid action specified');
         break;
 }
 ?>
