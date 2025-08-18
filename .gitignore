@@ -22,6 +22,6 @@ rui/
 fileupload/vendor/
 fileupload/files/
 fileupload/fonts/
-config/google/*.json
-fileupload/credentials/*.json
+config/google/
+fileupload/credentials/
 fileupload/client_secret.json
