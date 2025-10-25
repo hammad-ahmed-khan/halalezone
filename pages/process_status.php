@@ -248,6 +248,9 @@ table.dataTable td {
                 <div class="row">
                     <div class="col-xs-12">
                      <h3>Process Status</h3>
+<div class="widget-box widget-border" style="margin:15px 0">
+                        <div class="widget-body">
+                            <div class="widget-main">
 
                      <form id="searchForm" style="height:auto">
                         <input type="hidden" name="tidclient" id="tidclient" value="-1" />
@@ -372,6 +375,10 @@ table.dataTable td {
         -->
     </div>
 </form>
+
+</div>
+</div>
+</div>
 
 <div id="attentionModal" class="modal fade" role="dialog">
     <div class="modal-dialog">
@@ -749,6 +756,7 @@ table.dataTable td {
           <thead>
             <tr class="tableheader">
               <th class="no-wrap">Reference #</th>
+              <th class="no-wrap">Task for</th>
               <th class="no-wrap">Assigned to</th>  
               <th class="no-wrap">Category</th>                            
               <th class="no-wrap">Task</th>                            
@@ -962,15 +970,28 @@ table.dataTable td {
         <h4 class="modal-title" id="tasksModal">Create Task <span class="text-primary tclientName"></span></h4>
       </div>
       <div class="modal-body">
-          <!--<p class="text-muted">
-          Use this form to assign a task to a team member or auditor. Select the recipient, choose the relevant client, and provide task details.
-          </p>-->
+          <p class="text-muted">
+    First select who this task is for, then provide the details.
+  </p>
 
          <div class="alert alert-danger" id="taskErrors" style="display: none;"></div>
         <form id="taskForm">        
 
+          <!-- Step 1: Select Task Type -->
+<div class="form-group">
+  <label><strong>This task is for:</strong></label><br>
+  <div style="display: inline-block; margin-right: 15px;">
+    <input type="radio" id="taskTypeAuditor" name="task_type" value="auditor" checked>
+    <label for="taskTypeAuditor">Auditor/Team Member</label>
+  </div>
+  <div style="display: inline-block;">
+    <input type="radio" id="taskTypeClient" name="task_type" value="client">
+    <label for="taskTypeClient">Client</label>
+  </div>
+</div>
+
         <div class="form-group">
-            <label for="tauditor">Assign to Auditor</label>
+            <label for="tauditor"> Auditor</label>
             <select class="form-control" id="tidauditor">
                 <option value="">Please Select</option>
          <?php foreach ($auditors as $auditor): ?>
@@ -998,6 +1019,11 @@ table.dataTable td {
                 <option value="Others">Others</option>
             </select>
           </div>
+          <div class="form-group">
+            <label for="issueSubject">Subject</label>
+            <input type="text" class="form-control" id="issueSubject" value="" placeholder="Enter a brief subject for the task">
+          </div>          
+
           <div class="form-group">
             <label for="issueDescription">Description</label>
             <textarea class="form-control" id="issueDescription" rows="5" placeholder="Describe the request in detail."></textarea>
@@ -1190,6 +1216,7 @@ $(document).ready(function() {
         },
         columns: [
             { data: "id" },
+            { data: "task_type" },
              { data: "auditorname" },
             { data: "issue_type" },
             { data: "issue_description" },
@@ -1270,16 +1297,19 @@ $(document).ready(function() {
         texts.push(spanText);
         });
 
+        var taskType = $("input[name='task_type']:checked").val();
+
         var attachments = texts.join(", ");
         var formData = {
-        uid: 0,
-        rtype: "createTask",
-        idauditor: $("#tasksModal #tidauditor").val(),
-        idclient: $("#tidclient").val(),
-        issueType: $("#tasksModal #issueType").val(),
-        issueDescription: $("#tasksModal #issueDescription").val(),
-        taskType: "client",
-        attachments: attachments,
+            uid: 0,
+            rtype: "createTask",
+            idauditor: $("#tasksModal #tidauditor").val(),
+            idclient: $("#tidclient").val(),
+            issueType: $("#tasksModal #issueType").val(),
+            subject: $("#tasksModal #issueSubject").val(),
+            issueDescription: $("#tasksModal #issueDescription").val(),
+           attachments: attachments,
+            taskType: taskType // Send task type to server for additional validation if needed
         };
 
         $.ajax({
@@ -1288,7 +1318,7 @@ $(document).ready(function() {
         data: formData,
         success: function (response) {
             var jsonResponse = JSON.parse(response);
-            if (jsonResponse.data.errors.length > 0) {
+            if (jsonResponse.data.errors.length > 0) {  
             $("#taskErrors")
                 .show()
                 .html("<ul>" + jsonResponse.data.errors + "</ul>");

@@ -103,7 +103,8 @@ try {
 	$appData = $stmt->fetch(PDO::FETCH_ASSOC);
 	$currentState = $appData["state"];
 	$currentIndex = array_search($currentState, $statusOptions);
-
+			$ownerEmailAddress = "halal.ezone@gmail.com";
+			$fromEmailAddress = "noreply@halal-e.zone";
 	if ($newIndex > $currentIndex) { 				
 	
 	
@@ -117,8 +118,7 @@ try {
 
 			
 
-			$ownerEmailAddress = "halal.ezone@gmail.com";
-			$fromEmailAddress = "noreply@halal-e.zone";
+
 
 			$body = [];
 			$body['name'] = 'Halal e-Zone';
@@ -157,7 +157,14 @@ try {
 			$body['body'] .= "<br /><br />";
 			$body['body'] .= 'Best regards';
 			sendEmail($body);
-			
+
+					$query = "UPDATE tapplications SET state=:state WHERE idclient=:idclient AND id=:idapp";
+		$stmt = $dbo->prepare($query);
+		$stmt->bindParam(':state', $state, PDO::PARAM_STR);
+		$stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);
+		$stmt->bindParam(':idapp', $idapp, PDO::PARAM_STR);
+		$stmt->execute();
+	}
 			
 			//sendEmailWithAttach
 			$body = [];
@@ -185,7 +192,7 @@ try {
 
 			// sending notification
 			$body['subject'] = "Halal e-Zone - Offer Halal certification - ".$data["user"]["name"];
-			//$body['header'] = "Client ".getClientInfo($prod['idclient'])." added a new product:";
+			$body['header'] = "Client ".getClientInfo($prod['idclient'])." added a new product:";
 			$body['message'] = "<p>Dear Ms./ Mr. ".$data['user']["contact_person"]."!</p>";
 			$body['message'] .= '<p>Thank you for your interest in our Halal certification which is accepted and recognised nearly worldwide. Please note that we have excellent experience in your category. This makes the certification process very efficient and clear.</p>
 			<p>Please note that we offer a Halal Certificate with international Halal accreditation, including MUI Indonesia, Jakim Malaysia, SFAD KSA, ESMA UAE, HAC Sri Lanka, CICOT Thailand as well as in almost all Islamic countries in Asia and Africa and the Muslim communities in Europe. Our certificate gives you international recognition that is accepted almost everywhere in the world, whereas other bodies\' certifications are only recognised in certain countries.</p>
@@ -220,13 +227,8 @@ try {
 			insertActivityLog($idclient, $idapp, $myuser->userdata['id'], $myuser->userdata['name'], 'Offer sent to client');
 
 		
-		$query = "UPDATE tapplications SET state=:state WHERE idclient=:idclient AND id=:idapp";
-		$stmt = $dbo->prepare($query);
-		$stmt->bindParam(':state', $state, PDO::PARAM_STR);
-		$stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);
-		$stmt->bindParam(':idapp', $idapp, PDO::PARAM_STR);
-		$stmt->execute();
-	}
+
+ 
 
 	if ($error != "")  {
 	

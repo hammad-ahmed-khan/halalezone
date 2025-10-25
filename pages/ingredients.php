@@ -6,7 +6,7 @@
     <link href="https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
     <link href="https://cdn.datatables.net/responsive/2.2.8/css/responsive.bootstrap.min.css" rel="stylesheet" type="text/css" />
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.5.0/css/all.css" integrity="sha384-B4dIYHKNBt8Bc12p+WXckhzcICo0wtJAoU8YZTY5qE0Id1GSseTk6S+L3BlXeVIU" crossorigin="anonymous">
-    <title>Ingredients - Halal e-Zone</title>
+    <title>Ingredients - Halal Digital</title>
     <style>
         .blockUI h1 {
             font-size: 18px;
@@ -42,6 +42,9 @@ catch (PDOException $e) {
             <div class="page-content">
                 <div class="row no-gutters">
                     <div class="col-xs-12">
+                    <div class="widget-box widget-border" style="margin: 15px 0;">
+                        <div class="widget-body">
+                            <div class="widget-main">
                         <?php
 						$myuser = cuser::singleton();
                         $myuser->getUserData();
@@ -140,8 +143,14 @@ catch (PDOException $e) {
                         </div>
                         </div>
                         <?php endif;?> 
+                        </div>
+                        </div>
+                        </div>
                     </div>
-                    <div class="col-xs-12">
+
+                    
+                            <div class="col-xs-12">
+ 
                         <!-- PAGE CONTENT BEGINS -->
                         <table id="ingredGrid"></table>
                         <div id="ingredPager"></div>
@@ -269,7 +278,7 @@ catch (PDOException $e) {
                             <div class="alert-string"></div>
                         </div></div>
                     <div class="row form-group">
-                        <label class="col-xs-12 col-md-4"><b>Specification</b>&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please upload the ingredient specification"></sup></label>
+                        <label class="col-xs-12 col-md-4">Specification&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please upload the ingredient specification"></sup></label>
                         <div class='col-xs-12 col-md-8'>
                         <div class="progress">
                             <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: %"></div>
@@ -800,6 +809,104 @@ catch (PDOException $e) {
             </div>
         </div>
 
+    </div>
+</div>
+
+<!-- Bulk Halal Certificate Update Modal -->
+<div id="bulkHalalCertUpdate" class="modal fade" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title"><i class="fa fa-certificate"></i> Update Halal Certificates</h4>
+            </div>
+            <div class="modal-body">
+                
+                <div id="selected-ingredients-info" class="alert alert-info">
+                    <strong><span id="selected-count">0</span> ingredients selected</strong> for certificate update.
+                </div>
+
+                <div class="form-group">
+                    <label>Upload Halal Certificate</label>
+                    <div class="upload-box" id="bulk-halal-cert-upload-box">
+                        <div class="progress" style="display: none; width: 100%">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
+                        </div>
+                        <span class="fileinput-button bulk-halal-cert-dropzone" id="bulk-halal-cert-dropzone">
+                            Drop certificate file here or click to upload
+                            <input class="bulk-halal-cert-fileupload" id="bulk-halal-cert-fileupload" type="file" name="files[]" accept=".pdf,.jpg,.jpeg,.png">
+                        </span>
+                        <ul class="uploaded-files" style="display: none"></ul>
+                        <input type="hidden" name="halalCertificateFile" id="halalCertificateFile" class="uploaded-file-hidden-input">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Producer Name *</label>
+                    <input type="text" class="form-control" id="bulkProducerName" placeholder="Enter producer name" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Supplier Name</label>
+                    <input type="text" class="form-control" id="bulkSupplierName" placeholder="Enter supplier name (if different from producer)">
+                </div>
+
+                <div class="form-group">
+                    <label>Halal Certification Body *</label>
+                    <input type="text" class="form-control" id="bulkCertificationBody" placeholder="Enter certification body name" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Certificate Expiry Date *</label>
+                    <input type="text" class="form-control datepicker" id="bulkExpiryDate" placeholder="Select expiry date" required>
+                </div>
+
+                <!-- Progress Section -->
+                <div id="bulk-cert-progress" style="display: none">
+                    <h5>Processing Updates...</h5>
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%">
+                            <span class="progress-text">0%</span>
+                        </div>
+                    </div>
+                    <div id="progress-details"></div>
+                </div>
+
+                <!-- Results Section -->
+                <div id="bulk-cert-results" style="display: none">
+                    <div class="alert alert-success">
+                        <h5><i class="fa fa-check-circle"></i> Update Complete</h5>
+                        <p>
+                            <strong>Total:</strong> <span id="result-total">0</span> | 
+                            <strong>Success:</strong> <span id="result-success">0</span> | 
+                            <strong>Failed:</strong> <span id="result-failed">0</span>
+                        </p>
+                    </div>
+                    
+                    <div id="error-details" style="display: none">
+                        <h5>Failed Updates:</h5>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-condensed">
+                                <thead>
+                                    <tr>
+                                        <th>Ingredient</th>
+                                        <th>Error</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="error-list"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" id="processBulkCertBtn">
+                    <i class="fa fa-upload"></i> Update Certificates
+                </button>
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
     </div>
 </div>
 <?php include_once('pages/footer.php');?>

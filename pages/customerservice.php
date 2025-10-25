@@ -16,45 +16,78 @@
 <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.1/themes/base/jquery-ui.css">
 <style>      
 .mt-4 {
-            margin-top: 20px;
-        }
-        .mb-4 {
-            margin-bottom: 20px;
-        }
-        .mb-1 {
-            margin-bottom: 10px;
-        }
-        .scrollable {
-            max-height: 185px;
-            overflow-y: auto;
-        }
-        .list-group-item:nth-child(odd) {
-            background-color: #f9f9f9;
-        }
-    </style>
+    margin-top: 20px;
+}
+.mb-4 {
+    margin-bottom: 20px;
+}
+.mb-1 {
+    margin-bottom: 10px;
+}
+.scrollable {
+    max-height: 185px;
+    overflow-y: auto;
+}
+.list-group-item:nth-child(odd) {
+    background-color: #f9f9f9;
+}
+
+.centered-tabs {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.centered-tabs .nav-item {
+    display: inline-block;
+    float: none !important;
+    font-size:16px;
+    font-weight: bold;
+}
+
+.centered-tabs .nav-tabs {
+    display: inline-block;
+}
+
+.nav-tabs>li>a, .nav-tabs>li>a:focus {
+    margin-right: 5px;
+    padding: 10px 20px;
+}
+
+.tab-pane {
+    padding:10px;
+    border :1px #ccc solid;
+}
+
+.nav-tabs>li>a.active {
+    background-color: #FFF;
+    color: #4C8FBD;
+    border-color: #C5D0DC;
+    border-bottom: 1px #fff solid;
+}
+</style>
 </head>
 
 <body>
 <?php
-	$db = acsessDb :: singleton();
-	$dbo =  $db->connect(); // Создаем объект подключения к БД
-	$sql = "SELECT id, name, prefix FROM tusers WHERE isclient=1 ORDER BY name";
-	$stmt = $dbo->prepare($sql);
-	$stmt->setFetchMode(PDO::FETCH_ASSOC);
-	if(!$stmt->execute()) {
-		echo json_encode(generateErrorResponse("Getting clients list failed"));
-		die();
-	}
-	$clients = $stmt->fetchAll();
+    $db = acsessDb :: singleton();
+    $dbo =  $db->connect();
+    $sql = "SELECT id, name, prefix FROM tusers WHERE isclient=1 ORDER BY name";
+    $stmt = $dbo->prepare($sql);
+    $stmt->setFetchMode(PDO::FETCH_ASSOC);
+    if(!$stmt->execute()) {
+        echo json_encode(generateErrorResponse("Getting clients list failed"));
+        die();
+    }
+    $clients = $stmt->fetchAll();
 
     $sql = "SELECT id, name FROM tcompanies WHERE active=1 ORDER BY name";
-	$stmt = $dbo->prepare($sql);
-	$stmt->setFetchMode(PDO::FETCH_ASSOC);
-	if(!$stmt->execute()) {
-		echo json_encode(generateErrorResponse("Getting clients list failed"));
-		die();
-	}
-	$companies = $stmt->fetchAll();
+    $stmt = $dbo->prepare($sql);
+    $stmt->setFetchMode(PDO::FETCH_ASSOC);
+    if(!$stmt->execute()) {
+        echo json_encode(generateErrorResponse("Getting clients list failed"));
+        die();
+    }
+    $companies = $stmt->fetchAll();
 
     $statusOptions = ['app', 'offer', 'soffer', 'declarations', 'dates', 'audit', 'checklist', 'report', 'dm', 'pop', 'certificate', 'additional_items', 'extension'];
 ?>
@@ -85,37 +118,116 @@
                     <?php endif; ?>
                     <input type="hidden" name="customerServiceId" id="customerServiceId" value="" />
                     <input type="hidden" name="ticketStatus" id="ticketStatus" value="1" />
-                    <?php //if (!$myuser->userdata['isclient']): ?>
-                    <div class="row gutters">
-                    <label class="right">
-                        <input id="filter-actions-confirmed" class="ace ace-switch ace-switch-4" type="checkbox">
-                        <span class="lbl">&nbsp;&nbsp;Show closed requests</span>
-                    </label>
-                    </div>  
-                    <?php // endif; ?>
-                    <table id="table_tickets" class="table table-hover table-striped table-bordered w-100" style="width:100%;">
-                        <thead>
-                            <tr class="tableheader">
-                            <?php if ($myuser->userdata['isclient'] != "1"): ?>
-                                <th style="width:14%;">Client</th>
-                            <?php endif; ?>
-                            <th class="no-wrap">Reference #</th>
-                            <th class="no-wrap">Type</th>                            
-                            <th class="no-wrap">Request</th>                            
-                            <th class="no-wrap">Status</th>                                                        
-                            <th class="no-wrap">Created</th>                            
-                            <th class="no-wrap">Last Updated</th>                            
-                            </tr>
-                        </thead>
-                        <tbody>
-                        </tbody>
-                    </table>
+                    <input type="hidden" name="ticketOrigin" id="ticketOrigin" value="all" />
+                    
+                    <!-- Tabs for All/Client Created/Internal Created - Only show for non-clients -->
+                    <?php if ($myuser->userdata['isclient'] != "1"): ?>
+                    <div class="centered-tabs">
+                        <ul class="nav nav-tabs" role="tablist">
+                            <li class="active">
+                                <a data-toggle="tab" href="#all-tickets" data-origin="all">All Tickets</a>
+                            </li>
+                            <li>
+                                <a data-toggle="tab" href="#client-tickets" data-origin="client">Client Created</a>
+                            </li>
+                            <li>
+                                <a data-toggle="tab" href="#internal-tickets" data-origin="internal">Internal Created</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <?php endif; ?>
+                    
+                    <div class="tab-content" style="padding:0px !important; border:none !important;">
+                        <!-- All Tickets Tab -->
+                        <div id="all-tickets" class="tab-pane fade in active">
+                            <div class="row gutters">
+                                <label class="right">
+                                    <input id="filter-all-confirmed" class="ace ace-switch ace-switch-4" type="checkbox">
+                                    <span class="lbl">&nbsp;&nbsp;Show closed requests</span>
+                                </label>
+                            </div>
+                            <table id="table_all_tickets" class="table table-hover table-striped table-bordered w-100" style="width:100%;">
+                                <thead>
+                                    <tr class="tableheader">
+                                    <?php if ($myuser->userdata['isclient'] != "1"): ?>
+                                        <th style="width:14%;">Client</th>
+                                    <?php endif; ?>
+                                    <th class="no-wrap">Reference #</th>
+                                    <th class="no-wrap">Type</th>                            
+                                    <th class="no-wrap">Request</th>                            
+                                    <th class="no-wrap">Status</th>                                                        
+                                    <th class="no-wrap">Created</th>                            
+                                    <th class="no-wrap">Last Updated</th>
+                                    <?php if ($myuser->userdata['isclient'] != "1"): ?>
+                                    <th class="no-wrap">Origin</th>
+                                    <?php endif; ?>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Client Created Tickets Tab - Only show for non-clients -->
+                        <?php if ($myuser->userdata['isclient'] != "1"): ?>
+                        <div id="client-tickets" class="tab-pane fade">
+                            <div class="row gutters">
+                                <label class="right">
+                                    <input id="filter-client-confirmed" class="ace ace-switch ace-switch-4" type="checkbox">
+                                    <span class="lbl">&nbsp;&nbsp;Show closed requests</span>
+                                </label>
+                            </div>
+                            <table id="table_client_tickets" class="table table-hover table-striped table-bordered w-100" style="width:100%;">
+                                <thead>
+                                    <tr class="tableheader">
+                                    <?php if ($myuser->userdata['isclient'] != "1"): ?>
+                                        <th style="width:14%;">Client</th>
+                                    <?php endif; ?>
+                                    <th class="no-wrap">Reference #</th>
+                                    <th class="no-wrap">Type</th>                            
+                                    <th class="no-wrap">Request</th>                            
+                                    <th class="no-wrap">Status</th>                                                        
+                                    <th class="no-wrap">Created</th>                            
+                                    <th class="no-wrap">Last Updated</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Internal Created Tickets Tab - Only show for non-clients -->
+                        <div id="internal-tickets" class="tab-pane fade">
+                            <div class="row gutters">
+                                <label class="right">
+                                    <input id="filter-internal-confirmed" class="ace ace-switch ace-switch-4" type="checkbox">
+                                    <span class="lbl">&nbsp;&nbsp;Show closed requests</span>
+                                </label>
+                            </div>
+                            <table id="table_internal_tickets" class="table table-hover table-striped table-bordered w-100" style="width:100%;">
+                                <thead>
+                                    <tr class="tableheader">
+                                    <?php if ($myuser->userdata['isclient'] != "1"): ?>
+                                        <th style="width:14%;">Client</th>
+                                    <?php endif; ?>
+                                    <th class="no-wrap">Reference #</th>
+                                    <th class="no-wrap">Type</th>                            
+                                    <th class="no-wrap">Request</th>                            
+                                    <th class="no-wrap">Status</th>                                                        
+                                    <th class="no-wrap">Created</th>                            
+                                    <th class="no-wrap">Last Updated</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <?php endif; ?>
+                    </div>
                     </div><!-- /.col -->
                 </div><!-- /.row -->
             </div><!-- /.page-content -->
         </div>
     </div><!-- /.main-content -->
 </div><!-- /.main-container -->
+
 <div class="modal fade" id="postReplyModal" tabindex="-1" role="dialog" aria-labelledby="notesModalLabel">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
@@ -129,24 +241,24 @@
     <div class="col-md-4">
         <div class="form-group">
             <label for="requestType" style="font-weight: bold;">Request Type: </label>
-            <span id="tRequestType">Bug</span> <!-- Replace "Bug" with the actual request type value -->
+            <span id="tRequestType">Bug</span>
         </div>
 
         <div class="form-group">
             <label for="lastUpdated" style="font-weight: bold;">Last Updated: </label>
-            <span id="lastUpdated"></span> <!-- Replace with actual URL -->
+            <span id="lastUpdated"></span>
       </div>  
 
     </div>
     <div class="col-md-4">
     <div class="form-group">
             <label for="currentURL" style="font-weight: bold;">URL: </label>
-            <span id="currentURL"></span> <!-- Replace with actual URL -->
+            <span id="currentURL"></span>
             
         </div>
         <div class="form-group">
             <label for="status" style="font-weight: bold;">Status: </label>
-            <span id="status"><span class="badge badge-success">Open</span></span> <!-- Replace with actual URL -->
+            <span id="status"><span class="badge badge-success">Open</span></span>
             <input type="hidden" name="status_val" id="status_val" value="" />
         </div>          
 
@@ -154,7 +266,7 @@
     <div class="col-md-4">
     <div class="form-group">
             <label for="dateCreated" style="font-weight: bold;">Created: </label>
-            <span id="dateCreated"></span> <!-- Replace with actual URL -->
+            <span id="dateCreated"></span>
         </div>     
          
     </div>
@@ -164,17 +276,10 @@
         <a href="#" class="btn btn-danger" id="btnCloseCustomerService" style="display:none;">Close Request</a>
     </div>
 </div>
-<!--
-<div class="form-group">
-            <label for="requestDescription" style="font-weight: bold;">Request Description</label>
-            <p id="requestDescription"> </p> 
-            <span id="attachments"></span> 
-        </div>
-                            -->
+
         <label for="requestDescription" style="font-weight: bold;">Messages</label>
         <div class="list-group scrollable" id="replies">
             
-            <!-- Additional replies can be added here -->
         </div>
                 <div id="postReplyForm">
                     <div id="alertMessage"></div>
@@ -184,7 +289,7 @@
                             <textarea class="form-control" id="replyMessage" rows="3" placeholder="Enter your reply here"></textarea>
                         </div>
                         <div class="form-group">
-            <label for="attachment">Attachment (Screenshot, Excel file etc.)</label>
+             <label for="attachment">Attachment (Screenshot, Excel, PDF file etc.)</label>
             <span class="fileinput-button" id="dropzone144">Drop files here or click to upload
                     	<input class="fileupload" id="fileupload144" type="file" foldertype="addoc144" subfolder="Tickets" infotype="tickets" name="files[]" multiple="">
                			 </span><span class="loader"></span>
@@ -219,70 +324,148 @@ $(document).ready(function() {
     var minimumDataTableHeight = 200;
     var calculatedDataTableHeight = Math.max(windowHeight - 295, minimumDataTableHeight);
 
-    var table_tickets = $('#table_tickets').DataTable({
-       // paging: true,
-        //lengthChange: false,
-        searching: false,
-        ordering: true,
-         //info: true,
-         pageLength: 625,
-
-         /*
-         scrollCollapse: true,
-        scroller: {
-        loadingIndicator: false},
-        */
-        processing: true,
-        serverSide: true,
-        //scrollY: calculatedDataTableHeight, // Set scrollY to the calculated height
-        scrollX: true,
-
+    // Function to create column definitions
+    function getColumns(origin) {
+        var columns = [];
+        
         <?php if ($myuser->userdata['isclient'] != "1"): ?>
-        order: [[1, 'desc']], // 🟢 Default sort by "id" column in descending order
-        <?php else: ?>
-        order: [[0, 'desc']], // 🟢 Default sort by "id" column in descending order
-        <?php endif; ?> 
-      
-        ajax: {
-            url: "ajax/getCustomerServices.php",
-            type: "POST",
-            async: true,
-            data: function (data) {
-                data.idclient = $('#idclient').val();
-                data.status = $('#ticketStatus').val();
+        columns.push({ data: "username" });
+        <?php endif; ?>
+        
+        columns.push({ data: "id" });
+        columns.push({ data: "request_type" });
+        columns.push({ data: "request_description" });
+        columns.push({ 
+            data: "status",
+            render: function(data, type, row) {
+                if (data == '1') {
+                    return '<span class="badge badge-success">Open</span>';
+                } else {
+                    return '<span class="badge badge-danger">Closed</span>';
+                }
             }
-        },
-        columns: [
+        });
+        columns.push({ data: "date_created" });
+        columns.push({ data: "last_updated" });
+
+        
+        // Add Origin column only for "all" tab and only for non-clients
+        <?php if ($myuser->userdata['isclient'] != "1"): ?>
+        if (origin === 'all') {
+            columns.push({
+                data: null,
+                render: function(data, type, row) {
+                    return row.is_client_created == '1' ? 
+                        '<span class="label label-info">Client</span>' : 
+                        '<span class="label label-warning">Internal</span>';
+                },
+                orderable: false
+            });
+        }
+        <?php endif; ?>
+        
+        return columns;
+    }
+
+    // Function to initialize DataTable
+    function initializeDataTable(tableId, origin, filterCheckboxId) {
+        var table = $('#' + tableId).DataTable({
+            searching: false,
+            ordering: true,
+            pageLength: 625,
+            processing: true,
+            serverSide: true,
+            scrollX: true,
             <?php if ($myuser->userdata['isclient'] != "1"): ?>
-            { data: "username" },
+            order: [[1, 'desc']],
+            <?php else: ?>
+            order: [[0, 'desc']],
             <?php endif; ?>
-            { data: "id" },
-            { data: "request_type" },
-            { data: "request_description" },
-            { data: "status" },
-            { data: "date_created" },
-            { data: "last_updated" },
-        ],
-        columnDefs: [
-            { targets: 'no-sort', orderable: false },
-        ],
-        createdRow: function(row, data, dataIndex) {
-            if (data.viewed == 0) {
-                $(row).css('background-color', '#f2dede'); // Change this color as needed
+            ajax: {
+                url: "ajax/getCustomerServices.php",
+                type: "POST",
+                async: true,
+                data: function (data) {
+                    data.idclient = $('#idclient').val();
+                    data.status = $('#' + filterCheckboxId).prop('checked') ? '0' : '1';
+                    data.origin = origin;
+                }
+            },
+            columns: getColumns(origin),
+            columnDefs: [
+                { targets: 'no-sort', orderable: false },
+            ],
+            createdRow: function(row, data, dataIndex) {
+                if (data.viewed == 0) {
+                    //$(row).css('background-color', '#f2dede');
+                }
             }
-        }        
+        });
+        
+        return table;
+    }
+
+    // Initialize the "All Tickets" table on page load
+    var table_all = initializeDataTable('table_all_tickets', 'all', 'filter-all-confirmed');
+    var table_client = null;
+    var table_internal = null;
+
+    <?php if ($myuser->userdata['isclient'] != "1"): ?>
+    // Handle tab clicks - Only for non-clients
+    $('.nav-tabs a').on('click', function (e) {
+        e.preventDefault();
+        var origin = $(this).data('origin');
+        $('#ticketOrigin').val(origin);
+        
+        $(this).tab('show');
+        
+        // Initialize tables lazily when tabs are clicked
+        if (origin === 'client' && table_client === null) {
+            table_client = initializeDataTable('table_client_tickets', 'client', 'filter-client-confirmed');
+        } else if (origin === 'internal' && table_internal === null) {
+            table_internal = initializeDataTable('table_internal_tickets', 'internal', 'filter-internal-confirmed');
+        }
+        
+        // Reload the appropriate table
+        setTimeout(function() {
+            if (origin === 'all' && table_all) {
+                table_all.ajax.reload();
+            } else if (origin === 'client' && table_client) {
+                table_client.ajax.reload();
+            } else if (origin === 'internal' && table_internal) {
+                table_internal.ajax.reload();
+            }
+        }, 100);
     });
 
-    $('#filter-actions-confirmed').on('change', function (e) {
-        $("#ticketStatus").val($(this).is(":checked") ? '0' : '1');
-        table_tickets.ajax.reload(null, false);
+    // Handle filter checkbox changes
+    $('#filter-client-confirmed').on('change', function() {
+        if (table_client) table_client.ajax.reload();
+    });
+    
+    $('#filter-internal-confirmed').on('change', function() {
+        if (table_internal) table_internal.ajax.reload();
+    });
+    <?php endif; ?>
+    
+    // Handle filter checkbox for all tickets (applies to both clients and non-clients)
+    $('#filter-all-confirmed').on('change', function() {
+        if (table_all) table_all.ajax.reload();
     });
 
-
+    // Handle client dropdown change
     $('#idclient').on('change', function() {
-		table_tickets.ajax.reload(null, false);
-	});
+        var currentOrigin = $('#ticketOrigin').val();
+        if (currentOrigin === 'all' && table_all) {
+            table_all.ajax.reload();
+        } else if (currentOrigin === 'client' && table_client) {
+            table_client.ajax.reload();
+        } else if (currentOrigin === 'internal' && table_internal) {
+            table_internal.ajax.reload();
+        }
+    });
 
+    // Close customer service request
     $("#btnCloseCustomerService").on('click', function() {
         if (confirm("Are you sure you want to close this request?")) {
             var id = $("#customerServiceId").val();
@@ -294,13 +477,22 @@ $(document).ready(function() {
               uid: 0,
               data: formData,
             }).done(function (response) {
-                    table_tickets.ajax.reload(null, false);
-                    $('#postReplyModal').modal('hide');            
+                // Reload the active table
+                var currentOrigin = $('#ticketOrigin').val();
+                if (currentOrigin === 'all' && table_all) {
+                    table_all.ajax.reload();
+                } else if (currentOrigin === 'client' && table_client) {
+                    table_client.ajax.reload();
+                } else if (currentOrigin === 'internal' && table_internal) {
+                    table_internal.ajax.reload();
+                }
+                $('#postReplyModal').modal('hide');            
             });
          }   		
         return false;
-	});
+    });
 
+    // Get customer service data
     function getCustomerServiceData(id) {
         var formData = {
             id: id,
@@ -312,11 +504,9 @@ $(document).ready(function() {
             data: formData,
             success: function(response) {
               if (response) {
-                // Populate form fields with retrieved data
                 $('#postReplyModal #clientname').val(response.clientname);
                 $('#referenceNo').html(response.id);
                 $('#tRequestType').html(response.request_type);
-                //$('#requestDescription').html(response.request_description);
                 $('#currentURL').html(response.current_url);
                 $('#attachments').html(response.attachments);
                 $('#dateCreated').html(response.date_created);
@@ -336,16 +526,13 @@ $(document).ready(function() {
             }
       });        
      }
+     
     $(document).on('click', '.post-reply', function() {
         var id = $(this).attr("id");
         $("#customerServiceId").val(id);
       getCustomerServiceData(id);
       $('#postReplyModal').modal('show');
       return false;
-    });
-
-    $('#postReplyModal').on('hidden.bs.modal', function () {
-        //table_tickets.ajax.reload(null, false);
     });
 
     $('#postReplyModal').on('shown.bs.modal', function () {
@@ -366,12 +553,11 @@ $(document).ready(function() {
       var attachments = texts.join(', ');
 
           var formData = {
-              customerServiceId: $('#customerServiceId').val(), // Assuming you have a hidden input field with id 'customerServiceId' to store ticket ID
+              customerServiceId: $('#customerServiceId').val(),
               message: $("#replyMessage").val(),
               attachments: attachments
           };
 
-          // Send Ajax request
           $.post('ajax/ajaxHandler.php', {
               rtype: 'postReply',
               uid: 0,
@@ -383,14 +569,19 @@ $(document).ready(function() {
              
                 $('#alertMessage').removeClass('alert-success').addClass('alert-danger').html("<ul>"+response.data.errors+"</ul>").fadeIn();
             } else {
-   // Show error message in alert div
-   var id =  $("#customerServiceId").val();
+                var id =  $("#customerServiceId").val();
                 getCustomerServiceData(id);                
-                // Show success message
                 $('#alertMessage').removeClass('alert-danger').addClass('alert-success').text('Reply successfully sent!').fadeIn().delay(3000).fadeOut();
 
-                // Reload or update the DataTable, assuming you have a DataTable instance called table_tickets
-                table_tickets.ajax.reload(null, false);
+                // Reload the active table
+                var currentOrigin = $('#ticketOrigin').val();
+                if (currentOrigin === 'all' && table_all) {
+                    table_all.ajax.reload();
+                } else if (currentOrigin === 'client' && table_client) {
+                    table_client.ajax.reload();
+                } else if (currentOrigin === 'internal' && table_internal) {
+                    table_internal.ajax.reload();
+                }
             }
           }).fail(function (xhr, status, error) {
               // Handle Ajax error here
@@ -413,9 +604,9 @@ $(document).ready(function() {
       };
       var goUpload = true;
       var uploadFile = data.files[0];
-      if (!/\.(jpg|jpeg|png|gif|xls|xlsx)$/i.test(uploadFile.name)) {
-    alert('You can upload JPG, JPEG, PNG, GIF, or Excel file(s) only');
-    goUpload = false; // Prevent form submission
+if (!/\.(jpg|jpeg|png|gif|xls|xlsx|pdf)$/i.test(uploadFile.name)) {
+    alert('You can upload JPG, JPEG, PNG, GIF, Excel, or PDF file(s) only');
+    goUpload = false;
 }
 
       if (goUpload == true) {
@@ -426,12 +617,10 @@ $(document).ready(function() {
       $(this).parent().siblings('.loader').show();
     },
     fail: function (e, data) {
-      // kill all progress bars awaiting for showing
       $(this).parent().siblings('.loader').hide();
       alert('Error uploading file (' + data.errorThrown + ')');
     },
     done: function (e, data) {
-      // hide loader and add new li with new file info
       $(this).parent().siblings('.loader').hide();
       $.each(data.result.files, function (index, file) {
         var jsonstring =
@@ -445,10 +634,6 @@ $(document).ready(function() {
           file.hostUrl +
           '"}';
         var ell;
-        /*
-        if (file.name.length > 35) ell = file.name.substr(0, 30) + '...';
-        else ell = file.name;
-        */
         ell = file.name;
         var filename = $(
           '<li class="uploaded-file-name" originalname="' +
@@ -468,7 +653,6 @@ $(document).ready(function() {
             delDocClick(e);
           })
         );
-        // add li to the list of the appropriate ul - class from folderType
         $('#ul' + file.folderType).append(filename);
       });
     },

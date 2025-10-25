@@ -49,12 +49,57 @@
         .table-actions {
             white-space: nowrap;
         }
-        .management-tabs {
-            margin-bottom: 20px;
-        }
-        .tab-content {
-            padding: 20px 0;
-        }
+/* Modern Tabs */
+.management-tabs .nav-tabs {
+    border-bottom: 2px solid #e5e7eb; /* lighter border */
+    display: flex;
+    gap: 1rem;
+}
+
+.management-tabs .nav-tabs li {
+    margin-bottom: -2px; /* aligns with bottom border */
+}
+
+.management-tabs .nav-tabs a {
+    font-weight: 500;
+    color: #6b7280; /* gray-600 */
+    padding: 10px 18px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    transition: all 0.25s ease;
+    border-radius: 6px 6px 0 0;
+}
+
+.management-tabs .nav-tabs a:hover {
+    color: #111827; /* gray-900 */
+    background: #f9fafb; /* light hover */
+}
+
+.management-tabs .nav-tabs .active a,
+.management-tabs .nav-tabs .active a:focus,
+.management-tabs .nav-tabs .active a:hover {
+    color: #2563eb; /* modern blue */
+    font-weight: 600;
+    border-bottom: 2px solid #2563eb;
+    background: #f9fafb;
+}
+
+/* Modern Tab Content */
+.tab-content {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0 0 8px 8px;
+    padding: 20px;
+    margin-top: -1px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
         .category-item, .tag-item {
             padding: 10px 15px;
             margin-bottom: 5px;
@@ -421,7 +466,7 @@ function initDataTable() {
             dataSrc: 'data'
         },
         columns: [
-            { data: 'id' },
+            { data: 'id', visible: false },
             { 
                 data: 'question',
                 render: function(data, type, row) {

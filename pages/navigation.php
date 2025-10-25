@@ -51,7 +51,7 @@
              Support</a>
             </li>
             <?php // endif;?> 
-            <?php if ($myuser->userdata['isclient'] == "2"):
+            <?php if ($myuser->userdata['isclient'] != "1"):
                 $db = acsessDb :: singleton();
 	$dbo =  $db->connect(); // Создаем объект подключения к БД
                 $sql = 'SELECT COUNT(id) AS count FROM ttasks AS t WHERE t.status = 1 AND (t.user_id = :auditorId1 OR t.idauditor = :auditorId2)';
@@ -73,12 +73,38 @@ $totalRows = $rows->fetch(PDO::FETCH_ASSOC);
 $openedTasksCount = $totalRows['count'];
  
                 ?>
-                <li><a href="tasks"><i class="fa fa-tasks fa-fw"></i> My Tasks (<?php echo $openedTasksCount; ?>)</a></li>
+                <li><a href="tasks"><i class="fa fa-tasks fa-fw"></i> Tasks (<?php echo $openedTasksCount; ?>)</a></li>
             <?php endif;?>
 
             <?php if($myuser->userdata['canadmin']):?>
-                <li><a href="tasks"><i class="fa fa-tasks fa-fw"></i> Tasks</a></li>
+                <!--<li><a href="tasks"><i class="fa fa-tasks fa-fw"></i> Tasks</a></li>-->
             <?php endif;?>
+
+            <?php 
+// NEW: For Clients (isclient=1) - Show "My Tasks" (only assigned tasks)
+if ($myuser->userdata['isclient'] == "1"): 
+    // Get task count for clients - only tasks assigned to them
+    $db = acsessDb::singleton();
+    $dbo = $db->connect();
+    $sql = "SELECT COUNT(id) AS count FROM ttasks AS t WHERE t.status = 1 AND  t.task_type='client' AND t.idclient = :clientId";
+
+    // Prepare the query
+    $rows = $dbo->prepare($sql);
+
+    // Bind the client ID parameter
+    $rows->bindParam(':clientId', $myuser->userdata['id'], PDO::PARAM_INT);
+
+    // Execute the query
+    $rows->execute();
+
+    // Fetch the result
+    $totalRows = $rows->fetch(PDO::FETCH_ASSOC);
+
+    // Access the count of opened tasks
+    $clientTasksCount = $totalRows['count'];
+    ?>
+    <li><a href="tasks"><i class="fa fa-tasks fa-fw"></i> Tasks (<?php echo $clientTasksCount; ?>)</a></li>
+<?php endif;?>
 
             <?php if ($myuser->userdata['isclient'] != "1"): ?>
                 <li id="training"><a href="training"><i class="fa fa-file-text fa-fw"></i> Activity Records</a></li>
@@ -95,6 +121,7 @@ $openedTasksCount = $totalRows['count'];
                 <li><a href="process_status">Process Status</a></li>
                     <li><a href="tasks">Assign Tasks</a></li>
                     <li><a href="paingreds">Pre-Approved Ingredients</a></li>
+                    <li><a href="faq_manager">FAQ Management</a></li>
                     <li><a href="settings">Settings</a></li>
                 </ul>
                 <?php endif;?>

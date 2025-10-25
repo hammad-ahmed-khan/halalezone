@@ -433,7 +433,7 @@ td[colspan] > div:before {
                 <li class="tab_dates"><a data-toggle="tab" href="#dates">Audit Dates <i class="fa"></i></a></li>
  
                 
-                  <li <?php if ($isAdmin || $isSuperAdmin): ?> style="display:block;"  <?php else: ?> style="display:none;" <?php endif;?> class="tab_invoice"><a data-toggle="tab" href="#invoice">Upload invoice for certification fees <i class="fa"></i></a></li>
+                  <li <?php if ($isAdmin || $isClient || $isSuperAdmin): ?> style="display:block;"  <?php else: ?> style="display:none;" <?php endif;?> class="tab_invoice"><a data-toggle="tab" href="#invoice">Upload invoice for certification fees <i class="fa"></i></a></li>
                   <li <?php if ($isClient || $isAdmin || $isSuperAdmin): ?> style="display:block;"  <?php else: ?> style="display:none;" <?php endif;?> class="tab_popinv"><a data-toggle="tab" href="#popinv">Proof of Payment – Certification Fees  <i class="fa"></i></a></li>
                 
               
@@ -454,7 +454,7 @@ Corrective Actions <i class="fa"></i></a></li>
 <li <?php if ($isAdmin || $isSuperAdmin): ?> style="display:block;"  <?php else: ?> style="display:none;" <?php endif;?> class="tab_dm"><a data-toggle="tab" id="tdm" class="multiline" href="#dm">Decision Making <i class="fa"></i></a></li>
 
 
-<li <?php if ($isAdmin || $isSuperAdmin): ?> style="display:block;"  <?php else: ?> style="display:none;" <?php endif;?> class="tab_invoicete"><a data-toggle="tab" id="tinvoicete" class="multiline" href="#invoicete">Invoice for travel expenses <i class="fa"></i></a></li>
+<li <?php if ($isAdmin || $isClient || $isSuperAdmin): ?> style="display:block;"  <?php else: ?> style="display:none;" <?php endif;?> class="tab_invoicete"><a data-toggle="tab" id="tinvoicete" class="multiline" href="#invoicete">Invoice for travel expenses <i class="fa"></i></a></li>
 <li <?php if ($isClient || $isAdmin || $isSuperAdmin): ?> style="display:block;"  <?php else: ?> style="display:none;" <?php endif;?> class="tab_pop"><a data-toggle="tab" id="tpop" class="multiline" href="#pop">Proof of Payment – Travel Expenses <i class="fa"></i></a></li>
 
 
@@ -463,7 +463,7 @@ Corrective Actions <i class="fa"></i></a></li>
               <li class="tab_additional_items"><a data-toggle="tab" href="#additional_items" class="multiline">Additional Items Application <i class="fa"></i></a></li>
 
               
-                <li <?php if ($isAdmin || $isSuperAdmin): ?> style="display:block;"  <?php else: ?> style="display:none;" <?php endif;?> class="tab_invoiceai"><a data-toggle="tab" id="tinvoiceai" class="multiline" href="#invoiceai">Upload invoice for additional items <i class="fa"></i></a></li>
+                <li <?php if ($isAdmin || $isClient || $isSuperAdmin): ?> style="display:block;"  <?php else: ?> style="display:none;" <?php endif;?> class="tab_invoiceai"><a data-toggle="tab" id="tinvoiceai" class="multiline" href="#invoiceai">Upload invoice for additional items <i class="fa"></i></a></li>
                 <li <?php if ($isClient || $isAdmin || $isSuperAdmin): ?> style="display:block;"  <?php else: ?> style="display:none;" <?php endif;?> class="tab_popai"><a data-toggle="tab" id="tpopai" class="multiline" href="#popai">Proof of Payment – Additional Items <i class="fa"></i></a></li>
               
 

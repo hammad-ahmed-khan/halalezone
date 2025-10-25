@@ -6332,4 +6332,12 @@ function insertActivityLog($clientId,$appId, $userId, $username, $activityDescri
     }
 }
 
+function generateSuccessResponse($data = null){
+	return array("status"=>"1","statusDescription"=>"SUCCESS","data"=>$data);
+}
+
+function generateErrorResponse($description=""){
+	return array("status"=>"0","statusDescription"=>$description);
+}
+
 ?>

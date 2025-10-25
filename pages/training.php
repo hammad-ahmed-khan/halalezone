@@ -185,6 +185,7 @@ $isClient = $myuser->userdata['isclient'] == "1";
                         <label class="col-xs-12 col-md-4">Paid</label>
                         <div class='col-xs-12 col-md-8'>
                             <select class="form-control" id="paid-status">
+                                <option value="">Select</option>
                                 <option value="Yes">Yes</option>
                                 <option value="No">No</option>
                             </select>
@@ -966,14 +967,8 @@ if (!serviceTypeVal || serviceTypeVal.trim() === "") {
     }
         */
 
-    // Only validate payment fields if user is admin
+   // Only validate payment fields if user is admin
     if (TP.isAdmin) {
-        if ($("#activity-form #paid-on").val().trim() == "") {
-            Utils.notifyInput($("#activity-form #paid-on"), "Paid on date is required");
-            $("#activityModal .form-warning").show();
-            return false;
-        }
-        
         if ($("#activity-form #invoice-number-outbound").val().trim() == "") {
             Utils.notifyInput($("#activity-form #invoice-number-outbound"), "Outbound invoice number is required");
             $("#activityModal .form-warning").show();
@@ -982,6 +977,14 @@ if (!serviceTypeVal || serviceTypeVal.trim() === "") {
         
         if ($("#activity-form #paid-status").val().trim() == "") {
             Utils.notifyInput($("#activity-form #paid-status"), "Paid status is required");
+            $("#activityModal .form-warning").show();
+            return false;
+        }
+        
+        // Only require paid_on date if payment status is "Yes"
+        var paidStatus = $("#activity-form #paid-status").val().trim();
+        if (paidStatus === "Yes" && $("#activity-form #paid-on").val().trim() == "") {
+            Utils.notifyInput($("#activity-form #paid-on"), "Paid on date is required when payment status is 'Yes'");
             $("#activityModal .form-warning").show();
             return false;
         }

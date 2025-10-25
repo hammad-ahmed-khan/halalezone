@@ -4769,7 +4769,8 @@ function getIngredientsForIngredient($prod){
 	try{
 		$dbo = &$GLOBALS['dbo'];
         //$sql = 'SELECT id, CONCAT("RMC_", id, "/", rmcode, "/", name) as text from tingredients where  idclient=:idclient AND sub=1 AND deleted = 0 ORDER BY name';
-        $sql = 'SELECT id, CONCAT("RMC_", id, "/", rmcode, "/", name) as text from tingredients where CONCAT("RMC_", id, "/", rmcode, "/", name) is NOT NULL AND idclient=:idclient AND deleted = 0 ORDER BY name';
+        $sql = 'SELECT id, CONCAT("RMC_", id, "/", rmcode, "/", name) as text from tingredients 
+		where sub = 1 AND CONCAT("RMC_", id, "/", rmcode, "/", name) is NOT NULL AND idclient=:idclient AND deleted = 0 ORDER BY name';
 		$stmt = $dbo->prepare($sql);
 		$stmt->setFetchMode(PDO::FETCH_ASSOC);
 		$stmt->bindValue(':idclient', $prod['idclient']);
@@ -7985,6 +7986,7 @@ function createTask($data) {
  	$issueDescription = trim($data["issueDescription"]);
 	$issueType = trim($data["issueType"]);
 	$attachments = trim($data["attachments"]);
+	$taskType = isset($data["taskType"]) ? trim($data["taskType"]) : 'auditor'; // Default to auditor if not set
 
 	$myuser->getUserData();
 	$user_id = $myuser->userdata['id'];
@@ -8019,9 +8021,9 @@ function createTask($data) {
 		try {
 
 			$query = "INSERT INTO ttasks 
-          (user_id, username, email, issue_type, issue_description, current_url, attachments, last_updated_by, idauditor, idclient) 
+          (user_id, username, email, issue_type, issue_description, current_url, attachments, last_updated_by, idauditor, idclient, task_type) 
           VALUES 
-          (:user_id, :username, :email, :issueType, :issueDescription, :currentURL, :attachments, :last_updated_by, :idauditor, :idclient)";
+          (:user_id, :username, :email, :issueType, :issueDescription, :currentURL, :attachments, :last_updated_by, :idauditor, :idclient, :task_type)";
 $stmt = $dbo->prepare($query);
 
 // Bind the new parameters for idauditor and idclient
@@ -8035,6 +8037,7 @@ $stmt->bindParam(':attachments', $attachments, PDO::PARAM_STR);
 $stmt->bindParam(':last_updated_by', $user_id, PDO::PARAM_STR);
 $stmt->bindParam(':idauditor', $idauditor, PDO::PARAM_STR);  // Bind idauditor
 $stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);  // Bind idclient
+$stmt->bindParam(':task_type', $taskType, PDO::PARAM_STR);
 
 $stmt->execute();
 
@@ -9207,8 +9210,7 @@ function startNewCertCycleData($data) {
 		$stmt->execute();
 		$existingDocs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-		$excludedCategories = ['invoice', 'popinv', 'audit', 'checklist', 'review', 'decision', 'pop', 'certificate', 'additional_items', 'invoiceai', 'popai', 'extension'];
-
+		$excludedCategories = ['invoice', 'popinv', 'audit', 'checklist', 'review', 'dm', 'invoicete', 'pop', 'certificate', 'additional_items', 'invoiceai', 'popai', 'extension'];
 		// Duplicate the documents with the newAppId
 		foreach ($existingDocs as $doc) {
 
@@ -9364,9 +9366,30 @@ function saveActivityData($activity) {
         $stmt = $dbo->prepare($sql);
 
         // Format dates for SQL (Y-m-d)
-        $dateOfService = !empty($activity['date_of_service']) ? date("Y-m-d", strtotime($activity['date_of_service'])) : null;
-        $invoiceDateInbound = !empty($activity['invoice_date_inbound']) ? date("Y-m-d", strtotime($activity['invoice_date_inbound'])) : null;
-        $paidOn = !empty($activity['paid_on']) ? date("Y-m-d", strtotime($activity['paid_on'])) : null;
+$dateOfService = null;
+if (!empty($activity['date_of_service'])) {
+    $dt = DateTime::createFromFormat("d M Y", $activity['date_of_service']);
+    if ($dt !== false) {
+        $dateOfService = $dt->format("Y-m-d");
+    }
+}
+
+$invoiceDateInbound = null;
+if (!empty($activity['invoice_date_inbound'])) {
+    $dt = DateTime::createFromFormat("d M Y", $activity['invoice_date_inbound']);
+    if ($dt !== false) {
+        $invoiceDateInbound = $dt->format("Y-m-d");
+    }
+}
+
+$paidOn = null;
+if (!empty($activity['paid_on'])) {
+    $dt = DateTime::createFromFormat("d M Y", $activity['paid_on']);
+    if ($dt !== false) {
+        $paidOn = $dt->format("Y-m-d");
+    }
+}
+
 
         // Bind parameters
         $stmt->bindValue(':idauditor', $activity['idauditor']);
@@ -9404,15 +9427,6 @@ function saveActivityData($activity) {
 function validateUserId($uid){
 	return $uid == $GLOBALS['userId'] ? true : false;
 }
-
-function generateSuccessResponse($data = null){
-	return array("status"=>"1","statusDescription"=>"SUCCESS","data"=>$data);
-}
-
-function generateErrorResponse($description=""){
-	return array("status"=>"0","statusDescription"=>$description);
-}
-
 
 // ----------- Incoming data processing ------------
 

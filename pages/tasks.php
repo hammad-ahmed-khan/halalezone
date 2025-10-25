@@ -4,7 +4,7 @@
 <head>
     <?php include_once('pages/header.php');
     include_once ('includes/func.php');?>
-    <title>Tasks - Halal Digital</title>
+    <title>Tasks - Halal e-Zone</title>
     <style>
 
     </style>
@@ -96,7 +96,22 @@
 	
 
     
-if ($isAuditor) { // Auditor
+// Update the user list query to include clients when needed
+if ($isClient) {
+    // For clients, they should only see tasks related to them
+    // Modify the auditors query to be empty or limited
+    $auditors = [];
+    
+    // Clients query - only show the current client
+    $sql = "SELECT id, name, prefix FROM tusers WHERE isclient=1 AND id = :clientId AND name <> '' AND deleted = 0 ORDER BY name";
+    $stmt = $dbo->prepare($sql);
+    $stmt->bindValue(':clientId', $myuser->userdata['id'], PDO::PARAM_INT);
+    $stmt->setFetchMode(PDO::FETCH_ASSOC);
+    if($stmt->execute()) {
+        $clients = $stmt->fetchAll();
+    }
+}
+else if ($isAuditor) { // Auditor
     $ids = [-1];
     $clients_audit = $myuser->userdata['clients_audit'];
     if ($clients_audit != "") {
@@ -127,16 +142,21 @@ $stmt = $dbo->prepare($sql);
             <div class="page-content">
                 <div class="row no-gutters">
                     <div class="col-xs-12">
-                    <?php if ($isAdmin): ?>
+                 <?php if ($isAdmin): ?>
     <h3>All Assigned Tasks</h3>
     <p class="text-muted">Manage and track all tasks assigned to team members and auditors.</p>
+<?php elseif ($isClient): ?>
+    <h3>My Tasks</h3>
+    <p class="text-muted">View and track tasks assigned to you and tasks you have created.</p>
 <?php else: ?>
     <h3>My Tasks</h3>
     <p class="text-muted">View and track the tasks assigned to you.</p>
-<?php endif; ?>    
+<?php endif; ?>
                     <input type="hidden" name="taskId" id="taskId" value="" />
                     <input type="hidden" name="taskStatus" id="taskStatus" value="1" />
-                    <input type="hidden" name="tmytasks" id="tmytasks" value="<?php echo $isAdmin ? "0" : "1"; ?>" />
+                    
+<input type="hidden" name="tmytasks" id="tmytasks" value="<?php echo ($isAdmin && !$isClient) ? "0" : "1"; ?>" />
+
                     <?php // if (!$myuser->userdata['isclient']): ?>
                     <div class="row gutters">
                         <div class="col-md-4">
@@ -148,12 +168,11 @@ $stmt = $dbo->prepare($sql);
                         <span class="lbl">&nbsp;&nbsp;Show completed tasks</span>
 
                         
-        
+        <?php if (!$isClient): ?>
             <a href="#" id="create-task-btn" class="btn btn-primary" data-toggle="modal" data-target="#tasksModal">
                 <i class="fa fa-plus"></i> Create Task
             </a>
-        
-    
+        <?php endif; ?>    
                     </label>
                         </div>
                     </div>  
@@ -180,7 +199,20 @@ $stmt = $dbo->prepare($sql);
  $createdResult = $createdStmt->fetch(PDO::FETCH_ASSOC);
  $createdCount = (int)$createdResult['created_count'];
 
-                        ?>
+                        
+                        // Update the task count queries for clients
+if ($isClient) {
+    // Query for "Assigned to Me" - tasks where client is the target
+    $assignedQuery = "SELECT COUNT(*) AS assigned_count FROM ttasks WHERE status = 1  AND task_type='client' AND idclient = :client_id";
+    $assignedStmt = $dbo->prepare($assignedQuery);
+    $assignedStmt->bindValue(':client_id', $myuser->userdata['id'], PDO::PARAM_INT);
+    $assignedStmt->execute();
+    $assignedResult = $assignedStmt->fetch(PDO::FETCH_ASSOC);
+    $assignedCount = (int)$assignedResult['assigned_count'];
+     
+ 
+}
+?>
                        <ul class="nav nav-tabs centered-tabs" id="taskTabs" role="tablist">
     <?php if ($isAdmin): ?>
         <li class="nav-item active" role="presentation">
@@ -195,6 +227,14 @@ $stmt = $dbo->prepare($sql);
                 <span class="badge badge-info"><?php echo $assignedCount; ?></span> 
             </a>
         </li>
+ <?php elseif ($isClient): ?>
+        <!-- Clients only see tasks assigned to them, no tabs needed -->
+        <li class="nav-item active" role="presentation">
+            <a class="nav-link" id="assignedToMe-tab" data-toggle="tab" href="#assignedToMe" role="tab" aria-controls="assignedToMe" aria-selected="true">
+                My Assigned Tasks
+                <span class="badge badge-info"><?php echo $assignedCount; ?></span> 
+            </a>
+        </li>        
     <?php else: ?>
         <li class="nav-item active" role="presentation">
             <a class="nav-link" id="assignedToMe-tab" data-toggle="tab" href="#assignedToMe" role="tab" aria-controls="assignedToMe" aria-selected="true">
@@ -215,7 +255,8 @@ $stmt = $dbo->prepare($sql);
 <div class="tab-pane" >
 
 <div class="row">
-    <div class="form-group col-xs-12 col-sm-6 col-md-3" id="tfilter" <?php echo $isAdmin ? '' : 'style="display:none !important;"'; ?>>
+    
+<div class="form-group col-xs-12 col-sm-6 col-md-3" id="tfilter" <?php echo ($isAdmin && !$isClient) ? '' : 'style="display:none !important;"'; ?>>
         <label for="tidauditor">Filter by Auditor or Team Member</label>
         <select class="form-control" id="tidauditor">
             <option value="">Please Select</option>        
@@ -247,7 +288,7 @@ $stmt = $dbo->prepare($sql);
                             <tr class="tableheader">
                             <th class="no-wrap">Reference #</th>
                             <th class="no-wrap">Task for</th>
-                            <th class="no-wrap">Auditor</th>  
+                            <th class="no-wrap">Auditor/Team Member</th>  
                             <th class="no-wrap">Client</th>                            
                             <th class="no-wrap">Category</th>                            
                             <th class="no-wrap">Task</th>                            
@@ -586,6 +627,9 @@ $("#btnSubmitTask").on("click", function () {
             } else {
                 $("#tasksModal").modal("hide");
                 $("#taskForm")[0].reset();
+                 // Clear the attachment list
+                $("#uladdoc244").empty();
+                
                 var table_tasks = $('#table_tasks').DataTable(); 
                 table_tasks.ajax.reload(null, false);
                 alert("Task created successfully!");
@@ -735,7 +779,14 @@ $("#btnSubmitTask").on("click", function () {
         var scrollDiv = $('#replies');
         scrollDiv.scrollTop(scrollDiv[0].scrollHeight);
         $("#replyMessage").val("");
+         $("#uladdoc144").empty(); // Add this line
     });
+
+    // Clear attachments when task creation modal opens
+$('#create-task-btn').on('click', function() {
+    $("#uladdoc244").empty();
+});
+
 
  
     $('#btnPostReply').on('click', function(e) {
@@ -767,6 +818,10 @@ $("#btnSubmitTask").on("click", function () {
              
                 $('#alertMessage').removeClass('alert-success').addClass('alert-danger').html("<ul>"+response.data.errors+"</ul>").fadeIn();
             } else {
+                // Clear the reply form and attachments
+            $("#replyMessage").val("");
+            $("#uladdoc144").empty();
+            
    // Show error message in alert div
    var id =  $("#taskId").val();
                 getTaskData(id);                

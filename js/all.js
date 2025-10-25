@@ -4079,6 +4079,17 @@ let jqGridRequest;
 
 var IP = {
   onDocumentReady: function () {
+    $("#processBulkCertBtn").on("click", function () {
+      IP.processBulkHalalCertUpdate();
+    });
+
+    // Initialize datepicker for bulk expiry date
+    $("#bulkExpiryDate").datepicker({
+      format: "dd/mm/yyyy",
+      autoclose: true,
+      todayHighlight: true,
+    });
+
     $("#logModal").on("shown.bs.modal", function () {
       var table = $("#table_log").DataTable();
       table.ajax.reload(null, false);
@@ -4223,6 +4234,10 @@ var IP = {
       IP.loadIngredientsForIngredientData(IP.populateIngredientsForIngredient);
     });
 
+    $("#ingredModal").on("show.bs.modal", function (e) {
+      IP.loadIngredientsForIngredientData(IP.populateIngredientsForIngredient);
+    });
+
     if (IP.isAdminSession()) {
       IP.initTasksGrid();
 
@@ -4285,6 +4300,8 @@ var IP = {
     });
 
     $("#ingred-form #ingredients").select2({
+      dropdownParent: $("#ingredModal .modal-content"),
+      scrollAfterSelect: false,
       closeOnSelect: false,
     });
   },
@@ -5068,6 +5085,24 @@ var IP = {
         },
       });
 
+      $("#ingredGrid").navButtonAdd("#ingredPager", {
+        caption: "",
+        title: "Bulk Update Halal Certificates for Selected Ingredients",
+        buttonicon: "ace-icon fa fa-edit",
+        onClickButton: function () {
+          IP.onBulkHalalCertUpdate();
+        },
+      });
+
+      $("#ingredGrid").navButtonAdd("#ingredGrid_toppager", {
+        caption: "",
+        title: "Bulk Update Halal Certificates for Selected Ingredients",
+        buttonicon: "ace-icon fa fa-edit",
+        onClickButton: function () {
+          IP.onBulkHalalCertUpdate();
+        },
+      });
+
       resolve("grid inited");
     }).then(function () {
       document
@@ -5080,6 +5115,211 @@ var IP = {
         .querySelector("body")
         .addEventListener("drop", handleDropDocument);
     });
+  },
+
+  onBulkHalalCertUpdate: function () {
+    // Get selected ingredients using multiselect checkboxes
+    var selectedRows = $("#ingredGrid").jqGrid("getGridParam", "selarrrow");
+
+    if (!selectedRows || selectedRows.length === 0) {
+      alert(
+        "Please select one or more ingredients using the checkboxes to update their halal certificates."
+      );
+      return;
+    }
+
+    // Show count of selected ingredients
+    $("#selected-count").text(selectedRows.length);
+
+    // Reset and show modal
+    IP.resetBulkCertModal();
+    $("#bulkHalalCertUpdate").modal("show");
+
+    // Initialize file upload
+    IP.initBulkHalalCertUpload();
+  },
+
+  resetBulkCertModal: function () {
+    // Clear all form fields
+    $("#bulkProducerName").val("");
+    $("#bulkSupplierName").val("");
+    $("#bulkCertificationBody").val("");
+    $("#bulkExpiryDate").val("");
+    $("#bulkRmPosition").val("");
+    $("#halalCertificateFile").val("");
+
+    // Reset file upload area
+    $("#bulk-halal-cert-upload-box .uploaded-files").empty().hide();
+    $("#bulk-halal-cert-upload-box .progress").hide();
+
+    // Hide progress and results
+    $("#bulk-cert-progress").hide();
+    $("#bulk-cert-results").hide();
+    $("#error-details").hide();
+
+    // Enable the process button
+    $("#processBulkCertBtn").prop("disabled", false).show();
+  },
+
+  initBulkHalalCertUpload: function () {
+    // Initialize file upload similar to existing bulk upload functionality
+    // This follows the same pattern as the existing bulk ingredient upload
+
+    var uploadUrl = "fileupload/ProcessFiles.php";
+    var clientId = $("#ingred-clientid").val();
+
+    $("#bulk-halal-cert-fileupload").fileupload({
+      url: uploadUrl,
+      dataType: "json",
+      formData: {
+        infoType: "ingredient",
+        client: clientId,
+        ingredient: "bulk_cert_update",
+      },
+      done: function (e, data) {
+        if (data.result && data.result.files && data.result.files.length > 0) {
+          var file = data.result.files[0];
+          $("#halalCertificateFile").val(JSON.stringify(file));
+
+          // Show uploaded file
+          var fileHtml =
+            '<li class="list-group-item">' +
+            '<i class="fa fa-file-pdf-o"></i> ' +
+            file.name +
+            ' <span class="badge">' +
+            IP.formatFileSize(file.size) +
+            "</span>" +
+            "</li>";
+          $("#bulk-halal-cert-upload-box .uploaded-files")
+            .html(fileHtml)
+            .show();
+        }
+      },
+      progressall: function (e, data) {
+        var progress = parseInt((data.loaded / data.total) * 100, 10);
+        $("#bulk-halal-cert-upload-box .progress").show();
+        $("#bulk-halal-cert-upload-box .progress-bar").css(
+          "width",
+          progress + "%"
+        );
+      },
+      fail: function (e, data) {
+        alert("File upload failed. Please try again.");
+      },
+    });
+  },
+
+  // Process bulk certificate update
+  processBulkHalalCertUpdate: function () {
+    // Validate required fields
+    if (!$("#bulkProducerName").val().trim()) {
+      alert("Producer name is required.");
+      return;
+    }
+    if (!$("#bulkCertificationBody").val().trim()) {
+      alert("Certification body name is required.");
+      return;
+    }
+    if (!$("#bulkExpiryDate").val().trim()) {
+      alert("Expiry date is required.");
+      return;
+    }
+    if (!$("#halalCertificateFile").val()) {
+      alert("Please upload a certificate file.");
+      return;
+    }
+
+    // Get selected ingredients
+    var selectedRows = $("#ingredGrid").jqGrid("getGridParam", "selarrrow");
+    if (!selectedRows || selectedRows.length === 0) {
+      alert("No ingredients selected.");
+      return;
+    }
+
+    // Prepare data
+    var updateData = {
+      ingredientIds: selectedRows,
+      certificateFile: $("#halalCertificateFile").val(),
+      producerName: $("#bulkProducerName").val().trim(),
+      supplierName:
+        $("#bulkSupplierName").val().trim() ||
+        $("#bulkProducerName").val().trim(),
+      certificationBodyName: $("#bulkCertificationBody").val().trim(),
+      expiryDate: $("#bulkExpiryDate").val().trim(),
+      clientId: $("#ingred-clientid").val(),
+    };
+
+    // Show progress
+    $("#processBulkCertBtn").prop("disabled", true);
+    $("#bulk-cert-progress").show();
+
+    // Process the update
+    IP.sendBulkCertUpdateRequest(updateData);
+  },
+
+  sendBulkCertUpdateRequest: function (data) {
+    $.ajax({
+      url: "ajax/bulkHalalCertUpdate.php",
+      type: "POST",
+      data: data,
+      dataType: "json",
+      success: function (response) {
+        IP.handleBulkCertUpdateResponse(response);
+      },
+      error: function (xhr, status, error) {
+        alert("An error occurred: " + error);
+        $("#processBulkCertBtn").prop("disabled", false);
+        $("#bulk-cert-progress").hide();
+      },
+    });
+  },
+
+  handleBulkCertUpdateResponse: function (response) {
+    $("#bulk-cert-progress").hide();
+
+    if (response.status === 0) {
+      alert("Error: " + response.statusDescription);
+      $("#processBulkCertBtn").prop("disabled", false);
+      return;
+    }
+
+    // Show results
+    $("#result-total").text(response.data.total || 0);
+    $("#result-success").text(response.data.success || 0);
+    $("#result-failed").text(response.data.failed || 0);
+
+    // Show error details if any
+    if (response.data.failed > 0 && response.data.failed_rows) {
+      $("#error-list").empty();
+      response.data.failed_rows.forEach(function (row) {
+        $("#error-list").append(
+          "<tr><td>" + row.name + "</td><td>" + row.error + "</td></tr>"
+        );
+      });
+      $("#error-details").show();
+    }
+
+    $("#bulk-cert-results").show();
+    $("#processBulkCertBtn").hide();
+
+    // Refresh the grid to show updated data
+    $("#ingredGrid").jqGrid().trigger("reloadGrid");
+
+    // Show notification
+    if (response.data.success > 0) {
+      Utils.notify(
+        "success",
+        response.data.success + " ingredients updated successfully!"
+      );
+    }
+  },
+
+  formatFileSize: function (bytes) {
+    if (bytes === 0) return "0 Bytes";
+    var k = 1024;
+    var sizes = ["Bytes", "KB", "MB", "GB"];
+    var i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   },
 
   onRestoreIngred: function (e) {
@@ -5366,7 +5606,13 @@ var IP = {
     $("#ingred-form #ingredients").empty();
     $("#ingred-form #ingredients").select2("destroy").select2();
     $("#ingred-form #ingredients")
-      .select2({ closeOnSelect: false, data: response.data.ingredients })
+      .select2({
+        dropdownParent: $("#ingredModal .modal-content"),
+        scrollAfterSelect: false,
+
+        closeOnSelect: false,
+        data: response.data.ingredients,
+      })
       .trigger("change");
   },
 
@@ -6448,11 +6694,13 @@ var IP = {
         return;
       }
     }
+    /*
     if ($("#ingred-form #ulspec li").length == 0) {
       Utils.notifyInput($("#ingred-form #ulspec"), "No Specification uploaded");
       $("#ingredModal .form-warning").show();
       return;
     }
+      */
     return true;
   },
 
