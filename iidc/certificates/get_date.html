@@ -1,0 +1,166 @@
+<html>
+<head>
+	<title>Insert Date</title>
+	<style type="text/css"><!--
+	.msOver    		{ background-color:#ccccff; cursor:pointer;};
+	.mytable  		{background-color:#934900; font-size: 10px;};
+	.daysrow		{background-color:#FFB164; font-size: 10px;};
+	.regcols 		{background-color:#ffffff; font-size: 10px;};
+	.weekendcols	{background-color:#FFB164; font-size: 10px;};
+	.choice			{font-family: Verdana, Arial, Helvetica; font-size: 12px; color: #934900;background-color:#FEFEFE;};
+	.textbox { font-family: 
+			Verdana, Arial, Helvetica, sans-serif; font-size: 9px; color: #934900; border-style: 
+			none; border-top-width: 0px; border-right-width: 0px; border-bottom-width: 0px; 
+			background: transperant; border-left-width: 0px; cursor:pointer;}
+			}
+	--></style>
+	
+	<script language="JavaScript">
+		var today = new Date();
+		var monthLength = new Array(31,28,31,30,31,30,31,31,30,31,30,31);
+		var hiddenArray = new Array(35);
+		
+		var currentyear = today.getYear();
+		var currentmonth = today.getMonth();
+		function formatdate(dd,mm,yy){
+			var strf = document.getElementById('dateformat').value;
+			var chr = '/';
+			var dstr = "";
+			if (strf.charAt(3)== '1') {chr = '-';}
+			else if (strf.charAt(3)== '1') {chr = '.';}
+			
+			for (var a=0; a<3; a++){
+				if (strf.charAt(a)== 'd') {dstr += dd;}
+				else if (strf.charAt(a)== 'm') {dstr += mm;}
+				else if (strf.charAt(a)== 'y') {dstr += yy;}
+				
+				if (a < 2) {dstr += chr;}
+			}			
+			return dstr;
+		}
+	
+		function returndate(indx){
+	   		if(hiddenArray[indx] > 0) {
+	   			window.returnValue = formatdate(hiddenArray[indx],document.getElementById('months').options.selectedIndex+1,parseInt(document.getElementById('years').value));
+			window.close();
+			}
+	   		
+		}
+		function updateoutput() {
+			var ml = document.getElementById('months').options.selectedIndex;
+			var sday = new Date(parseInt(document.getElementById('years').value),ml,01)
+			var startindex = sday.getDay();
+			if (startindex==0) {startindex = 7;}
+			
+			for (var n=0; n<35; n++) {
+				var str = "cell"+n;
+				document.getElementById(str).value = "";
+				hiddenArray[n] = 0;
+			}
+			for (var m=0; m<monthLength[ml]; m++)
+			{
+				var str = "cell"+((startindex+m-1)%35);
+				document.getElementById(str).value = (m+1);
+				hiddenArray[((startindex+m-1)%35)] = (m+1);
+			}
+		}
+		
+		function updateyears()
+		{
+			var tempyear = document.getElementById('years').value;
+			var styear = tempyear - 10;
+			for (var i=0; i <= 20; i++) {
+				var s = "yopt"+i;
+				document.getElementById(s).text = (styear+i);
+				document.getElementById(s).value = (styear+i);
+			}
+			for (var i = 0; i < document.getElementById('years').options.length; i++ )
+			{
+				if (document.getElementById('years').options[i].value == ""+tempyear)
+				{
+			  		document.getElementById('years').options.selectedIndex = i;
+					break;
+				}
+			}
+		}	
+	
+	</script>
+</head>
+
+<body  style="margin: 5px;" scroll=no>
+
+<table class="mytable" align=center cellpadding="0" cellspacing="0" id='main_table'><tr><td align="center" height="25">
+<select id="months" class="choice" onChange="updateoutput();">
+	<option value="1">Jan</option>
+	<option value="2">Feb</option>
+	<option value="3">Mar</option>
+	<option value="4">Apr</option>
+	<option value="5">May</option>
+	<option value="6">Jun</option>
+	<option value="7">Jul</option>
+	<option value="8">Aug</option>
+	<option value="9">Sep</option>
+	<option value="10">Oct</option>
+	<option value="11">Nov</option>
+	<option value="12">Dec</option>
+</select>&nbsp;&nbsp;
+<script language="JavaScript">
+document.getElementById('months').options.selectedIndex = parseInt(currentmonth);
+</script>
+
+<select id="years" class="choice"  onchange="updateoutput();updateyears();">
+	<script language="JavaScript">		
+		var styear = currentyear - 10;
+		for (var i=0; i <= 20; i++) {
+			document.write("<option id=\"yopt"+ i +"\" value=\""+ (styear+i) +"\">" + (styear+i) +"</option>\n");
+		}
+	</script>
+</select>&nbsp;&nbsp;
+<script language="JavaScript">
+
+for (var i = 0; i < document.getElementById('years').options.length; i++ )
+{
+	if (document.getElementById('years').options[i].value == ""+currentyear)
+	{
+  		document.getElementById('years').options.selectedIndex = i;
+		break;
+	}
+}
+</script>
+<input id="dateformat" value="dmy2" type="hidden">
+</td></tr>
+<tr><td>
+
+	<TABLE width="100%" cellpadding="1" cellspacing="1" class="mytable">
+	<TBODY>
+	<TR class="daysrow">
+	<TD align="center" width="25">Mon</TD>
+	<TD align="center" width="25">Tue</TD>
+	<TD align="center" width="25">Wed</TD>
+	<TD align="center" width="25">Thu</TD>
+	<TD align="center" width="25">Fri</TD>
+	<TD align="center" width="25">Sat</TD>
+	<TD align="center" width="25">Sun</TD>
+	</TR>
+	<script language="JavaScript">
+		document.writeln("<tr>");
+		for (var j=1;j<=35;j++){
+			if (j==6 || j==7 || j==13 || j==14 || j==20 || j==21 || j==27 || j==28 || j==34 || j==35) {
+				document.writeln("<TD align=\"center\" width=\"25\" class=\"weekendcols\" onclick=\"returndate("+(j-1)+");\" onmouseover=\"this.className=\'msOver\';\" onmouseout=\"this.className=\'weekendcols\';\"><input id=\"cell" + (j-1) + "\" value=\"1\" type=\"text\" size=\"1\" class=\"textbox\" align=\"absmiddle\" readonly=\"true\"></TD>");
+			} else {
+				document.writeln("<TD align=\"center\" width=\"25\" class=\"regcols\" onclick=\"returndate("+(j-1)+");\" onmouseover=\"this.className=\'msOver\';\" onmouseout=\"this.className=\'regcols\';\"><input id=\"cell" + (j-1) + "\" value=\"1\" type=\"text\" size=\"1\" class=\"textbox\" align=\"absmiddle\" readonly=\"true\"></TD>");
+			}
+			if ((j % 7) == 0) {document.writeln("</tr>");}
+		}
+		document.writeln("</tr>");
+	</script>
+	</TBODY></TABLE>
+
+
+	</td></tr></table>
+
+<script language="JavaScript">
+updateoutput();
+</script>
+</body>
+</html>

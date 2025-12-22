@@ -1,0 +1,19 @@
+# Increase upload_max_filesize to 20MB
+#php_value upload_max_filesize 20M
+
+# Increase max_input_vars to 5000
+#php_value max_input_vars 5000
+
+# Increase max_execution_time to 120 seconds
+#php_value max_execution_time 3600
+#php_value post_max_size 20M
+<IfModule mod_rewrite.c>
+RewriteEngine On
+#RewriteCond %{HTTPS} off
+#RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+RewriteBase /
+RedirectMatch ^/mail/logo.jpg$ /tools/mail/mail-status.php$1
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+#RewriteRule . home.php [L]
+</IfModule>
