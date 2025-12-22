@@ -1,0 +1,73 @@
+<?php
+$page_title = "Tanks";
+include "../config.php";
+include "../init.php";
+
+$pageNumber = $_POST["start"];
+$pageSize = $_POST["length"];
+$s = trim($_POST["s"]);
+$in = trim($_POST["in"]);
+$criteria = "";
+
+if (strlen($s) > 0) {
+	if ($in != "") {
+		if ($in == "FuelID") {
+			$criteria .= " AND t.".$in." = ".$s."";
+		}
+		else if ($in == "Type" || $in == "Status") {
+			$criteria .= " AND t.".$in." = '".$s."'";
+		}
+		else {
+			$criteria .= " AND t.".$in." LIKE '%".$s."%'";
+		}
+	}
+	else {
+		$criteria .= " AND (t.TankID LIKE '%".$s."%' OR t.CRN LIKE '%".$s."%' OR t.MPRN LIKE '%".$s."%' OR t.Status LIKE '%".$s."%' OR t.Type LIKE '%".$s."%' OR f.Name LIKE '%".$s."%')";
+	}
+}
+
+$query = "SELECT t.ID, t.TankID, t.CRN, t.MPRN, t.Type, t.Status, t.BillingMode, t.BillingTarget, f.Name as FuelName, COUNT(DISTINCT fl.ID) AS NumFills, COUNT(DISTINCT fc.ID) AS NumFactors, 
+COUNT(DISTINCT br.ID) AS NumBadReadings, COUNT(*) OVER () as TotalCount
+FROM Tank as t
+INNER JOIN Fuel AS f ON t.FuelID = f.ID
+LEFT OUTER JOIN Fill AS fl ON t.ID = fl.TankID
+LEFT OUTER JOIN Factor AS fc ON t.ID = fc.TankID
+LEFT OUTER JOIN BadReadingDaterange AS br ON t.ID = br.TankID
+WHERE 1 = 1
+$criteria
+GROUP BY t.ID, t.TankID, t.CRN, t.MPRN, t.Type, t.Status, f.Name, t.BillingMode, t.BillingTarget
+ORDER BY t.TankID
+OFFSET ".$pageNumber." ROWS
+FETCH NEXT ".$pageSize." ROWS ONLY";
+
+$stmt = $pdo->prepare($query);
+$stmt->execute();
+$tanks = $stmt->fetchAll(PDO::FETCH_ASSOC);  
+
+$data = array();
+foreach($tanks as $d) {
+	$data[] = $d;
+}
+
+$i = 0;
+foreach ($data as $key=>$val) {
+	if ($i == 0) {
+		header('recordsTotal: '.$data[$i]['TotalCount']);
+	}
+		// add new button
+	$data[$i]['button'] = '<a href="#" id="'.$data[$i]['ID'].'" class="btn btn-danger btndel-tank">
+						   <span class="glyphicon glyphicon-trash" title="Delete" aria-hidden="true"></span>
+						   </a> '. 
+						  '<a href="#" id="'.$data[$i]['ID'].'" class="btn btn-primary btnedit-tank">
+						   <span class="glyphicon glyphicon-pencil" title="Edit" aria-hidden="true"></span>
+						   </a>';
+	$i++;
+}
+
+if ($i == 0) {
+	header('recordsTotal: 0');
+}
+
+$datax = array('data' => $data);
+echo json_encode($datax);
+?>

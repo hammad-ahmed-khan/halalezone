@@ -1,0 +1,123 @@
+<?php
+$page_title = "Tanks";
+include "../config.php";
+include "../init.php";
+
+$ID = $_POST["ID"];
+$FuelID = $_POST["FuelID"];
+$MPRN = $_POST["MPRN"];
+$CRN = $_POST["CRN"];
+$TankID = $_POST["TankID"];
+$Status = $_POST["Status"];
+$Type = $_POST["Type"];
+$errors = "";
+
+$BillingMode = "";
+$BillingTarget = "";
+
+$pdo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+
+if (trim($TankID) == "") { 
+	$errors .= "<li>Tank ID is required.</li>";
+}
+else { 
+	$query = "SELECT ID FROM Tank WHERE TankID = :TankID ".($ID != "" ?" AND ID <> " . $ID : "");
+	$stmt = $pdo->prepare($query);
+	$stmt->bindParam(':TankID', $TankID, PDO::PARAM_STR);  
+	$stmt->execute();
+	if ($stmt->fetchColumn() != "") { 
+		$errors .= "<li>Tank ID already exists.</li>";
+	}
+}
+if (trim($CRN) == "") { 
+	$errors .= "<li>CRN is required.</li>";
+}
+elseif (!is_numeric($CRN)) { 
+	$errors .= "<li>Invalid CRN. Only digits are allowed.</li>";
+}
+elseif (strlen($CRN) > 10) { 
+	$errors .= "<li>Invalid CRN. Must not exceed 10 digits.</li>";
+}
+else { 
+	$query = "SELECT ID FROM Tank WHERE CRN = :CRN ".($ID != "" ?" AND ID <> " . $ID : "");
+	$stmt = $pdo->prepare($query);
+	$stmt->bindParam(':CRN', $CRN, PDO::PARAM_STR);  
+	$stmt->execute();
+	if ($stmt->fetchColumn() != "") { 
+		$errors .= "<li>CRN already exists.</li>";
+	}
+}
+if (trim($MPRN) == "") { 
+	$errors .= "<li>MPRN is required.</li>";
+}
+elseif (!is_numeric($MPRN)) { 
+	$errors .= "<li>Invalid MPRN. Only digits are allowed.</li>";
+}
+elseif (strlen($MPRN) != 11) { 
+	$errors .= "<li>Invalid MPRN. Must be exactly 11 digits long.</li>";
+}
+else { 
+	$query = "SELECT ID FROM Tank WHERE MPRN = :MPRN ".($ID != "" ?" AND ID <> " . $ID : "");
+	$stmt = $pdo->prepare($query);
+	$stmt->bindParam(':MPRN', $MPRN, PDO::PARAM_STR);  
+	$stmt->execute();
+	if ($stmt->fetchColumn() != "") { 
+		$errors .= "<li>MPRN already exists.</li>";
+	}
+}
+
+if ($errors == "") { 
+	if ($ID == "") { // New Tank
+		if ($billing_mode['ui']['add']['visibility'] == TRUE) {
+			$BillingMode = $_POST["BillingMode"];
+		}
+		else {
+			$BillingMode = $billing_mode['ui']['default'];
+		}
+		if ($billing_target['ui']['add']['visibility'] == TRUE) {
+			$BillingTarget = $_POST["BillingTarget"];
+		}
+		else {
+			$BillingTarget = $billing_target['ui']['default'];
+		}
+		$query = "INSERT INTO Tank (FuelID, MPRN, CRN, TankID, Status, Type, BillingMode, BillingTarget) VALUES (:FuelID, :MPRN, :CRN, :TankID, :Status, :Type, :BillingMode, :BillingTarget)";
+		$stmt = $pdo->prepare($query);
+		$stmt->bindParam(':FuelID', $FuelID, PDO::PARAM_STR);  
+		$stmt->bindParam(':MPRN', $MPRN, PDO::PARAM_STR);  
+		$stmt->bindParam(':CRN', $CRN, PDO::PARAM_STR);   
+		$stmt->bindParam(':TankID', $TankID, PDO::PARAM_STR);   
+		$stmt->bindParam(':Status', $Status, PDO::PARAM_STR);   
+		$stmt->bindParam(':Type', $Type, PDO::PARAM_STR);   
+		$stmt->bindParam(':BillingMode', $BillingMode, PDO::PARAM_STR);   
+		$stmt->bindParam(':BillingTarget', $BillingTarget, PDO::PARAM_STR);   
+		$stmt->execute();
+	}
+	else { // Existing Tank
+		$query = "UPDATE Tank SET FuelID = :FuelID, MPRN = :MPRN, CRN = :CRN, TankID = :TankID, Status = :Status, Type = :Type
+		".($billing_mode['ui']['edit']['visibility'] == TRUE ? ",BillingMode=:BillingMode" : "")."
+		".($billing_target['ui']['edit']['visibility'] == TRUE ? ",BillingTarget=:BillingTarget" : "")."
+		 WHERE ID = :ID";
+		$stmt = $pdo->prepare($query);
+		$stmt->bindParam(':FuelID', $FuelID, PDO::PARAM_STR);  
+		$stmt->bindParam(':MPRN', $MPRN, PDO::PARAM_STR);  
+		$stmt->bindParam(':CRN', $CRN, PDO::PARAM_STR);   
+		$stmt->bindParam(':TankID', $TankID, PDO::PARAM_STR);   
+		$stmt->bindParam(':Status', $Status, PDO::PARAM_STR);   
+		$stmt->bindParam(':Type', $Type, PDO::PARAM_STR);   
+		if ($billing_mode['ui']['edit']['visibility'] == TRUE) {
+			$BillingMode = $_POST["BillingMode"];
+			$stmt->bindParam(':BillingMode', $BillingMode, PDO::PARAM_STR);   
+		}
+		if ($billing_target['ui']['edit']['visibility'] == TRUE) {
+			$BillingTarget = $_POST["BillingTarget"];
+			$stmt->bindParam(':BillingTarget', $BillingTarget, PDO::PARAM_STR);   
+		}
+		$stmt->bindParam(':ID', $ID, PDO::PARAM_STR);   
+		$stmt->execute();
+	}
+}
+
+if ($errors != "") {
+	die("<ul>$errors</ul>");
+}
+?>

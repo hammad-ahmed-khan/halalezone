@@ -1,0 +1,35 @@
+AddType application/x-httpd-php .php
+
+### No Direct Access to All files ###
+#<IfModule mod_authz_host.c>
+#	<Files *.php>
+#	order allow,deny
+#	deny from all
+#	</Files>
+#	
+#	<Files index.php>
+#	order allow,deny
+#	allow from all
+#	</Files>
+#</IfModule>
+
+### One of the alternative ways with mod_rewrite ###
+<IfModule mod_rewrite.c>
+	Options -Indexes
+	Options +FollowSymlinks
+	
+	RewriteEngine On
+	RewriteBase /
+	RewriteCond %{SERVER_PORT} !=443
+	RewriteRule ^(.*)$ https://halal-e.zone/$1 [R=301,L]
+
+	RewriteCond %{REQUEST_FILENAME} !-f
+	RewriteCond %{REQUEST_FILENAME} !-d
+
+	RewriteRule ^(.*)$ index.php [L,QSA]
+</IfModule>
+
+
+<IfModule mod_rewrite.c>
+
+</IfModule>
