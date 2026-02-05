@@ -28,7 +28,7 @@ if ($_GET['act'] == 'edit') {
 <form id="reminder_edit" class="form" action="reminder_save.php" method="post" onsubmit="return post_this_form(this)" target="" style="min-width:450px;padding:10px;">
     <input type="hidden" name="act" value="<?php echo $_GET['act'] == 'edit' ? 'updateReminder' : 'massUpdateReminders'; ?>">
     <input type="hidden" name="clid" id="clid" value="<?php echo $_GET['clid']; ?>">
-    <table class="alternateOn" style="width:100%;margin:0">
+    <table class="table table-striped table-bordered" style="width:100%;margin:0">
         <tr>
             <th colspan="2" style="text-align:center;"><?php echo $reminder['company_name']; ?></th>
         </tr>

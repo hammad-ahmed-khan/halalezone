@@ -113,7 +113,7 @@ if (isset($act) and $act == "edit") {
     }
 </script>
 <div id="addEditDialog" style="display:none;overflow:auto !important">
-    <ol id="user_allowed_clients" class="alternateOn">
+    <ol id="user_allowed_clients" class="table table-striped table-bordered">
     </ol>
     <center>
         <input type='button' onclick="selectAllUserClients()" value="..Select all.." />

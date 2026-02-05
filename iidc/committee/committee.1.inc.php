@@ -67,7 +67,7 @@ if (isset($_GET['status']) && $_GET['status']) {
     <?php if (isset($_SESSION['super_admin']) && !isset($_GET['status'])) { ?>
         <span style="position: absolute;right:50px;top:-15px;font-size:12px;color:grey;"><a href="?inc=certificates" class="button">Call for a meeting</a></span><?php }; ?>
 </h2>
-<table class="alternateOn" style="width:100%">
+<table class="table table-striped table-bordered" style="width:100%">
     <thead>
         <tr>
             <th style="width:20px">No</th>

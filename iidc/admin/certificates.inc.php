@@ -3,46 +3,106 @@
 	<input type="text" id="crtDocNr" />
 </div>
 <?php
-$cert_types = ['a' => 'HA: Slaughtering Certificate', 'b' => 'HB: None meat Certificate', 'sa' => 'SA: Slaughtering Certificate (Saudi Arabia only)', 'sb' => 'SB: None meat Certificate (Saudi Arabia only)'];
-if (!isset($_GET['offid'])) {
-	echo "<h2 style=\"text-align:center\">" . $cert_types[$_GET['tp']] . "</h2>";
-}
+$cert_types = [
+    'a' => ['name' => 'HA: Slaughtering Certificate', 'icon' => 'fa-drumstick-bite', 'class' => 'type-ha'],
+    'b' => ['name' => 'HB: Non-meat Certificate', 'icon' => 'fa-leaf', 'class' => 'type-hb'],
+    'sa' => ['name' => 'SA: Slaughtering Certificate (Saudi Arabia)', 'icon' => 'fa-drumstick-bite', 'class' => 'type-sa'],
+    'sb' => ['name' => 'SB: Non-meat Certificate (Saudi Arabia)', 'icon' => 'fa-leaf', 'class' => 'type-sb']
+];
+
+$currentType = isset($_GET['tp']) ? $_GET['tp'] : 'a';
+$certInfo = isset($cert_types[$currentType]) ? $cert_types[$currentType] : $cert_types['a'];
+
 if (!isset($_SESSION['offid']) or trim($_SESSION['offid']) == '0') {
-	$offIds = array();
-	if ($offices = $amdb->query("SELECT * FROM offices WHERE status != 'deleted'")) {
-		foreach ($offices as $office)
-			$offIds[$office['offid']] = $office['offid'];
-	}
+    $offIds = array();
+    if ($offices = $amdb->query("SELECT * FROM offices WHERE status != 'deleted'")) {
+        foreach ($offices as $office)
+            $offIds[$office['offid']] = $office['offid'];
+    }
 ?>
-	<center>
-		<select size="1" name="offid" onchange="document.location='<?php echo $prog_www; ?>/admin/?inc=certificates&tp=<?php echo $_GET['tp']; ?>&offid='+this.value;">
-			<?php ob_start(); ?>
-			<option value="*" <?php echo (isset($_GET['offid']) && $_GET['offid'] == '*') ? 'selected' : ''; ?>>All offices</option>
-			<?php
-			$offices = $amdb->query("SELECT * FROM offices WHERE status != 'deleted'");
-			if (count($offices) > 0) {
-				include "$hcp_path/config/countries.code.php";
-				$nr = 1;
-				foreach ($offices as $office) {
-					if (isset($offIds[$office['offid']])) { ?>
-						<option value="<?php echo $office['offid']; ?>" <?php echo (isset($_GET['offid']) && $_GET['offid'] == $office['offid']) ? 'selected' : ''; ?>><?php echo $country[$office['office_country']]; ?> - <?php echo $office['office_name']; ?></option>
-			<?php
-					}
-				}
-			}
-			?>
-			<?php
-			$offices = ob_get_contents();
-			ob_end_clean();
-			echo $offices;
-			?>
-		</select>
-		<?php if (isset($_GET['offid']) && $_GET['offid'] != '*') { ?>
-			<input type="button" onClick="document.location='<?php echo $prog_www ?>/certificates/?inc=certificate_ab&tp=<?php echo $_GET['tp']; ?>&offid=<?php echo $_GET['offid']; ?>'" value="Issue certificate" />
-		<?php }; ?>
-	</center>
-<?php
-}
+
+<div class="shipment-header-section">
+    <div class="shipment-header-content">
+        <div class="shipment-header-left">
+            <div class="shipment-header-icon">
+                <i class="fas fa-shipping-fast"></i>
+            </div>
+            <div class="shipment-header-info">
+                <h3>Shipment Certificates</h3>
+                <p>Issue and manage shipment certification documents</p>
+            </div>
+            <span class="cert-type-badge <?php echo $certInfo['class']; ?>">
+                <i class="fas <?php echo $certInfo['icon']; ?>"></i>
+                <?php echo $currentType; ?>
+            </span>
+        </div>
+        
+        <div class="office-selector-wrapper">
+            <label for="officeSelect">Select Office:</label>
+            <select class="office-selector" id="officeSelect" name="offid" 
+                    onchange="document.location='<?php echo $prog_www; ?>/admin/?inc=certificates&tp=<?php echo $_GET['tp']; ?>&offid='+this.value;">
+                <option value="*" <?php echo (isset($_GET['offid']) && $_GET['offid'] == '*') ? 'selected' : ''; ?>>All Offices</option>
+                <?php
+                $offices = $amdb->query("SELECT * FROM offices WHERE status != 'deleted'");
+                if (count($offices) > 0) {
+                    include "$hcp_path/config/countries.code.php";
+                    foreach ($offices as $office) {
+                        if (isset($offIds[$office['offid']])) { ?>
+                            <option value="<?php echo $office['offid']; ?>" <?php echo (isset($_GET['offid']) && $_GET['offid'] == $office['offid']) ? 'selected' : ''; ?>>
+                                <?php echo $country[$office['office_country']]; ?> - <?php echo $office['office_name']; ?>
+                            </option>
+                <?php
+                        }
+                    }
+                }
+                ?>
+            </select>
+            
+            <?php if (isset($_GET['offid']) && $_GET['offid'] != '*') { ?>
+                <a href="<?php echo $prog_www ?>/certificates/?inc=certificate_ab&tp=<?php echo $_GET['tp']; ?>&offid=<?php echo $_GET['offid']; ?>" 
+                   class="btn-issue-shipment">
+                    <i class="fas fa-plus-circle"></i>
+                    Issue Certificate
+                </a>
+            <?php } else { ?>
+                <span class="btn-issue-shipment disabled" title="Please select an office first">
+                    <i class="fas fa-plus-circle"></i>
+                    Issue Certificate
+                </span>
+            <?php } ?>
+        </div>
+    </div>
+</div>
+
+<?php } else { 
+    // When session office is set, show simplified header
+?>
+
+<div class="shipment-header-section">
+    <div class="shipment-header-content">
+        <div class="shipment-header-left">
+            <div class="shipment-header-icon">
+                <i class="fas fa-shipping-fast"></i>
+            </div>
+            <div class="shipment-header-info">
+                <h3>Shipment Certificates</h3>
+                <p>Issue and manage shipment certification documents</p>
+            </div>
+            <span class="cert-type-badge <?php echo $certInfo['class']; ?>">
+                <i class="fas <?php echo $certInfo['icon']; ?>"></i>
+                <?php echo $certInfo['name']; ?>
+            </span>
+        </div>
+        
+        <a href="<?php echo $prog_www ?>/certificates/?inc=certificate_ab&tp=<?php echo $_GET['tp']; ?>&offid=<?php echo $_SESSION['offid']; ?>" 
+           class="btn-issue-shipment">
+            <i class="fas fa-plus-circle"></i>
+            Issue Certificate
+        </a>
+    </div>
+</div>
+
+<?php }
 if (!isset($_GET['offid']) or trim($_GET['offid']) == '') {
 	$_GET['offid'] = $_SESSION['offid'];
 }
@@ -193,7 +253,7 @@ if (!isset($_GET['offid']) or trim($_GET['offid']) == '') {
 
 	function loadCertificates(start) {
 		st = start;
-		jQuery.post('/admin/load_certificates.php', {
+		jQuery.post('/iidc/admin/load_certificates.php', {
 			tp: '<?php echo $_GET['tp']; ?>',
 			offid: offid,
 			country: country,
@@ -328,6 +388,204 @@ if (!isset($_GET['offid']) or trim($_GET['offid']) == '') {
 	}
 </script>
 <style>
+/* Shipment Certificate Header Section */
+.shipment-header-section {
+    background: linear-gradient(135deg, #ffffff 0%, #f8faf9 100%);
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    margin: 15px 0 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+}
+
+.shipment-header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 32px;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.shipment-header-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.shipment-header-icon {
+    width: 52px;
+    height: 52px;
+    background: linear-gradient(135deg, #0369a1 0%, #0284c7 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 22px;
+    flex-shrink: 0;
+}
+
+.shipment-header-info h3 {
+    margin: 0 0 4px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.shipment-header-info p {
+    margin: 0;
+    font-size: 13px;
+    color: #64748b;
+}
+
+/* Office Selector */
+.office-selector-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.office-selector-wrapper label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    white-space: nowrap;
+}
+
+.office-selector {
+    min-width: 280px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #1e293b;
+    background-color: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 18px;
+	height:34px;
+}
+
+.office-selector:hover {
+    border-color: #0284c7;
+    background-color: #f8fafc;
+}
+
+.office-selector:focus {
+    outline: none;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 4px rgba(3, 105, 161, 0.12);
+}
+
+/* Issue Button */
+.btn-issue-shipment {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 24px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+    background: linear-gradient(135deg, #0369a1 0%, #0284c7 100%);
+    border: none;
+    border-radius: 8px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(3, 105, 161, 0.3);
+    white-space: nowrap;
+}
+
+.btn-issue-shipment:hover {
+    background: linear-gradient(135deg, #075985 0%, #0369a1 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(3, 105, 161, 0.4);
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.btn-issue-shipment:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(3, 105, 161, 0.3);
+}
+
+.btn-issue-shipment i {
+    font-size: 15px;
+}
+
+.btn-issue-shipment.disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
+    box-shadow: none;
+    opacity: 0.7;
+}
+
+.btn-issue-shipment.disabled:hover {
+    transform: none;
+    background: #94a3b8;
+    box-shadow: none;
+}
+
+/* Certificate Type Badge */
+.cert-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: #e0f2fe;
+    color: #0369a1;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.cert-type-badge.type-ha { background: #dcfce7; color: #166534; }
+.cert-type-badge.type-hb { background: #fef3c7; color: #92400e; }
+.cert-type-badge.type-sa { background: #e0e7ff; color: #3730a3; }
+.cert-type-badge.type-sb { background: #fce7f3; color: #9d174d; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .shipment-header-content {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+        padding: 20px;
+    }
+    
+    .shipment-header-left {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .office-selector-wrapper {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .office-selector {
+        width: 100%;
+        min-width: unset;
+    }
+    
+    .btn-issue-shipment {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
 	#searchHead td input {
 		width: 99% !important;
 		padding: 4px 10px;
@@ -360,7 +618,7 @@ if (!isset($years['year'])) {
 	$years['year'] = date("Y");
 }
 ?>
-<table border=0 class="alternateOn" id="shipmentCertificates" style="background:#fff;width:100%">
+<table border=0 class="table table-striped table-bordered" id="shipmentCertificates" style="background:#fff;width:100%">
 	<thead>
 		<tr class="alternateOff">
 			<td colspan=10 class="sub_title">

@@ -102,7 +102,7 @@ function get_user_signature($comemid)
 }
 ?>
 <h2 class="content_title" style="text-align:center">Decision Making Committee Members</h2>
-<table id="hqc_committee_members" class="alternateOn">
+<table id="hqc_committee_members" class="table table-striped table-bordered">
     <thead>
         <tr>
             <th style="width:20px">Nr</th>

@@ -87,7 +87,7 @@ if ($_REQUEST['act'] == 'subsidiaries') {
             <input type="hidden" name="act" value="save_subsidiaries" />
             <input type="hidden" name="clid" value="<?php echo $_REQUEST['clid']; ?>" />
             <input type="hidden" name="saveBtn" value="Save" />
-            <div style="padding:10px;width:600px;border:1px solid #eee" class="alternateOn">
+            <div style="padding:10px;width:600px;border:1px solid #eee" class="table table-striped table-bordered">
                 <h3><b>Company: </b><span style="color:green"><?php echo $main_client['company_name']; ?></span></h3>
                 <div>
                     <input type="text" id="search" onkeyup="searchClients(this.value);" class="search" style="width:90% !important" placeholder="Search fo clients"/>

@@ -2,37 +2,1225 @@
 if (!defined("_HQC_")) {
 	exit();
 };
-//show php errors
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-if (!isset($_GET['act']))
-	$_GET['act'] = 'add';
 ?>
+<style>
+	/* ============================================
+   Annual Certificate Page - Complete Styling
+   ============================================ */
+
+/* Office Selection for Clients */
+.office-select-container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.office-select-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+    border-radius: 16px;
+    border: 1px solid #bbf7d0;
+    padding: 32px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    text-align: center;
+}
+
+.office-select-card .card-icon {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, #1a5f4a 0%, #2d8a6e 100%);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 28px;
+    margin: 0 auto 20px;
+}
+
+.office-select-card h3 {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.office-select-card p {
+    margin: 0 0 24px 0;
+    font-size: 14px;
+    color: #64748b;
+}
+
+.office-select-card select {
+    width: 100%;
+    padding: 16px 48px 16px 20px;
+    font-size: 15px;
+    font-weight: 500;
+    color: #1e293b;
+    background-color: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    background-size: 20px;
+}
+
+.office-select-card select:hover {
+    border-color: #1a5f4a;
+}
+
+.office-select-card select:focus {
+    outline: none;
+    border-color: #1a5f4a;
+    box-shadow: 0 0 0 4px rgba(26, 95, 74, 0.12);
+}
+
+/* Version Badge */
+.version-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #f1f5f9;
+    color: #64748b;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    margin-bottom: 20px;
+}
+
+/* Form Container */
+.annual-cert-form-container {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.annual-cert-form-container table#certTbl {
+    width: 100%;
+    margin: 0;
+    border: none !important;
+    border-collapse: collapse;
+}
+
+.annual-cert-form-container table#certTbl tr {
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.annual-cert-form-container table#certTbl tr:last-child {
+    border-bottom: none;
+}
+
+.annual-cert-form-container table#certTbl th {
+    padding: 16px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    background: #fafafa;
+    text-align: left;
+    vertical-align: top;
+    width: 180px;
+    border-right: 1px solid #f1f5f9;
+}
+
+.annual-cert-form-container table#certTbl td {
+    padding: 10px 10px;
+    background: #ffffff;
+    vertical-align: top;
+}
+
+/* Sub Title Rows */
+.annual-cert-form-container table#certTbl td.sub_title,
+.annual-cert-form-container table#certTbl th.sub_title {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%) !important;
+    color: #166534;
+    font-weight: 600;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+    padding: 16px 20px;
+    border-right: none;
+}
+
+/* Form Inputs */
+.annual-cert-form-container input[type="text"],
+.annual-cert-form-container input[type="number"],
+.annual-cert-form-container select:not(.searchable),
+.annual-cert-form-container textarea {
+    padding: 0px 14px;
+    font-size: 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    transition: all 0.25s ease;
+    font-family: inherit;
+}
+.annual-cert-form-container input[type="text"],
+.annual-cert-form-container input[type="number"],
+.annual-cert-form-container textarea {
+    padding: 10px 14px;
+     
+ 
+}
+
+.annual-cert-form-container input[type="text"]:focus,
+.annual-cert-form-container input[type="number"]:focus,
+.annual-cert-form-container select:focus,
+.annual-cert-form-container textarea:focus {
+    outline: none;
+    border-color: #1a5f4a;
+    box-shadow: 0 0 0 3px rgba(26, 95, 74, 0.1);
+}
+
+.annual-cert-form-container textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+/* Company Selection */
+.company-select-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.company-select-row select {
+    flex: 1;
+    min-width: 300px;
+    max-width: 450px;
+}
+
+.btn-new-cert {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+    background: linear-gradient(135deg, #1a5f4a 0%, #2d8a6e 100%);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.btn-new-cert:hover {
+    background: linear-gradient(135deg, #155043 0%, #1a5f4a 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(26, 95, 74, 0.3);
+}
+
+/* Company Info Display */
+.company-info-display {
+    padding: 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    line-height: 1.6;
+}
+
+.company-info-display b {
+    color: #1e293b;
+}
+
+.company-info-display .deleted-warning {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 8px 16px;
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+/* Manufacturing Sites */
+#manufacturingSites {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+#manufacturingSites li {
+    padding: 0px !important;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.2s ease;
+    position: relative;
+}
+
+#manufacturingSites li:last-child {
+    border-bottom: none;
+}
+
+#manufacturingSites li:hover {
+    background: #f0fdf4;
+}
+
+#manufacturingSites li label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    padding-right: 40px;
+}
+
+#manufacturingSites li input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #1a5f4a;
+}
+
+#manufacturingSites li .siteName {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+#manufacturingSites li .siteAddress {
+    color: #64748b;
+    font-size: 13px;
+}
+
+#manufacturingSites li .fa-clone {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #0369a1;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+#manufacturingSites li .fa-clone:hover {
+    background: #e0f2fe;
+}
+
+.site-options-box {
+    margin-top: 16px;
+    padding: 16px;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 10px;
+}
+
+.site-options-box label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #92400e;
+    cursor: pointer;
+    margin-bottom: 8px;
+}
+
+.site-options-box label:last-child {
+    margin-bottom: 0;
+}
+
+/* Products List */
+#productsOl {
+    padding: 0 !important;
+    margin: 0 !important;
+    list-style: none;
+    max-height: 280px;
+    overflow-y: auto;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+}
+
+#productsOl li {
+    padding: 5px !important;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.2s ease;
+    position: relative;
+    margin: 0 !important;
+    list-style: none !important;
+}
+
+#productsOl li:last-child {
+    border-bottom: none;
+}
+
+#productsOl li:hover {
+    background: #f0fdf4;
+}
+
+#productsOl li label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #374151;
+    padding-right: 30px;
+    line-height: 1.4;
+    margin: 0pc;
+    padding: 5px;
+} 
+
+#productsOl li input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #1a5f4a;
+    flex-shrink: 0;
+    margin-top: 0px;
+}
+
+#productsOl li.double {
+    background: #fef2f2;
+}
+
+#productsOl li .prohibited {
+    color: #dc2626 !important;
+    font-size: 12px !important;
+    margin-right: 4px;
+}
+
+.products-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.products-toolbar select {
+    padding: 8px 32px 8px 12px;
+    font-size: 13px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+}
+
+.products-toolbar a {
+    color: #1a5f4a;
+    font-size: 13px;
+    text-decoration: none;
+}
+
+.products-toolbar a:hover {
+    text-decoration: underline;
+}
+
+.products-count {
+    font-size: 13px;
+    color: #64748b;
+}
+
+.products-count span {
+    font-weight: 600;
+    color: #1a5f4a;
+}
+
+.products-warning {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #dc2626;
+}
+
+.products-warning i {
+    font-size: 14px !important;
+}
+
+/* Prohibited Confirm */
+#prohibitedConfirm {
+    margin-top: 12px;
+    padding: 12px 16px;
+    background: #fef3c7;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+#prohibitedConfirm span {
+    color: #dc2626;
+    font-weight: 500;
+}
+
+#prohibitedConfirm label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 12px;
+    cursor: pointer;
+}
+
+/* Reference Standards List */
+#halalStandards {
+    padding: 0 !important;
+    margin: 0 !important;
+    list-style: none;
+    max-height: 220px;
+    overflow-y: auto;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+}
+
+#halalStandards li {
+    padding: 0px;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.2s ease;
+    margin: 0pc;
+    padding: 5px;
+
+}
+
+#halalStandards li:last-child {
+    border-bottom: none;
+}
+
+#halalStandards li:hover {
+    background: #f0fdf4;
+}
+
+#halalStandards li label {
+	padding:0px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #374151;
+    line-height: 1.4;
+}
+
+#halalStandards li input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #1a5f4a;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.list-hint {
+    display: block;
+    padding: 8px 16px;
+    font-size: 12px;
+    color: #64748b;
+    font-style: italic;
+}
+
+.list-hint.warning {
+    color: #dc2626;
+}
+
+/* Categories List */
+.categoriesUl {
+    padding: 0 !important;
+    margin: 0 !important;
+    list-style: none;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.categoriesUl li {
+    padding: 0px;
+    border-bottom: 1px solid #f1f5f9;
+    position: relative;
+}
+
+.categoriesUl li:last-child {
+    border-bottom: none;
+}
+
+.categoriesUl li.main-category {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.categoriesUl li.main-category:hover {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+}
+
+.categoriesUl li.sub-category {
+    padding-left: 40px;
+    background: #ffffff;
+}
+
+.categoriesUl li.sub-category:hover {
+    background: #f0fdf4;
+}
+
+.categoriesUl li label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #374151;
+    padding-right: 50px;
+}
+
+.categoriesUl li input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #1a5f4a;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.categoriesUl li b {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.categoriesUl li .fa-angle-double-down {
+    position: absolute;
+    right: 16px;
+    top: 45%;
+    transform: translateY(-50%);
+    color: #64748b;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    font-size: 14px !important;
+}
+
+.categoriesUl li .fa-angle-double-down:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+}
+
+.categoriesUl li .fa-question-circle {
+    position: absolute;
+    right: 44px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #0369a1;
+    cursor: pointer;
+    font-size: 14px !important;
+}
+
+.categoriesUl li .fa-question-circle:hover {
+    color: #0284c7;
+}
+
+/* Scope Textarea */
+#scope_of_certification {
+    width: 100% !important;
+    min-height: 100px;
+}
+
+.char-counter {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.char-counter span {
+    font-weight: 600;
+    color: #1a5f4a;
+}
+
+/* Dates Section */
+.dates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.date-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.date-field label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.date-field input {
+    padding: 10px 14px;
+}
+
+.validity-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.validity-field input[type="number"] {
+    width: 70px;
+}
+
+.validity-hint {
+    font-size: 12px;
+    color: #64748b;
+    font-style: italic;
+}
+
+.validity-hint.warning {
+    color: #dc2626;
+}
+
+#surveillance {
+    margin-top: 12px;
+    padding: 12px 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+#surveillance input {
+    margin: 0 8px;
+}
+
+/* Signatory Section */
+#approval {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+#approval select {
+    max-width: 400px;
+}
+
+#approval info {
+    font-size: 13px;
+    color: #64748b;
+}
+
+#approval .infoBox {
+    padding: 10px 14px;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #0369a1;
+}
+
+/* Font Sizes Section */
+#font_sizes {
+    padding: 16px !important;
+    margin: 12px 0 !important;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 10px;
+    list-style: none;
+}
+
+#font_sizes li {
+    padding: 0px !important;
+    margin: 0 !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    background: none !important;
+}
+
+#font_sizes li:last-child {
+    border-bottom: none !important;
+}
+
+#font_sizes li label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: #374151;
+}
+
+#font_sizes li input[type="number"] {
+    width: 60px;
+    padding: 6px 10px;
+    font-size: 13px;
+}
+
+/* Product Columns Section */
+#productsColumns {
+    margin-top: 12px;
+    padding: 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+}
+
+#sortableTitles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 0 !important;
+    margin: 16px 0 !important;
+    list-style: none;
+}
+
+#sortableTitles li {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0px !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    margin: 0 !important;
+    min-width: 160px;
+}
+
+#sortableTitles li b {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px !important;
+    background: #f0fdf4 !important;
+    color: #166534;
+    border-radius: 6px;
+    font-size: 12px !important;
+    cursor: move;
+}
+
+#sortableTitles li b::after {
+    content: "\f0b2";
+    font-family: "Font Awesome 5 Free";
+    font-size: 12px;
+}
+
+#sortableTitles li input[type="text"] {
+    padding: 6px 10px !important;
+    font-size: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+}
+
+#sortableTitles li input[type="text"]:first-of-type {
+    width: 100% !important;
+}
+
+#sortableTitles li input[type="text"]:last-of-type {
+    width: 50px !important;
+}
+
+/* Certificate Options */
+#annexOptions ul {
+    padding: 12px !important;
+    margin: 12px 0 0 0 !important;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    list-style: none;
+}
+
+#annexOptions ul li {
+    padding: 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+#annexOptions ul li:last-child {
+    border-bottom: none;
+}
+
+#annexOptions ul li label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #374151;
+    cursor: pointer;
+}
+
+#annexOptions ul li input[type="checkbox"],
+#annexOptions ul li input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #1a5f4a;
+}
+
+#annexOptions ul ul {
+    margin: 8px 0 0 24px !important;
+    padding: 12px !important;
+    background: #ffffff;
+    border: 1px dashed #e2e8f0;
+}
+
+/* Revision Section */
+.revision-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.revision-row label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #374151;
+}
+
+.revision-row b {
+    font-size: 13px;
+    color: #374151;
+}
+
+.revision-row input[type="text"],
+.revision-row input[type="number"] {
+    padding: 8px 12px;
+    font-size: 13px;
+}
+
+#auto_annex_number {
+    padding: 6px 12px;
+    background: #e0f2fe;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #0369a1;
+}
+
+/* Form Footer */
+.annual-cert-form-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 24px;
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border-top: 1px solid #bbf7d0;
+    flex-wrap: wrap;
+}
+
+.btn-cert-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    border: none;
+}
+
+.btn-cert-action.reset {
+    background: #ffffff;
+    color: #64748b;
+    border: 2px solid #e2e8f0;
+}
+
+.btn-cert-action.reset:hover {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.btn-cert-action.secondary {
+    background: #ffffff;
+    color: #1a5f4a;
+    border: 2px solid #bbf7d0;
+}
+
+.btn-cert-action.secondary:hover {
+    background: #f0fdf4;
+    border-color: #86efac;
+}
+
+.btn-cert-action.primary {
+    background: linear-gradient(135deg, #1a5f4a 0%, #2d8a6e 100%);
+    color: #ffffff;
+}
+
+.btn-cert-action.primary:hover {
+    background: linear-gradient(135deg, #155043 0%, #1a5f4a 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(26, 95, 74, 0.3);
+}
+
+.btn-cert-action.authorize {
+    background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
+    color: #ffffff;
+}
+
+.btn-cert-action.authorize:hover {
+    background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+.btn-cert-action.print {
+    background: linear-gradient(135deg, #0369a1 0%, #0284c7 100%);
+    color: #ffffff;
+}
+
+.btn-cert-action.print:hover {
+    background: linear-gradient(135deg, #075985 0%, #0369a1 100%);
+    box-shadow: 0 4px 12px rgba(3, 105, 161, 0.3);
+}
+
+#DownLoadZip {
+    padding: 8px 14px;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+#DownLoadZip label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #92400e;
+    cursor: pointer;
+}
+
+/* Info Messages */
+#productsInfo {
+    margin-top: 24px;
+    padding: 16px 24px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    color: #dc2626;
+    text-align: center;
+}
+
+/* Collapsible Sections */
+.collapsible-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-right: 12px;
+    margin-bottom: 8px;
+}
+
+.collapsible-header:hover {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #1a5f4a;
+}
+
+.collapsible-header i {
+    font-size: 12px !important;
+    transition: transform 0.2s ease;
+}
+
+/* ============================================
+   VALIDATION ERROR STYLES
+   ============================================ */
+
+/* Validation Error Styles */
+.validation-error {
+    border: 2px solid #dc2626 !important;
+    background-color: #fef2f2 !important;
+    animation: shake 0.5s ease-in-out;
+}
+
+.validation-error-label {
+    color: #dc2626 !important;
+    font-weight: 600 !important;
+    background: #fef2f2 !important;
+}
+
+.validation-error-message {
+    display: block;
+    color: #dc2626;
+    font-size: 12px;
+    margin-top: 4px;
+    padding: 4px 8px;
+    background: #fef2f2;
+    border-radius: 4px;
+    border-left: 3px solid #dc2626;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+/* Error Summary Box */
+.validation-summary {
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: none;
+}
+
+.validation-summary.show {
+    display: block;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.validation-summary-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    color: #dc2626;
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.validation-summary-header i {
+    font-size: 18px;
+}
+
+.validation-summary-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.validation-summary-list li {
+    padding: 0;
+    padding-left: 24px;
+    position: relative;
+    color: #991b1b;
+    font-size: 13px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.validation-summary-list li:hover {
+    color: #dc2626;
+    text-decoration: underline;
+}
+
+.validation-summary-list li::before {
+    content: "×";
+    position: absolute;
+    left: 8px;
+    color: #dc2626;
+    font-weight: bold;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .annual-cert-form-container table#certTbl th {
+        display: block;
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    
+    .annual-cert-form-container table#certTbl td {
+        display: block;
+    }
+    
+    .company-select-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .company-select-row select {
+        min-width: 100%;
+        max-width: 100%;
+    }
+    
+    .dates-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    #sortableTitles {
+        flex-direction: column;
+    }
+    
+    #sortableTitles li {
+        min-width: 100%;
+    }
+    
+    .annual-cert-form-footer {
+        flex-direction: column;
+    }
+    
+    .btn-cert-action {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .revision-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+label {
+    padding: 5px !important;
+}
+</style>
+<?php
+//show php errors
+//ini_set('display_errors', 1);
+//ini_set('display_startup_errors', 1);
+//error_reporting(E_ALL);
+if (!isset($_GET['act'])) {
+	$_GET['act'] = 'add';
+}
+
+$user_type = $_SESSION["user_type"];
+
+// Define crtNr and act variables
+$crtNr = isset($_GET['crtNr']) ? $_GET['crtNr'] : '';
+$act = isset($_GET['act']) ? $_GET['act'] : 'add';
+?>
+
 <script type="text/javascript">
 	$("#page_title").html("Annual Certificate (Request / Update)")
 </script>
-ver: 01 14/052025
-<?php
+ <?php
 if ($_SESSION['user_type'] == 'client' and !isset($_REQUEST['offid'])) {
-	if ($userOffices = $amdb->get_results("SELECT offid,office_name FROM offices WHERE FIND_IN_SET($_GET[clid],clients) AND status='active'")) { ?>
-		<center> <b>Request the certificate from:</b>
-			<select size="1" name="office" onchange="document.location='index.php?inc=certificate_add_edit&act=add&clid=<?php echo $_GET['clid']; ?>&offid='+this.value">
-				<option value="">Please select Office</option>
-				<?php foreach ($userOffices as $office) { ?>
-					<option value="<?php echo $office['offid']; ?>"><?php echo $office['office_name']; ?></option>
-				<?php }; ?>
-			</select>
-		</center>
-	<?php
-		return;
-	} else {
-		$_GET['offid'] = 0;
-	}
-	?>
+    if ($userOffices = $amdb->get_results("SELECT offid,office_name FROM offices WHERE FIND_IN_SET($_GET[clid],clients) AND status='active'")) { 
+?>
+<div class="office-select-container">
+    <div class="office-select-card">
+        <div class="card-icon">
+            <i class="fas fa-building"></i>
+        </div>
+        <h3>Select Certification Office</h3>
+        <p>Choose the office that will process your certificate request</p>
+        <select name="office" onchange="if(this.value) document.location='index.php?inc=certificate_add_edit&act=add&clid=<?php echo $_GET['clid']; ?>&offid='+this.value">
+            <option value="">-- Select an Office --</option>
+            <?php foreach ($userOffices as $office) { ?>
+                <option value="<?php echo $office['offid']; ?>"><?php echo htmlspecialchars($office['office_name']); ?></option>
+            <?php } ?>
+        </select>
+    </div>
+</div>
 <?php
+        return;
+    } else {
+        $_GET['offid'] = 0;
+    }
 }
 ?>
+ 
 <style>
 	#approval div {
 		margin-bottom: 5px
@@ -54,7 +1242,7 @@ if ($_SESSION['user_type'] == 'client' and !isset($_REQUEST['offid'])) {
 
 	ul#productsOl li {
 		list-style: decimal !important;
-		margin-left: 20px;
+		margin-left: 0px;
 
 	}
 
@@ -117,7 +1305,7 @@ if ($_SESSION['user_type'] == 'client' and !isset($_REQUEST['offid'])) {
 	ul.categoriesUl li .fa-angle-double-down {
 		position: absolute;
 		right: 20px;
-		top: 2px;
+		top: 45%;
 		font-size: 16px !important;
 	}
 
@@ -143,6 +1331,7 @@ if ($_SESSION['user_type'] == 'client' and !isset($_REQUEST['offid'])) {
 		border-radius: 10px;
 		display: inline-block;
 		width: 40px;
+		text-align:center !important;
 	}
 
 	.disabled {
@@ -160,10 +1349,388 @@ if ($_SESSION['user_type'] == 'client' and !isset($_REQUEST['offid'])) {
 		font-size: 12px !important;
 		color: firebrick;
 	}
+/* Annual Certificate Page Header */
+.annual-cert-header {
+    background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+}
+
+.annual-cert-header-content {
+    display: flex;
+    align-items: center;
+    padding: 24px 32px;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.annual-cert-header-icon {
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, #1a5f4a 0%, #2d8a6e 100%);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.annual-cert-header-info {
+    flex: 1;
+    min-width: 200px;
+}
+
+.annual-cert-header-info h2 {
+    margin: 0 0 6px 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.annual-cert-header-info p {
+    margin: 0;
+    font-size: 14px;
+    color: #64748b;
+	text-align:left;
+}
+
+
+.annual-cert-header-info p strong {
+    color: #1a5f4a;
+}
+
+/* Action Badge */
+.action-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.action-badge.issue {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.action-badge.update {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.action-badge.reissue {
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+.action-badge i {
+    font-size: 11px;
+}
+
+/* Header Meta Tags */
+.annual-cert-header-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.cert-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.cert-badge.annual {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.cert-badge.annual i {
+    color: #1a5f4a;
+}
+
+.office-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #f8fafc;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.office-badge i {
+    color: #64748b;
+}
+
+/* Company Info Card */
+.company-info-strip {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 32px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+}
+
+.company-info-strip .company-icon {
+    width: 40px;
+    height: 40px;
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    font-size: 16px;
+}
+
+.company-info-strip .company-details {
+    flex: 1;
+}
+
+.company-info-strip .company-details .company-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 2px 0;
+}
+
+.company-info-strip .company-details .company-address {
+    font-size: 12px;
+    color: #64748b;
+    margin: 0;
+}
+
+.company-info-strip .company-status {
+    padding: 6px 12px;
+    background: #dcfce7;
+    color: #166534;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.company-info-strip .company-status.deleted {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+/* Company Selection State */
+.company-select-prompt {
+    background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 24px;
+    padding: 32px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.company-select-prompt .prompt-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.company-select-prompt .prompt-icon {
+    width: 52px;
+    height: 52px;
+    background: linear-gradient(135deg, #1a5f4a 0%, #2d8a6e 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 22px;
+}
+
+.company-select-prompt .prompt-text h2 {
+    margin: 0 0 4px 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.company-select-prompt .prompt-text p {
+    margin: 0;
+    font-size: 13px;
+    color: #64748b;
+}
+
+.company-select-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.company-select-wrapper label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.company-select-wrapper .select-with-button {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+}
+
+.company-select-wrapper select {
+    flex: 1;
+    padding: 16px 48px 16px 20px;
+    font-size: 15px;
+    font-weight: 500;
+    color: #1e293b;
+    background-color: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    background-size: 20px;
+}
+
+.company-select-wrapper select:hover {
+    border-color: #1a5f4a;
+    background-color: #fafffe;
+}
+
+.company-select-wrapper select:focus {
+    outline: none;
+    border-color: #1a5f4a;
+    box-shadow: 0 0 0 4px rgba(26, 95, 74, 0.12);
+}
+
+.btn-new-certificate {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+    background: linear-gradient(135deg, #1a5f4a 0%, #2d8a6e 100%);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.btn-new-certificate:hover {
+    background: linear-gradient(135deg, #155043 0%, #1a5f4a 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(26, 95, 74, 0.3);
+}
+
+.company-select-hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 12px 16px;
+    background: #fefce8;
+    border: 1px dashed #fbbf24;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #92400e;
+}
+
+.company-select-hint i {
+    color: #f59e0b;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .annual-cert-header-content {
+        flex-direction: column;
+        text-align: center;
+        padding: 20px;
+    }
+    
+    .annual-cert-header-info h2 {
+        justify-content: center;
+        font-size: 18px;
+    }
+    
+    .annual-cert-header-meta {
+        justify-content: center;
+    }
+    
+    .company-info-strip {
+        flex-direction: column;
+        text-align: center;
+        padding: 16px 20px;
+    }
+    
+    .company-select-prompt {
+        padding: 20px;
+    }
+    
+    .company-select-prompt .prompt-header {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .company-select-wrapper .select-with-button {
+        flex-direction: column;
+    }
+}
+	
 </style>
 <script type="text/javascript">
 	$("#page_title").html("Halal Certificate (Request / Update)");
 	var prohibited = false;
+	var formInteracted = false;
+
+	// Field labels for better error messages
+	var fieldLabels = {
+		'clid': 'Company',
+		'products': 'Products',
+		'productsOl': 'Products',
+		'reference_standards': 'Reference Halal Standards',
+		'halalStandards': 'Reference Halal Standards',
+		'scope_of_certification': 'Scope of Certification',
+		'category': 'Category',
+		'categoriesUl': 'Category',
+		'date_of_issue': 'Date of Issue',
+		'date_of_expiry': 'Date of Expiry',
+		'initial_issue_date': 'Initial Issue Date',
+		'signatory': 'Signatory',
+		'manufacturingSites': 'Manufacturing Site'
+	};
 
 	function checkAnnexSepareted(val) {
 		jQuery("#annexSepareted,#DownLoadZip").css("display", val)
@@ -172,40 +1739,237 @@ if ($_SESSION['user_type'] == 'client' and !isset($_REQUEST['offid'])) {
 	}
 	var offid = <?php echo $_GET['offid']; ?>;
 
-	async function crtDoAct(act) {
-		document.addEditForm.crtDo.value = act;
-		var reqs = ['products', 'clid', 'reference_standards', 'scope_of_certification', 'category', 'date_of_issue', 'date_of_expiry', 'initial_issue_date', 'signatory'];
-		if (act == "preview") {
-			// jQuery("#certificate_option_invoiced").removeAttr("data-required");
-			jQuery("#future_action_when").removeAttr("data-required");
-			// jQuery("#certificate_option_invoiced").parent().css("color", "")
-			document.addEditForm.action = 'certificate.pdf.php';
-			document.addEditForm.target = '_blank';
-		} else {
-			// jQuery("#certificate_option_invoiced").attr("data-required", "yes");
-			if (jQuery("#send_by_email").is(":checked")) jQuery("#future_action_when").attr("data-required", "yes");
-			document.addEditForm.action = 'certificate_save.php';
-			document.addEditForm.target = '_blank';
-			document.addEditForm.target = 'fIframe';
+	/**
+	 * Clear all validation errors
+	 */
+	function clearValidationErrors() {
+		// Remove error classes
+		jQuery('.validation-error').removeClass('validation-error');
+		jQuery('.validation-error-label').removeClass('validation-error-label');
+		
+		// Remove inline error messages
+		jQuery('.validation-error-message').remove();
+		
+		// Hide summary
+		jQuery('#validationSummary').removeClass('show');
+		jQuery('#validationSummaryList').empty();
+	}
+
+	/**
+	 * Show validation errors with highlighting and summary
+	 */
+	function showValidationErrors(errors) {
+		var summaryHtml = '';
+		var firstErrorElement = null;
+		
+		errors.forEach(function(error, index) {
+			// Find the field element
+			var $field = jQuery('#' + error.field);
+			
+			// If not found by ID, try other selectors
+			if ($field.length === 0) {
+				$field = jQuery('[name="' + error.field + '"]');
+			}
+			if ($field.length === 0) {
+				$field = jQuery('.' + error.field).first();
+			}
+			if ($field.length === 0) {
+				$field = jQuery('#' + error.field.replace('Ul', '').replace('Ol', ''));
+			}
+			
+			if ($field.length > 0) {
+				// Add error class
+				$field.addClass('validation-error');
+				
+				// Find and highlight the label/header
+				var $row = $field.closest('tr');
+				if ($row.length > 0) {
+					$row.find('th').first().addClass('validation-error-label');
+				}
+				
+				// Store first error element for scrolling
+				if (index === 0) {
+					firstErrorElement = $field;
+				}
+			}
+			
+			// Add to summary list
+			summaryHtml += '<li onclick="scrollToField(\'' + error.field + '\')">' + error.message + '</li>';
+		});
+		
+		// Show summary box
+		jQuery('#validationSummaryList').html(summaryHtml);
+		jQuery('#validationSummary').addClass('show');
+		
+		// Scroll to summary
+		if (jQuery('#validationSummary').length > 0) {
+			jQuery('html, body').animate({
+				scrollTop: jQuery('#validationSummary').offset().top - 100
+			}, 500);
+		} else if (firstErrorElement) {
+			jQuery('html, body').animate({
+				scrollTop: firstErrorElement.offset().top - 100
+			}, 500);
 		}
-		if (jQuery("#awarded_to_site").is(":checked")) {
-			sitesSelected = jQuery("#manufacturingSites input[type='checkbox']:checked").length;
-			if (sitesSelected != 1) {
-				if (sitesSelected == 0)
-					alert_message("Please select a manufacturing site");
-				else
-					alert_message("Please select only one manufacturing site");
-				return false;
+	}
+
+	/**
+	 * Scroll to a specific field
+	 */
+	function scrollToField(fieldId) {
+		var $field = jQuery('#' + fieldId);
+		if ($field.length === 0) {
+			$field = jQuery('[name="' + fieldId + '"]');
+		}
+		if ($field.length === 0) {
+			$field = jQuery('.' + fieldId).first();
+		}
+		
+		if ($field.length > 0) {
+			jQuery('html, body').animate({
+				scrollTop: $field.offset().top - 100
+			}, 500);
+			
+			// Focus the field if possible
+			if ($field.is('input, select, textarea')) {
+				$field.focus();
 			}
 		}
+	}
+
+	async function crtDoAct(act) {
+		formInteracted = true;
+		document.addEditForm.crtDo.value = act;
+		
+		// Clear previous validation errors
+		clearValidationErrors();
+		
+		var errors = [];
+		var reqs = ['products', 'clid', 'reference_standards', 'scope_of_certification', 'category', 'date_of_issue', 'date_of_expiry', 'initial_issue_date', 'signatory'];
+		
+if (act == "preview") {
+    jQuery("#future_action_when").removeAttr("data-required");
+    document.addEditForm.action = 'certificate.pdf.php';
+    document.addEditForm.target = '_blank';
+    document.addEditForm.method = 'post';
+} else {
+    if (jQuery("#send_by_email").is(":checked")) jQuery("#future_action_when").attr("data-required", "yes");
+    document.addEditForm.action = 'certificate_save.php';
+    document.addEditForm.target = '_self';
+    document.addEditForm.method = 'post';
+}		
+		// Manufacturing site validation
+		if (jQuery("#awarded_to_site").is(":checked")) {
+			var sitesSelected = jQuery("#manufacturingSites input[type='checkbox']:checked").length;
+			if (sitesSelected == 0) {
+				errors.push({
+					field: 'manufacturingSites',
+					message: 'Please select a manufacturing site (required when "Awarded to Manufacturing site" is checked)'
+				});
+			} else if (sitesSelected > 1) {
+				errors.push({
+					field: 'manufacturingSites',
+					message: 'Please select only one manufacturing site'
+				});
+			}
+		}
+		
 		checkForm(reqs);
-		if (jQuery("#signatory").val() == '' || jQuery("#signatory").val() == 'Select Signatory') {
-			//alert_message("Please select a signatory");
-			//return false;
+		
+		// Validate Company
+		var clidVal = jQuery("#clid").val();
+		if (!clidVal) {
+			clidVal = jQuery("input[name='clid']").val();
+		}
+		if (!clidVal || clidVal.toString().trim() === '') {
+			errors.push({
+				field: 'clid',
+				message: 'Company is required'
+			});
+		}
+		
+		// Validate Products
+		if ($(".product:checked").length === 0) {
+			errors.push({
+				field: 'productsOl',
+				message: 'Please select at least one product'
+			});
+		}
+		
+		// Validate Reference Standards
+		if ($(".reference_standards:checked").length === 0) {
+			errors.push({
+				field: 'halalStandards',
+				message: 'Please select at least one Reference Halal Standard'
+			});
+		}
+		
+		// Validate Scope of Certification
+		var scopeVal = jQuery("#scope_of_certification").val();
+		if (!scopeVal || scopeVal.trim() === '') {
+			errors.push({
+				field: 'scope_of_certification',
+				message: 'Scope of Certification is required'
+			});
+		}
+		
+		// Validate Categories
+		if ($(".category:checked").length === 0 && $(".main-cat-checkbox:checked").length === 0) {
+			errors.push({
+				field: 'categoriesUl',
+				message: 'Please select at least one category'
+			});
+		}
+		
+		// Validate Date of Issue (for admin)
+		<?php if ($_SESSION['user_type'] == "admin") { ?>
+		var dateIssue = jQuery("#date_of_issue").val();
+		if (!dateIssue || dateIssue.trim() === '') {
+			errors.push({
+				field: 'date_of_issue',
+				message: 'Date of Issue is required'
+			});
+		}
+		
+		// Validate Date of Expiry
+		var dateExpiry = jQuery("#date_of_expiry").val();
+		if (!dateExpiry || dateExpiry.trim() === '') {
+			errors.push({
+				field: 'date_of_expiry',
+				message: 'Date of Expiry is required'
+			});
+		}
+		
+		// Validate Initial Issue Date
+		var initialDate = jQuery("#initial_issue_date").val();
+		if (!initialDate || initialDate.trim() === '') {
+			errors.push({
+				field: 'initial_issue_date',
+				message: 'Initial Issue Date is required'
+			});
+		}
+		
+		// Validate Signatory
+		var signatoryVal = jQuery("#signatory").val();
+		if (!signatoryVal || signatoryVal === '' || signatoryVal === 'Select Signatory') {
+			errors.push({
+				field: 'signatory',
+				message: 'Please select a Signatory'
+			});
+		}
+		<?php }; ?>
+		
+		// Validate prohibited products
+		if (prohibited === true && !jQuery("#certificate_option_prohibited").is(":checked")) {
+			errors.push({
+				field: 'prohibitedConfirm',
+				message: 'There is a prohibited product in the selected items. Please confirm to proceed.'
+			});
 		}
 
-		if (prohibited == true && jQuery("#certificate_option_prohibited").is(":checked") == false) {
-			alert_message("There is a prohibited product in the selected item(s).");
+		// Show errors if any
+		if (errors.length > 0) {
+			showValidationErrors(errors);
 			return false;
 		}
 
@@ -216,10 +1980,9 @@ if ($_SESSION['user_type'] == 'client' and !isset($_REQUEST['offid'])) {
 			jQuery("#selectedProducts").val(selectedProducts);
 		}
 
-		if (post_this_form("#addEditForm")) {
+		//if (post_this_form("#addEditForm")) {
 			document.addEditForm.submit();
-
-		}
+		//}
 	}
 
 	function checkForm(reqs) {
@@ -275,15 +2038,28 @@ if ($_SESSION['user_type'] == 'client' and !isset($_REQUEST['offid'])) {
 			checkProductsCount();
 		})
 		checkProductsCount();
+		
+		// Clear validation error when user interacts with a field
+		jQuery(document).on('change keyup', '.validation-error', function() {
+			jQuery(this).removeClass('validation-error');
+			jQuery(this).closest('tr').find('th').removeClass('validation-error-label');
+		});
+		
+		// Clear error when checkbox in error container is clicked
+		jQuery(document).on('change', '.validation-error input[type="checkbox"]', function() {
+			jQuery(this).closest('.validation-error').removeClass('validation-error');
+		});
 	});
 
 	function nextYear() {
 		jQuery("#surveillance").html("");
 		var time = new Date().getTime();
+		
+		// Silently return if date is empty - validation happens on form submit
 		if (jQuery("#date_of_issue").val().trim() == '') {
-			alert_message("Please select the date of issue");
 			return false;
 		}
+		
 		date_of_issue = jQuery("#date_of_issue").val();
 		cert_validity = jQuery("#cert_validity").val();
 		$.post(prog_www + "/config/date_conv.inc.php?tm=" + time, {
@@ -403,10 +2179,6 @@ if ($_SESSION['user_type'] == 'client' and !isset($_REQUEST['offid'])) {
 </script>
 <?php
 include "$prog_path/config/connect.inc.php";
-if ($_SESSION['user_type'] == 'admin') {
-	$hqc_user = $amdb->get_row("SELECT permissions FROM hqc_admin_users WHERE uid = '$_SESSION[uid]'");
-	$hqc_user_permissions = explode(",", str_replace('"', '', $hqc_user['permissions']));
-}
 
 $company = "";
 $scope_of_activities = '';
@@ -489,7 +2261,7 @@ if ($row) {
 	}
 	$result = get_clients("companies.clid,companies.company_name,companies.scope_of_activities,companies.email1,companies.country1");
 	if (count($result) > 0) {
-		$company = '<select size=1 name="clid" style="max-width:400px" id="clid" name="clid" class="searchable" data-required="yes"><option value="">Select a company</option>';
+		$company = '<select size=1 name="clid" style="max-width:400px" id="clid" name="clid" class="searchable" data-required="yes" onchange="redirectToNewCertificate();"><option value="">Select a company</option>';
 
 		foreach ($result as $row) {
 			if ($row['country1'] != 'Israel') {
@@ -520,9 +2292,43 @@ if ($user_type != "client") {
 	if (!$template = $amdb->get_row("SELECT content,php,revision FROM office_certificate_templates WHERE offid='$_GET[offid]' and status='active' and type='annual'"))
 		$template = $amdb->get_row("SELECT content,php,revision FROM office_certificate_templates WHERE offid='0' and status='active' and type='annual'");
 }
+
+// Determine action type and styling
+$isEdit = isset($_GET['act']) && $_GET['act'] == 'edit';
+$isReissue = isset($_GET['act']) && $_GET['act'] == 'reissue';
+
+if ($isEdit) {
+    $actionText = 'Update';
+    $actionClass = 'update';
+    $actionIcon = 'fa-edit';
+} elseif ($isReissue) {
+    $actionText = 'Reissue';
+    $actionClass = 'reissue';
+    $actionIcon = 'fa-redo';
+} else {
+    $actionText = 'Issue';
+    $actionClass = 'issue';
+    $actionIcon = 'fa-plus-circle';
+}
+
+// Get office name if available
+$officeName = '';
+if (isset($office) && isset($office['office_name'])) {
+    $officeName = $office['office_name'];
+}
+
 ?>
-<center>
 	<form action="" method="post" target="_blank" data-target="fIframe" id="addEditForm" name="addEditForm">
+	
+		<!-- Validation Summary Box -->
+		<div id="validationSummary" class="validation-summary">
+			<div class="validation-summary-header">
+				<i class="fas fa-exclamation-triangle"></i>
+				<span>Please fix the following errors:</span>
+			</div>
+			<ul class="validation-summary-list" id="validationSummaryList"></ul>
+		</div>
+	
 		<input type="hidden" name="act" id="act" value="<?php echo (isset($_GET['act']) && $_GET['act'] == 'reissue') ? "add" : $act ?>" />
 		<input type="hidden" value="" name="crtDo" />
 		<input type="hidden" value="certsList" name="afterPrint" id="afterPrint" />
@@ -542,7 +2348,7 @@ if ($user_type != "client") {
 		<?php
 
 		if ($user_type == "client" or $act == "edit" and !isset($_GET['reissue']))
-			echo "<input type=\"hidden\" name=\"clid\" value=\"$clid\">";
+    		echo "<input type=\"hidden\" name=\"clid\" id=\"clid\" value=\"$clid\">";
 		if (isset($act) and $act == "edit") {
 		?>
 			<input type="hidden" id="crtNr" name="crtNr" value="<?php echo $crtNr; ?>" />
@@ -556,10 +2362,44 @@ if ($user_type != "client") {
 <input type=\"hidden\" name=\"reissue\" value=\"y\"/>";
 		}
 		?>
-		<h2 class="content_title">
-			<center><?php echo (isset($_GET['act']) and $_GET['act'] == "edit") ? "Update" : ($_GET['act'] == "reissue" ? "Reissue" : "Issue") ?> Halal Certificate</center>
-		</h2>
-		<table id="certTbl" style="border:1px solid #EEE;min-width: 100%;" class="alternate">
+		 <div class="annual-cert-header">
+        <div class="annual-cert-header-content">
+            <div class="annual-cert-header-icon">
+                <i class="fas fa-certificate"></i>
+            </div>
+            
+            <div class="annual-cert-header-info">
+                <h2>
+                    Annual Halal Certificate
+                    <span class="action-badge <?php echo $actionClass; ?>">
+                        <i class="fas <?php echo $actionIcon; ?>"></i>
+                        <?php echo $actionText; ?>
+                    </span>
+                </h2>
+                <p>Halal certification for products and manufacturing processes</p>
+            </div>
+            
+            <div class="annual-cert-header-meta">
+                <span class="cert-badge annual">
+                    <i class="fas fa-award"></i>
+                    Annual Certificate
+                </span>
+                
+                <?php if ($officeName != '') { ?>
+                    <span class="office-badge">
+                        <i class="fas fa-building"></i>
+                        <?php echo htmlspecialchars($officeName); ?>
+                    </span>
+                <?php } ?>
+            </div>
+        </div>
+        
+         
+    </div>
+
+<div class="annual-cert-form-container">
+    <table id="certTbl" class="alternate">
+
 			<tr>
 				<th style="min-width:150px">Company:*</th>
 				<td colspan="4">
@@ -575,18 +2415,21 @@ if ($user_type != "client") {
 						}
 					}
 					?>
+					<script>
+						function redirectToNewCertificate() {
+							document.location.href = 'index.php?inc=certificate_add_edit&clid=' + document.getElementById("clid").value + '&act=add&offid=<?php echo $_GET['offid']; ?>';
+						}
+					</script>
+
 					<?php if (!isset($_GET['clid'])) { ?>
-						<script>
-							function redirectToNewCertificate() {
-								document.location.href = 'index.php?inc=certificate_add_edit&clid=' + document.getElementById("clid").value + '&act=add&offid=<?php echo $_GET['offid']; ?>';
-							}
-						</script>
 						<button onclick="redirectToNewCertificate()" class="btn btn-primary" type="button" style="margin-left:10px;">New Certificate</button>
 					<?php } ?>
 				</td>
 			</tr>
 
-			<?php if (trim($awarded_to) != '') {  ?>
+			<?php
+			
+			if (trim($awarded_to) != '') {  ?>
 				<?php
 				$certificate_validity = 1;
 				$annual_permissions = array();
@@ -598,7 +2441,7 @@ if ($user_type != "client") {
 						$annual_permissions = $certificate_permissions['annual'];
 					}
 				}
-				$certificate_validity = 4;
+				$certificate_validity = 4;				
 				?>
 				<tr>
 					<th>Manufacturing Sites:</th>
@@ -619,14 +2462,14 @@ if ($user_type != "client") {
 										}
 									?>
 										<li style="padding: 2px;;">
-											<label><input type="checkbox" name="manufacturing_site[]" value="<?php echo $site['stid']; ?>" <?php echo ($act == 'edit' && in_array($site['stid'], $selectedSite)) ? 'checked' : ''; ?> /> <?php echo (trim($site['site_name']) != '') ? '<b class="siteName">' . $site['site_name'] . '</b>' : ''; ?> <span class="siteAddress"><?php echo (isset($site_address)) ? $site_address['street'] . ', ' . $site_address['zipcode'] . ' ' . $site_address['city'] . ', ' . $site_address['country'] : ''; ?></span></label> <i class="far fa-clone" style="color:darkcyan;margin-top:5px;font-size:12px !important;position:absolute;right:10px;" onclick="copySiteAddress(this)"><span>Copy into additional title</span></i>
+											<label><input type="checkbox" name="manufacturing_site[]" value="<?php echo $site['stid']; ?>" <?php echo ($act == 'edit' && in_array($site['stid'], $selectedSite)) ? 'checked' : ''; ?> /> <?php echo (trim($site['site_name']) != '') ? '<b class="siteName">' . $site['site_name'] . '</b>' : ''; ?> <span class="siteAddress"><?php echo (isset($site_address)) ? $site_address['street'] . ', ' . $site_address['zipcode'] . ' ' . $site_address['city'] . ', ' . $site_address['country'] : ''; ?></span></label> <i class="far fa-clone" style="display:none;color:darkcyan;margin-top:5px;font-size:12px !important;position:absolute;right:10px;" onclick="copySiteAddress(this)"><span>Copy into additional title</span></i>
 										</li>
 									<?php }; ?>
 								</ul>
-								<div style="margin-top:20px;border:1px solid #eee;padding:5px 10px; background: lightyellow;">
-									<label><input type="checkbox" name="certificate_options[manufacturing_sites_OL]" <?php echo (isset($certificate_options['manufacturing_sites_OL'])) ? 'checked' : ''; ?> /> Manufacturing sites on one line</label>
+								<div style="margin-top:20px;border:1px solid #eee;padding:0px; background: lightyellow;">
+									<label><input type="checkbox" name="certificate_options[manufacturing_sites_OL]" <?php echo (isset($certificate_options['manufacturing_sites_OL'])) ? 'checked' : ''; ?> /> &nbsp;&nbsp;Manufacturing sites on one line</label>
 									<br />
-									<label><input type="checkbox" name="certificate_options[awarded_to_site]" <?php echo (isset($certificate_options['awarded_to_site'])) ? 'checked' : ''; ?> id="awarded_to_site" onclick="$('#awarded_as_site_label').css('display',this.checked?'inline-block':'none')" /> Awarded to Manufacturing site</label>
+									<label><input type="checkbox" name="certificate_options[awarded_to_site]" <?php echo (isset($certificate_options['awarded_to_site'])) ? 'checked' : ''; ?> id="awarded_to_site" onclick="$('#awarded_as_site_label').css('display',this.checked?'inline-block':'none')" /> &nbsp;&nbsp;Awarded to Manufacturing site</label>
 
 									<label id="awarded_as_site_label" style="display: <?php echo (isset($certificate_options['awarded_to_site'])) ? 'inline-block' : 'none'; ?> ;"><input type="checkbox" name="certificate_options[awarded_as_site]" <?php echo (isset($certificate_options['awarded_as_site'])) ? 'checked' : ''; ?> id="awarded_as_site" /> Print company address as Manufacturing site address</label>
 								</div>
@@ -634,7 +2477,7 @@ if ($user_type != "client") {
 						}; ?>
 					</td>
 				</tr>
-			<?php }; ?>
+			<?php };  ?>
 			<?php if (isset($_GET['clid']) and trim($_GET['clid']) != '') { ?>
 
 				<?php
@@ -721,7 +2564,7 @@ if ($user_type != "client") {
 									<?php }; ?>
 								</select>
 							<?php }; ?>
-							<a href="/company/products/index.php?inc=products_list&clid=<?php echo $_GET['clid']; ?>&offid=<?php echo $_GET['offid']; ?>&gb=1" onclick="set_session_url('goBack','Annual certificate')">Manage Products</a> (Total selected products: <span id="productsCount"></span>)
+							<a href="/products?idclient=<?php echo $_GET['clid']; ?>" onclick="set_session_url('goBack','Annual certificate')">Manage Products</a> (Total selected products: <span id="productsCount"></span>)
 							<?php if (isset($oldProducts) and count($oldProducts) > 0 && !isset($_GET['oldProducts'])) { ?>
 								<div style="color:darkred;margin:5px 0"><i class="fas fa-exclamation-triangle" style="position: inherit;color: red;"></i> There are one or more products are deleted from the system. To reuse them again select (All including deleted products). </div>
 						<?php };
@@ -729,7 +2572,7 @@ if ($user_type != "client") {
 								$selected_products = array();
 								$prohibited_products = array();
 								$doubles = 0;
-								echo "<ul style=\"padding:10px;max-height:250px;overflow:auto;margin:0px\" id=\"productsOl\">";
+								echo "<ul style=\"padding:10px;max-height:250px;overflow:auto;margin-top:15px !important;\" id=\"productsOl\">";
 								foreach ($resultPrd as $rowPrd) {
 
 									$product_item = $rowPrd['article_nr'] . $rowPrd['product_name'] . $rowPrd['description'];
@@ -831,45 +2674,54 @@ if ($user_type != "client") {
 					</td>
 				</tr>
 				<tr>
-					<th>Category:*</th>
-					<td colspan="3">
-						<?php
-						if (($act == 'edit' or isset($_GET['reissue'])) && isset($row['category']) && is_array(json_decode($row['category'], true)))
-							$catids = json_decode($row['category'], true);
-						if ($act == 'add')
-							$catid = '';
-						?>
-						<ul style="padding: 10px;margin:0px;" class="alternateOn categoriesUl">
-							<?php
-							if ($categories = $amdb->get_results("SELECT * FROM hqc_categories WHERE status='active'")) {
-								$category_name = '';
-								foreach ($categories as $category) {
-							?>
-									<?php if ($category['category_name'] != $category_name) { ?>
-										<li>
-											<label>
-												<input type="checkbox" name="category[]" class="category" value="<?php echo $category['catid']; ?>" <?php echo (isset($catids) && in_array($category['catid'], $catids)) ? 'checked' : ''; ?> />
-												<?php echo '<b>' . $category['category'] . ": " . $category['category_name'] . "</b>";
-												$category_name = $category['category_name'];
-												?>
-											</label>
-											<i class="fas fa-angle-double-down" onclick="toggleCategory('<?php echo $category['category']; ?>')"></i>
-										</li>
-									<?php }; ?>
-									<li class="cat_<?php echo $category['category']; ?> category" style="display:none">
-										<span style="display:inline-block;width:40px;"></span>
-										<?php echo $category['code']; ?>: <?php echo $category['description']; ?>
-										<?php if (trim($category['exapmle']) != '') { ?>
-											<i class="far fa-question-circle" data-id="<?php echo $category['catid']; ?>"></i>
-										<?php }; ?>
-									</li>
-							<?php };
-							}; ?>
-						</ul>
-						<i style="padding-left:10px" id="categoriesCount">Maximum 3 categories</i>
-					</td>
-				</tr>
-				<?php if (isset($user_permissions) && in_array("ac_request_certificates", $user_permissions) or $_SESSION['user_type'] == "admin" or $user_type == 'hqc_office' or $user_type = 'committee_member') { ?>
+    <th>Category:*</th>
+    <td colspan="3">
+        <?php
+        if (($act == 'edit' or isset($_GET['reissue'])) && isset($row['category']) && is_array(json_decode($row['category'], true)))
+            $catids = json_decode($row['category'], true);
+        else
+            $catids = array();
+        if ($act == 'add')
+            $catid = '';
+        ?>
+        <ul style="padding: 10px; margin: 0px;" class="alternateOn categoriesUl">
+            <?php
+            if ($categories = $amdb->get_results("SELECT * FROM hqc_categories WHERE status='active'")) {
+                $category_name = '';
+                foreach ($categories as $category) {
+            ?>
+                    <?php if ($category['category_name'] != $category_name) { ?>
+                        <li class="main-category">
+                            <label>
+                                <input type="checkbox" name="category[]" class="category main-cat-checkbox" 
+                                       value="<?php echo $category['catid']; ?>" 
+                                       data-parent="<?php echo $category['category']; ?>"
+                                       <?php echo (isset($catids) && in_array($category['catid'], $catids)) ? 'checked' : ''; ?> />
+                                <b><?php echo $category['category'] . ": " . $category['category_name']; ?></b>
+                            </label>
+                            <i class="fas fa-angle-double-down" onclick="toggleCategory('<?php echo $category['category']; ?>')"></i>
+                            <?php $category_name = $category['category_name']; ?>
+                        </li>
+                    <?php }; ?>
+                    <li class="cat_<?php echo $category['category']; ?> sub-category" style="display:none">
+                        <label>
+                            <input type="checkbox" name="sub_category[]" class="sub-category-checkbox" 
+                                   value="<?php echo $category['catid']; ?>"
+                                   data-parent="<?php echo $category['category']; ?>"
+                                   <?php echo (isset($catids) && in_array($category['catid'], $catids)) ? 'checked' : ''; ?> />
+                            <span><?php echo $category['code']; ?>: <?php echo $category['description']; ?></span>
+                        </label>
+                        <?php if (trim($category['exapmle']) != '') { ?>
+                            <i class="far fa-question-circle" data-id="<?php echo $category['catid']; ?>"></i>
+                        <?php }; ?>
+                    </li>
+            <?php };
+            }; ?>
+        </ul>
+        <i style="padding-left:10px" id="categoriesCount">Maximum 3 categories</i>
+    </td>
+</tr>
+				<?php if ($_SESSION['user_type'] == "admin") { ?>
 					<?php if (isset($_GET['reissue'])) {
 						$act = "add";
 					};
@@ -879,16 +2731,16 @@ if ($user_type != "client") {
 						$disabled = 'disabled class="disabled"';
 					else
 						$disabled = '';
-					$disabled = '';
-					?>
+ 					?>
 					<tr>
 						<th>Issue & Expiry Dates:*</th>
-						<td><b>Issue:</b> <input type="text" name="date_of_issue" class="date" id="date_of_issue" onchange="nextYear()" value="<?php echo ($_GET['act'] == 'edit' and $row['date_of_issue'] != 0) ? web_date($row['date_of_issue']) : ''; ?>" <?php echo $disabled; ?> />
-							<b>Expiry:</b> <input type="text" name="date_of_expiry" class="date" id="date_of_expiry" value="<?php echo ($_GET['act'] == 'edit' and $row['date_of_expiry'] != 0) ? web_date($row['date_of_expiry']) : ''; ?>" <?php if ($_SESSION['user_role'] != 'super_admin') { ?>onchange="checkExpiryPeriod()" <?php }; ?> <?php echo $disabled; ?> />
+						<td>
+							<b>Issue:</b> <input type="text" name="date_of_issue" class="date" id="date_of_issue" onchange="nextYear()" value="<?php echo ($_GET['act'] == 'edit' and $row['date_of_issue'] != 0) ? web_date($row['date_of_issue']) : ''; ?>" <?php echo $disabled; ?> 
+							<b>Expiry:</b> <input type="text" name="date_of_expiry" class="date" id="date_of_expiry" value="<?php echo ($act == 'edit' and $row['date_of_expiry'] != 0) ? web_date($row['date_of_expiry']) : ''; ?>" />
 							<b>Validity:</b>
 							<input type="number" name="certificate_options[cert_validity]" id="cert_validity" onchange="nextYear()" max="<?php echo $certificate_validity; ?>" min="1" value="<?php echo isset($certificate_options['cert_validity']) ? $certificate_options['cert_validity'] : 1; ?>" <?php echo $disabled; ?> style="width:50px;" /> years
 							<span id="maxPeriod"><i>(Maximum <?php echo $certificate_validity; ?> year<?php echo $certificate_validity != 1 ? 's' : ''; ?></i>)</span>
-							<b>Initial certification date:</b> <input type="text" class="date" name="initial_issue_date" id="initial_issue_date" value="<?php echo ($_GET['act'] == 'edit') ? web_date($row['initial_issue_date']) : ''; ?>" />
+							<b>Initial issue date:</b> <input type="text" class="date" name="initial_issue_date" id="initial_issue_date" value="<?php echo ($act == 'edit') ? web_date($row['initial_issue_date']) : ''; ?>" />
 							<div style="margin-top: 5px;" id="surveillance">
 								<?php if (isset($certificate_options['surveillance']) and count($certificate_options['surveillance']) > 0) {
 									$preSur = array('1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th');
@@ -1215,52 +3067,62 @@ if ($user_type != "client") {
 					</td>
 				</tr>
 				<tr>
-					<td colspan="5" class="sub_title" style="text-align: center;">
-						<input type="reset" value="Reset" />
-						<?php
-						if ($user_type == 'admin')
-							$request = 'Save';
-						else
-							$request = 'Request';
-						?>
-						<input type="button" id="addUpdateReissue" onclick="crtDoAct('save')" value="<?php echo ($_GET['act'] == "edit") ? "Update" : ($_GET['act'] == "reissue" ? "Reissue" : $request) ?>" />
-						<input type="button" value="Preview" onclick="crtDoAct('preview')" />
-						<?php if (isset($user_permissions) && (in_array("ac_print_certificates", $user_permissions) or $_SESSION['user_type'] == "admin" or $user_type == 'hqc_office')) { ?>
-							<?php if ((in_array("ac_print_certificates", $user_permissions) or isset($annual_permissions['print']) or $_SESSION['user_type'] == "admin")) {
-								$controlled_by = 'no';
-								if (isset($options)) {
-									$options = json_decode($office['options'], true);
-									if (isset($options['controlled_by']))
-										$controlled_by = strtolower($options['controlled_by']);
-									if (isset($options['print_jakim']))
-										$print_jakim_certificates = $options['print_jakim'];
-									else
-										$print_jakim_certificates = 'no';
-								}
-							?>
-								<?php if ($user_type == "admin" && $_GET['offid'] != '0') { ?>
-									<input type="button" value="Authorize" onclick="crtDoAct('authorize')" />
-								<?php }; ?>
-								<input type="button" id="printActionButton" value="<?php echo (isset($dmc)) ? 'Create DMC Report' : 'Print'; ?>" onclick="crtDoAct('print')" />
-								<span id="DownLoadZip" style="display:none;font-weight:normal"><label><input type="checkbox" name="downLoadZipFile" id="downLoadZipFile" value="yes">Download individual certificates </label></span>
-							<?php } else { ?>
-								<input type="hidden" value="<?php echo $controlled_by; ?>" name="certificate_options[controlled_by]" />
-							<?php }; ?>
-						<?php
-						};
-						?>
-					</td>
-				</tr>
-			<?php
-			}; ?>
+    <td colspan="5">
+	  <div class="annual-cert-form-footer">
+        <button type="reset" class="btn-cert-action reset">
+            <i class="fas fa-undo"></i>
+            Reset
+        </button>
+        
+        <button type="button" class="btn-cert-action secondary" onclick="crtDoAct('preview')">
+            <i class="fas fa-eye"></i>
+            Preview
+        </button>
+        
+        <?php
+        $request = ($user_type == 'admin') ? 'Save' : 'Request';
+        $buttonText = ($_GET['act'] == "edit") ? "Update" : ($_GET['act'] == "reissue" ? "Reissue" : $request);
+        $buttonIcon = ($_GET['act'] == "edit") ? "fa-save" : ($_GET['act'] == "reissue" ? "fa-redo" : "fa-paper-plane");
+        ?>
+        
+        <button type="button" class="btn-cert-action primary" id="addUpdateReissue" onclick="crtDoAct('save')">
+            <i class="fas <?php echo $buttonIcon; ?>"></i>
+            <?php echo $buttonText; ?>
+        </button>
+        
+        <?php if ($_SESSION['user_type'] == "admin") { ?>
+            <?php if ($user_type == "admin" && $_GET['offid'] != '0') { ?>
+                <button type="button" class="btn-cert-action authorize" onclick="crtDoAct('authorize')">
+                    <i class="fas fa-check-double"></i>
+                    Authorize
+                </button>
+            <?php } ?>
+            
+            <button type="button" class="btn-cert-action print" id="printActionButton" onclick="crtDoAct('print')">
+                <i class="fas <?php echo isset($dmc) ? 'fa-file-alt' : 'fa-print'; ?>"></i>
+                <?php echo isset($dmc) ? 'Create DMC Report' : 'Print'; ?>
+            </button>
+            
+            <span id="DownLoadZip" style="display:none;">
+                <label>
+                    <input type="checkbox" name="downLoadZipFile" id="downLoadZipFile" value="yes">
+                    Download individual certificates
+                </label>
+            </span>
+        <?php } ?>
+			</div>
+    </td>
+</tr>
+<?php }; ?> 
+	   </table>
+</div>
 
-		</table>
 		<?php if ($act == 'add') { ?>
 			<input type="hidden" id="DMCUrl" data-href="" title="Create DMC Report" data-resize="true" onclick="doIframe(this)"></input>
 		<?php }; ?>
 	</form>
 
-	<?php if (isset($_GET['clid']) and (isset($user_permissions) && in_array("ac_print_certificates", $user_permissions) or $_SESSION['user_type'] == "admin")) { ?>
+	<?php if (isset($_GET['clid']) and $_SESSION['user_type'] == "admin") { ?>
 		Please make a preview before you print the certificate.
 	<?php } else { ?>
 		<div id="productsInfo" style="color:red;margin-top:20px">Before you request a certificate make sure to add some products to the company.</div>
@@ -1269,8 +3131,8 @@ if ($user_type != "client") {
 
 <!--End add/edit halal_certificates-->
 <template id="remarksStyle">
-	<label><input type="checkbox" name="[name][bold]" value="strong" class='remarksBold' /><strong>Font-weight Bold</strong></label>
-	<label><input type="checkbox" name="[name][italic]" value="italic" class="remarkItalic" /><i>Font-style Italic</i></label>
+	<label><input type="checkbox" name="[name][bold]" value="strong" class='remarksBold' /><strong>&nbsp;&nbsp;Font-weight Bold</strong></label>
+	<label><input type="checkbox" name="[name][italic]" value="italic" class="remarkItalic" /><i>&nbsp;&nbsp;Font-style Italic</i></label>
 	Text color:
 	<label class="colorLabel" style="background:black"><input type="radio" name="[name][color]" value="black" class="colorPicked" checked /></label>
 	<label class="colorLabel" style="background:red"><input type="radio" name="[name][color]" value="red" class="colorPicked" /></label>
@@ -1278,7 +3140,7 @@ if ($user_type != "client") {
 	<label class="colorLabel" style="background:green"><input type="radio" name="[name][color]" value="green" class="colorPicked" /></label>
 </template>
 
-<script src="/scripts/color-picker/jqColorPicker.min.js"></script>
+<script src="/iidc/scripts/color-picker/jqColorPicker.min.js"></script>
 <script>
 	var remarksStyle = {};
 	var JAKIM = '<?php echo isset($options['print_jakim']) ? $options['print_jakim'] : 'no'; ?>';
@@ -1489,6 +3351,57 @@ if ($user_type != "client") {
 				jQuery("#addUpdateReissue").val(jQuery("#addUpdateReissue").data('value'));
 			}
 		})
+
+
+		// Handle main category checkbox - select/deselect all sub-categories
+$('.main-cat-checkbox').click(function(event) {
+    var parentCat = $(this).data('parent');
+    var isChecked = $(this).is(':checked');
+    
+    // Select/deselect all sub-categories under this main category
+    $('.sub-category-checkbox[data-parent="' + parentCat + '"]').prop('checked', isChecked);
+    
+    // Check total selected categories
+    checkCategoryLimit();
+});
+
+// Handle sub-category checkbox
+$('.sub-category-checkbox').click(function(event) {
+    checkCategoryLimit();
+    
+    // Optional: Check parent if at least one child is selected
+    var parentCat = $(this).data('parent');
+    var anyChecked = $('.sub-category-checkbox[data-parent="' + parentCat + '"]:checked').length > 0;
+    $('.main-cat-checkbox[data-parent="' + parentCat + '"]').prop('checked', anyChecked);
+});
+
+// Function to check category selection limit
+function checkCategoryLimit() {
+    var totalChecked = $('.main-cat-checkbox:checked').length;
+    
+    jQuery("#categoriesCount").removeClass("red");
+    if (totalChecked > 3) {
+        jQuery("#categoriesCount").addClass("red");
+        alert_message('Maximum 3 categories');
+        return false;
+    }
+    return true;
+}
+
+// Update the existing .category click handler - remove old one and use new logic
+$('.category').off('click').on('click', function(event) {
+    if ($(this).hasClass('main-cat-checkbox')) {
+        // Handled by main-cat-checkbox handler
+        return;
+    }
+    jQuery("#categoriesCount").removeClass("red");
+    if ($(".main-cat-checkbox:checked").length > 3) {
+        $(this).prop("checked", false);
+        jQuery("#categoriesCount").addClass("red");
+        alert_message('Maximum 3 categories');
+    }
+});
+
 	})
 
 	async function removeProduct(prdid) {
@@ -1500,4 +3413,5 @@ if ($user_type != "client") {
 			jQuery("#product_" + prdid).remove();
 		}
 	}
+
 </script>

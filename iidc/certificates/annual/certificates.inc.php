@@ -6,6 +6,204 @@
 };
 ?>
 <style>
+/* Old Versions Fieldset Styling */
+fieldset.old_versions {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border: 1px solid #d4a574;
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+fieldset.old_versions legend {
+    font-weight: 600;
+    font-size: 11px;
+    color: #92400e;
+    padding: 2px 8px;
+    background: #fef3c7;
+    border-radius: 4px;
+}
+
+fieldset.old_versions ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+fieldset.old_versions ul li {
+    padding: 4px 0;
+    border-bottom: 1px dashed #e5c9a8;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+fieldset.old_versions ul li:last-child {
+    border-bottom: none;
+}
+
+fieldset.old_versions ul li a {
+    color: #b45309;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+fieldset.old_versions ul li a:hover {
+    color: #92400e;
+    text-decoration: underline;
+}
+
+fieldset.old_versions ul li .fa-file-pdf,
+fieldset.old_versions ul li .far.fa-file-pdf {
+    color: #dc2626;
+    font-size: 14px !important;
+}
+
+fieldset.old_versions ul li .fa-edit,
+fieldset.old_versions ul li .far.fa-edit {
+    color: #2563eb;
+    font-size: 12px !important;
+    cursor: pointer;
+}
+
+fieldset.old_versions ul li .fa-edit:hover,
+fieldset.old_versions ul li .far.fa-edit:hover {
+    color: #1d4ed8;
+}
+</style>
+<style>
+
+	
+/* Issue Certificate Section */
+.issue-certificate-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 32px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8faf9 100%);
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.issue-certificate-section .section-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.issue-certificate-section .section-icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #1a5f4a 0%, #2d8a6e 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 20px;
+}
+
+.issue-certificate-section .section-text h3 {
+    margin: 0 0 4px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.issue-certificate-section .section-text p {
+    margin: 0;
+    font-size: 13px;
+    color: #64748b;
+}
+
+/* Issue Button */
+.btn-issue-certificate {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 28px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: #ffffff;
+    background: linear-gradient(135deg, #1a5f4a 0%, #2d8a6e 100%);
+    border: none;
+    border-radius: 10px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(26, 95, 74, 0.3);
+}
+
+.btn-issue-certificate:hover {
+    background: linear-gradient(135deg, #155043 0%, #1a5f4a 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(26, 95, 74, 0.4);
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.btn-issue-certificate:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(26, 95, 74, 0.3);
+}
+
+.btn-issue-certificate i {
+    font-size: 16px;
+}
+
+/* Quick Stats (optional) */
+.quick-stats {
+    display: flex;
+    gap: 24px;
+    margin-left: 32px;
+    padding-left: 32px;
+    border-left: 1px solid #e2e8f0;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-item .stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1a5f4a;
+    line-height: 1;
+}
+
+.stat-item .stat-label {
+    font-size: 11px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .issue-certificate-section {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+        padding: 20px;
+    }
+    
+    .issue-certificate-section .section-info {
+        flex-direction: column;
+    }
+    
+    .quick-stats {
+        margin-left: 0;
+        padding-left: 0;
+        border-left: none;
+        padding-top: 16px;
+        border-top: 1px solid #e2e8f0;
+    }
+}
 	td.status {
 		/* white-space: nowrap */
 	}
@@ -289,16 +487,29 @@
 	$_GET['offid'] = $_SESSION['offid'];
 }
 */
-$_GET['offid'] = $_SESSION['offid'];
+$_GET['offid'] = '0';
 if (!isset($_GET['offid']) or trim($_GET['offid']) == '') {
-	return;
+	//return;
 }
 ?>
-<?php if (in_array("ac_request_certificates", $user_permissions) or $_SESSION['user_type'] == "admin" or $user_type == 'hqc_office') { ?>
-	<div style="text-align: center;"><a href='?inc=certificate_add_edit&offid=<?php echo $_GET['offid']; ?>' class="button">Issue Annual Certificate</a></div>
-<?php }; ?>
-
-<table class="alternateOn" style="min-width:100% !important" id="annualCertificates">
+ <div class="issue-certificate-section">
+    <div class="section-info">
+        <div class="section-icon">
+            <i class="fas fa-certificate"></i>
+        </div>
+        <div class="section-text">
+            <h3>Annual Halal Certificates</h3>
+            <p>Create and manage halal certification documents</p>
+        </div>
+    </div>
+    
+    <a href="?inc=certificate_add_edit&offid=<?php echo $_GET['offid']; ?>" class="btn-issue-certificate">
+        <i class="fas fa-plus-circle"></i>
+        Issue New Certificate
+    </a>
+</div>
+ 
+<table class="table table-striped table-bordered" style="min-width:100% !important" id="annualCertificates">
 	<thead>
 		<tr class="alternateOff">
 			<td colspan=8 class="sub_title">
@@ -352,7 +563,7 @@ if (!isset($_GET['offid']) or trim($_GET['offid']) == '') {
 			<th id="thDates" data-id="issue_expiry">Issue / Expiry</th>
 			<th data-id="ordered_on" style="width:200px">Certificate Request</th>
 			<th id="thStatus" data-id="status" style="width:200px">Certificate Status</th>
-			<?php if (in_array("ac_reissue_remove", $user_permissions) or $_SESSION['user_type'] == "admin" or $_SESSION['offid'] != '0') { ?>
+			<?php if ($_SESSION['user_type'] == "admin") { ?>
 				<th id="thAction" data-id="action" style="width:90px">Action</th>
 			<?php }; ?>
 		</tr>
@@ -368,7 +579,7 @@ if (!isset($_GET['offid']) or trim($_GET['offid']) == '') {
 	</thead>
 	<tbody id="certificateItems">
 		<tr id="certificateItemsLoading">
-			<td colspan="12" style="text-align:center;vertical-align:middle;"><img src="<?php echo $prog_www; ?>/images/loading.gif" style="height:50px;" /></td>
+			<td colspan="12" style="text-align:center;vertical-align:middle;"><img src="<?php echo $prog_www; ?>/iidc/images/loading.gif" style="height:50px;" /></td>
 		</tr>
 	</tbody>
 </table>

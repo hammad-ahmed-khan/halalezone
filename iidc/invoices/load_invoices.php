@@ -6,7 +6,7 @@ include "../check_user.inc.php";
 include "$prog_path/config/connect.inc.php";
 
 $user_options = get_office_options()['options'];
-if ((isset($user_options) and isset($user_options['invoices_create'])) or (in_array("invoices_actions", $user_permissions) or $_SESSION['user_type'] == "admin"))
+if ($_SESSION['user_type'] == "admin")
 	$invoice_actions = true;
 
 $reminders = array();

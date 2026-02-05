@@ -44,7 +44,7 @@ if (isset($_GET['type']) && $_GET['type'] == 'auditor') {
 
 <center>
 	<h2><?php echo isset($auditor) ? 'Auditors List' : 'Admin users List'; ?></h2>
-	<table id="usersTbl" class="alternateOn">
+	<table id="usersTbl" class="table table-striped table-bordered">
 		<tr>
 			<th style="width:20px">Nr</th>
 			<th>Username owner</th>

@@ -6,11 +6,11 @@
 use PhpOffice\PhpSpreadsheet\Shared\OLE\PPS\File;
 
 session_start();
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-ini_set('display_errors', '1');
-ini_set('display_startup_errors', '1');
-error_reporting(E_ALL);
+//error_reporting(E_ALL);
+//ini_set('display_errors', 1);
+//ini_set('display_errors', '1');
+//ini_set('display_startup_errors', '1');
+//error_reporting(E_ALL);
 include "../../config/paths.inc.php";
 if (!defined("__HQC__") and !defined("_HQC_")) {
 	exit();

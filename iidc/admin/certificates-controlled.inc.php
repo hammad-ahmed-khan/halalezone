@@ -158,7 +158,7 @@
     }
 </script>
 
-<table class="alternateOn" style="min-width:100% !important" id="annualCertificatesControlled">
+<table class="table table-striped table-bordered" style="min-width:100% !important" id="annualCertificatesControlled">
     <thead>
         <tr class="alternateOff">
             <th colspan=7 style="padding:0px 10px;" class="sub_title" title="CERTIFICATES TO BE CONTROLLED">

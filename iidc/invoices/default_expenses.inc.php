@@ -43,7 +43,7 @@
 <h2 style="text-align:center">Predefined Expenses</h2>
 <form action="expenses_save.php" method="post" id="expensesForm" onsubmit="return post_this_form(this);">
     <input type="hidden" name="act" value="save_expense" />
-    <table class="alternateOn" style="min-width:auto">
+    <table class="table table-striped table-bordered" style="min-width:auto">
         <thead>
             <tr>
                 <th style="width:20px">::</th>

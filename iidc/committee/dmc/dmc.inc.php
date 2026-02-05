@@ -276,18 +276,18 @@ if ($commebersAll = $amdb->get_results("SELECT comemid,uid,offid,bm,member_name,
     }
 
     $member_title = '<tr><th style="width:33%">' . $functions['SBM'] . 's <span style="font-weight:normal">(At least 2 Members)</span></th>' . '<th style="width:33%">' . $functions['ABM'] . 's <span style="font-weight:normal">(At least 1 Member)</span></th><th>' . $functions['MBM'] . 's</th></tr>';
-    $member_footer = '<tr id="comemSignatures"><td style="vertical-align:top !important"><ul class="alternateOn" style="padding:0px">';
+    $member_footer = '<tr id="comemSignatures"><td style="vertical-align:top !important"><ul class="table table-striped table-bordered" style="padding:0px">';
     foreach ($members['SBM'] as $member) {
         $member_footer .= '<li><label><input type="checkbox" class="shariah" name="comemids[]" value="' . $member['comemid'] . '"/>' . $member['member_name'] . '</label></li>';
     }
     $member_footer .= '</ul></td>';
 
-    $member_footer .= '<td style="vertical-align:top !important"><ul class="alternateOn" style="padding:0px">';
+    $member_footer .= '<td style="vertical-align:top !important"><ul class="table table-striped table-bordered" style="padding:0px">';
     foreach ($members['ABM'] as $member) {
         $member_footer .= '<li><label><input type="checkbox" class="auditors" name="comemids[]" value="' . $member['comemid'] . '"/>' . $member['member_name'] . '</label></li>';
     }
     $member_footer .= '</ul></td>';
-    $member_footer .= '<td style="vertical-align:top !important"><ul class="alternateOn" style="padding:0px">';
+    $member_footer .= '<td style="vertical-align:top !important"><ul class="table table-striped table-bordered" style="padding:0px">';
     foreach ($members['MBM'] as $member) {
         $member_footer .= '<li><label><input type="checkbox" class="management" name="comemids[]" value="' . $member['comemid'] . '"/>' . $member['member_name'] . '</label></li>';
     }

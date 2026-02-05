@@ -149,7 +149,7 @@ if (isset($_GET['comemid'])) {
         <input type="hidden" name="comemid" value="<?php echo $_GET['comemid']; ?>">
     <?php } ?>
     <?php $tableTitle = isset($_GET['comemid']) ? 'update committee member' : 'add committee member'; ?>
-    <table id="committeeMembers" class="alternateOn" style="width:550px;min-width:auto">
+    <table id="committeeMembers" class="table table-striped table-bordered" style="width:550px;min-width:auto">
         <tr>
             <th colspan="2" style="text-align: center;text-transform:capitalize"><?php echo isset($_GET['inc']) ? 'Update My data' : $tableTitle ?> </th>
         </tr>

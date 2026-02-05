@@ -2,7 +2,7 @@
 if ((!isset($_GET['clid']) and !isset($_GET['internal'])) and !isset($_GET['act'])) {
     exit();
 };
-
+$_SESSION['offid'] = '0';
 $data = array();
 $invoice_options = array();
 if (isset($_GET['act']) and isset($_GET['nr'])) {
@@ -122,9 +122,6 @@ if ($_GET['type'] == 'hsa' or $_GET['type'] == 'hfc') {
 } else {
     $defaultPrices = get_default_prices()['defaultPrices'];
     $comPrices = get_default_prices()['comPrices'];
-    // print_r($defaultPrices);
-    // print_r($comPrices);
-    // exit();
 }
 
 
@@ -632,6 +629,23 @@ if ($_GET['type'] == 'hfc') {
 }
 $invoice_template = array();
 $invoice_template = $amdb->get_row("SELECT * FROM invoice_templates WHERE template_name='$template_name'");
+
+// Determine go back URL
+$goback = '/iidc/invoices/?show=all';
+if (isset($_GET['goback'])) {
+    if ($_GET['goback'] == 'expenses')
+        $goback = '../expenses/index.php?inc=' . $_GET['goback'];
+    elseif ($_GET['goback'] == 'audits')
+        $goback = '../audit/';
+    elseif ($_GET['goback'] == 'invoices' && isset($_GET['show']))
+        $goback = '/iidc/invoices/?show=' . $_GET['show'];
+    elseif ($_GET['goback'] == 'create_cohs_invoice')
+        $goback = '/iidc/invoices/index.php?inc=create_cohs_invoice';
+    elseif ($_GET['goback'] == 'draft')
+        $goback = '/iidc/invoices/?show=draft';
+    elseif ($_GET['goback'] == 'halal-supervision')
+        $goback = '/audit/halal-supervision/index.php';
+}
 ?>
 <script>
     $("#page_title").html("<?php echo $pageTtl; ?>")
@@ -662,40 +676,30 @@ $invoice_template = $amdb->get_row("SELECT * FROM invoice_templates WHERE templa
         $("#invoiceTbl .invoiceItem").prop('checked', $(obj).prop('checked'));
     }
 
+    /**
+     * Main function to create/save invoice
+     * Now uses AJAX for better error handling and user feedback
+     */
     async function create_invoice(act) {
-        document.invoice_form.act.value = act;
-        document.invoice_form.target = '_blank';
-        if (act == 'crt' || act == 'test') {
-            if (MailPost == 'mail')
-                document.invoice_form.target = 'invoice_frame';
-            else
-                document.invoice_form.target = '_blank';
-        }
-        if (act == 'save_draft' || act == 'update_draft' || act == 'save_scheduled' || act == 'update_scheduled') {
-            if (act == 'save_scheduled' || act == 'update_scheduled') {
-                if (jQuery("#scheduled_date").val().trim() == '' || jQuery("#scheduled_hour").val().trim() == '') {
-                    alert_message("Scheduled hour & time are required.");
-                    return false;
-                }
-            }
-            document.invoice_form.target = 'invoice_frame';
-        }
-        <?php if ($_SERVER['REMOTE_ADDR'] == '::1') { ?>
-            document.invoice_form.target = '_blank';
-        <?php }; ?>
         var sel = 0;
         var error = false;
         var amountError = false;
         var invoiceType = '<?php echo $_GET['type']; ?>';
 
+        // Validate form
         if (post_this_form(document.invoice_form) == false) {
             return false;
-        };
-        $("#invoiceTbl input[type='text'], #invoiceTbl textarea").css('border-color', '#c0c0c0')
+        }
+
+        // Reset field highlights
+        $("#invoiceTbl input[type='text'], #invoiceTbl textarea").css('border-color', '#c0c0c0');
+
+        // Validate selected items
         $(".invoiceItem").each(function(index, element) {
             if ($(this).prop('checked') == true) {
                 sel++;
-                id = $(this).data('id');
+                var id = $(this).data('id');
+
                 if ($('#product_' + id).val() == '') {
                     $('#product_' + id).css('border-color', 'red');
                     error = true;
@@ -708,7 +712,7 @@ $invoice_template = $amdb->get_row("SELECT * FROM invoice_templates WHERE templa
                     $('#amount_' + id).css('border-color', 'red');
                     error = true;
                 } else if (invoiceType == 'credit_note') {
-                    amount = $('#amount_' + id).val().replace(/,/g, '').replace(/\./g, '')
+                    var amount = $('#amount_' + id).val().replace(/,/g, '').replace(/\./g, '');
                     if (amount > 0) {
                         $('#amount_' + id).css('border-color', 'red');
                         amountError = true;
@@ -717,73 +721,242 @@ $invoice_template = $amdb->get_row("SELECT * FROM invoice_templates WHERE templa
             }
         });
 
-        if (sel > 0) {
-            if (error == true) {
-                alert_message('Some fields are empty!');
-                return false;
-            }
-            if (jQuery("#splitInvoice").prop('checked') == true) {
-                //count checked invoiceSender2
-                if (jQuery(".invoiceSender2:checked").length > 0) {
-                    if (jQuery(".invoiceItem:checked").length < 2) {
-                        alert_message('Please select at least two invoice item!');
-                        return false;
+        // Check if any items selected
+        if (sel === 0) {
+            alert_message("Please select at least one invoice item");
+            return false;
+        }
 
-                    }
+        // Check for validation errors
+        if (error) {
+            alert_message('Some fields are empty!');
+            return false;
+        }
 
-                    if (jQuery(".invoiceItem:checked").length == jQuery(".invoiceSender2:checked").length) {
-                        alert_message('Selected invoice items should be split invoice sender!');
-                        return false;
+        if (amountError) {
+            alert_message('For credit notes, amounts should be negative!');
+            return false;
+        }
 
-                    }
-
-                    if (jQuery("#sbsid1").val() == jQuery("#sbsid").val()) {
-                        alert_message('Split invoice sender should be different from main invoice sender!');
-                        return false;
-                    }
-                } else {
-                    alert_message('Please select at least one split invoice sender!');
+        // Split invoice validation
+        if (jQuery("#splitInvoice").prop('checked') == true) {
+            if (jQuery(".invoiceSender2:checked").length > 0) {
+                if (jQuery(".invoiceItem:checked").length < 2) {
+                    alert_message('Please select at least two invoice items!');
                     return false;
                 }
-            }
-            if (amountError == true) {
-                alert_message('For credit notes. Amounts should be negative!');
+                if (jQuery(".invoiceItem:checked").length == jQuery(".invoiceSender2:checked").length) {
+                    alert_message('Selected invoice items should be split invoice sender!');
+                    return false;
+                }
+                if (jQuery("#sbsid1").val() == jQuery("#sbsid").val()) {
+                    alert_message('Split invoice sender should be different from main invoice sender!');
+                    return false;
+                }
+            } else {
+                alert_message('Please select at least one split invoice sender!');
                 return false;
             }
-            document.invoice_form.submit();
+        }
 
-            if (jQuery("#splitInvoice").prop('checked') == true && jQuery(".invoiceSender2:checked").length > 0 && jQuery(".invoiceItem").length > 1) {
-                console.log(jQuery(".invoiceSender2:checked").length);
-                setTimeout(() => {
+        // Scheduled invoice validation
+        if (act == 'save_scheduled' || act == 'update_scheduled') {
+            if (jQuery("#scheduled_date").val().trim() == '' || jQuery("#scheduled_hour").val().trim() == '') {
+                alert_message("Scheduled hour & time are required.");
+                return false;
+            }
+        }
+
+        // Set the action
+        document.invoice_form.act.value = act;
+
+        // For Preview - open in new tab (keep old behavior)
+        if (act === 'prv') {
+            document.invoice_form.target = '_blank';
+            document.invoice_form.submit();
+            return;
+        }
+
+        // For Print option - open in new tab
+        if ((act === 'crt' || act === 'test') && MailPost === 'post') {
+            document.invoice_form.target = '_blank';
+            document.invoice_form.submit();
+            return;
+        }
+
+        // For Email option and drafts - use AJAX
+        await submitInvoiceAjax(act);
+    }
+
+    /**
+     * Submit invoice via AJAX for better error handling
+     */
+    async function submitInvoiceAjax(act) {
+        // Get all submit buttons
+        const submitBtns = document.querySelectorAll('#invoiceButtons input[type="button"]');
+        const originalTexts = [];
+
+        // Disable buttons and show loading state
+        submitBtns.forEach((btn, index) => {
+            originalTexts[index] = btn.value;
+            btn.disabled = true;
+        });
+
+        // Find the clicked button and update its text
+        let activeBtn = null;
+        if (act === 'crt') {
+            activeBtn = document.querySelector('input[onclick*="create_invoice(\'crt\')"]');
+        } else if (act === 'save_draft' || act === 'update_draft') {
+            activeBtn = document.querySelector('input[onclick*="draft"]');
+        } else if (act === 'test') {
+            activeBtn = document.querySelector('input[onclick*="test"]');
+        }
+
+        if (activeBtn) {
+            activeBtn.value = 'Processing...';
+        }
+
+        // Show loading overlay (if you have one)
+        showLoadingIndicator(true);
+
+        try {
+            const formData = new FormData(document.invoice_form);
+            formData.set('act', act);
+            formData.set('ajax', '1'); // Flag for AJAX request
+
+            const response = await fetch('pdf/pdf_invoice.php', {
+                method: 'POST',
+                body: formData
+            });
+
+            const text = await response.text();
+
+            // Try to parse as JSON
+            let result;
+            try {
+                result = JSON.parse(text);
+            } catch (e) {
+                // If not JSON, there was a PHP error
+                console.error('Server response:', text);
+                alert_message('Server error occurred. Please check the console for details.');
+                return;
+            }
+
+            if (result.success) {
+                // Show success message
+                showSuccessMessage(result.message);
+
+                // Handle split invoice - submit second part if needed
+                if (jQuery("#splitInvoice").prop('checked') == true && 
+                    jQuery(".invoiceSender2:checked").length > 0 && 
+                    jQuery(".invoiceItem").length > 1 && 
+                    jQuery("#splittedInvoice").val() !== '1') {
+                    
                     jQuery("#splittedInvoice").val('1');
-                    document.invoice_form.submit();
-                }, 500);
-                jQuery("#splittedInvoice").val('');
+                    // Small delay then submit second invoice
+                    setTimeout(async () => {
+                        await submitInvoiceAjax(act);
+                        jQuery("#splittedInvoice").val('');
+                    }, 500);
+                    return;
+                }
+
+                // Redirect after short delay
+                setTimeout(() => {
+                    if (act === 'save_draft' || act === 'update_draft') {
+                        window.location.href = '/iidc/invoices/?show=draft';
+                    } else if (act === 'save_scheduled' || act === 'update_scheduled') {
+                        window.location.href = '/iidc/invoices/?show=scheduled';
+                    } else if (act === 'test') {
+                        // Don't redirect for test emails
+                        hideLoadingIndicator();
+                    } else {
+                        window.location.href = result.redirect || '<?php echo $goback; ?>';
+                    }
+                }, 1500);
+            } else {
+                // Show error message
+                alert_message(result.message || 'Failed to create invoice. Please try again.');
             }
-            if (act == "crt") {
-                <?php
-                $goback = '/invoices/?show=all';
-                if ($_GET['goback'] == 'expenses')
-                    $goback = '../expenses/index.php?inc=' . $_GET['goback'];
-                elseif ($_GET['goback'] == 'audits')
-                    $goback = '../audit/';
-                elseif ($_GET['goback'] == 'invoices' && isset($_GET['show']))
-                    $goback = '/invoices/?show=' . $_GET['show'];
-                elseif ($_GET['goback'] == 'create_cohs_invoice')
-                    $goback = '/invoices/index.php?inc=create_cohs_invoice';
-                elseif ($_GET['goback'] == 'draft')
-                    $goback = '/invoices/?show=draft';
-                elseif ($_GET['goback'] == 'halal-supervision')
-                    $goback = '/audit/halal-supervision/index.php';
-                ?>
-                setTimeout("document.location.href='<?php echo $goback; ?>'", 500);
-            } else if (act == 'save_draft' || act == 'update_draft') {
-                setTimeout("document.location.href='/invoices/?show=draft'", 500);
-            } else if (act == 'save_scheduled' || act == 'update_scheduled') {
-                setTimeout("document.location.href='/invoices/?show=scheduled'", 500);
+
+        } catch (error) {
+            console.error('Error:', error);
+            alert_message('Network error occurred. Please check your connection and try again.');
+        } finally {
+            // Restore button states
+            submitBtns.forEach((btn, index) => {
+                btn.disabled = false;
+                btn.value = originalTexts[index];
+            });
+            showLoadingIndicator(false);
+        }
+    }
+
+    /**
+     * Show/hide loading indicator
+     */
+    function showLoadingIndicator(show) {
+        let loader = document.getElementById('invoice-loader');
+        if (show) {
+            if (!loader) {
+                loader = document.createElement('div');
+                loader.id = 'invoice-loader';
+                loader.innerHTML = `
+                    <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;">
+                        <div style="background:white;padding:30px 50px;border-radius:10px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+                            <div style="width:40px;height:40px;border:4px solid #e0e0e0;border-top-color:#4f46e5;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 15px;"></div>
+                            <div style="font-size:16px;color:#333;font-weight:500;">Processing Invoice...</div>
+                            <div style="font-size:13px;color:#666;margin-top:5px;">Please wait</div>
+                        </div>
+                    </div>
+                    <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+                `;
+                document.body.appendChild(loader);
             }
-        } else
-            alert_message("Please select at least one invoice item");
+            loader.style.display = 'block';
+        } else {
+            if (loader) {
+                loader.style.display = 'none';
+            }
+        }
+    }
+
+    function hideLoadingIndicator() {
+        showLoadingIndicator(false);
+    }
+
+    /**
+     * Show success message
+     */
+    function showSuccessMessage(message) {
+        let successDiv = document.getElementById('invoice-success');
+        if (!successDiv) {
+            successDiv = document.createElement('div');
+            successDiv.id = 'invoice-success';
+            document.body.appendChild(successDiv);
+        }
+        successDiv.innerHTML = `
+            <div style="position:fixed;top:20px;right:20px;background:linear-gradient(135deg,#10b981,#059669);color:white;padding:20px 30px;border-radius:10px;z-index:10000;box-shadow:0 4px 20px rgba(16,185,129,0.4);max-width:400px;animation:slideIn 0.3s ease;">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:24px;height:24px;background:white;border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    </div>
+                    <div>
+                        <div style="font-weight:600;font-size:15px;">Success!</div>
+                        <div style="font-size:13px;opacity:0.9;margin-top:2px;">${message}</div>
+                    </div>
+                </div>
+            </div>
+            <style>@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}</style>
+        `;
+        successDiv.style.display = 'block';
+
+        // Hide after 5 seconds
+        setTimeout(() => {
+            successDiv.style.display = 'none';
+        }, 5000);
     }
 
     function showHideSplitInvoice() {
@@ -819,6 +992,14 @@ $invoice_template = $amdb->get_row("SELECT * FROM invoice_templates WHERE templa
         jQuery("#splitInvoice").prop('checked', false);
         jQuery(".invoiceSender2").prop('checked', false);
         showHideSplitInvoice();
+        
+        // Refresh autosuggest for newly added textarea
+        if (window.textareaAutosuggest) {
+            setTimeout(function() {
+                window.textareaAutosuggest.refresh();
+            }, 100);
+        }
+        
         return newItem;
     }
 
@@ -1118,16 +1299,971 @@ $invoice_template = $amdb->get_row("SELECT * FROM invoice_templates WHERE templa
         margin-right: 5px !important;
         display: none;
     }
+
+/* Create Invoice Form Header */
+.invoice-form-header {
+    background: linear-gradient(135deg, #ffffff 0%, #f5f3ff 100%);
+    border-radius: 12px;
+    border: 1px solid #e0e7ff;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+}
+
+.invoice-form-header-content {
+    display: flex;
+    align-items: center;
+    padding: 24px 32px;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.invoice-form-header-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.invoice-form-header-icon.general { background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); }
+.invoice-form-header-icon.credit { background: linear-gradient(135deg, #db2777 0%, #ec4899 100%); }
+.invoice-form-header-icon.annual { background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%); }
+.invoice-form-header-icon.shipment { background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%); }
+.invoice-form-header-icon.audit { background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%); }
+.invoice-form-header-icon.hsa { background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%); }
+.invoice-form-header-icon.hfc { background: linear-gradient(135deg, #059669 0%, #10b981 100%); }
+.invoice-form-header-icon.supervision { background: linear-gradient(135deg, #0369a1 0%, #0ea5e9 100%); }
+
+.invoice-form-header-info {
+    flex: 1;
+    min-width: 200px;
+}
+
+.invoice-form-header-info h2 {
+    margin: 0 0 6px 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.invoice-form-header-info p {
+    margin: 0;
+    font-size: 14px;
+    color: #64748b;
+}
+
+/* Invoice Type Badges */
+.invoice-type-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.invoice-type-tag i { font-size: 10px; }
+
+.invoice-type-tag.general { background: #e0e7ff; color: #4338ca; }
+.invoice-type-tag.credit { background: #fce7f3; color: #be185d; }
+.invoice-type-tag.annual { background: #dcfce7; color: #166534; }
+.invoice-type-tag.shipment { background: #fef3c7; color: #92400e; }
+.invoice-type-tag.audit { background: #cffafe; color: #0e7490; }
+.invoice-type-tag.hsa { background: #ede9fe; color: #6d28d9; }
+.invoice-type-tag.hfc { background: #d1fae5; color: #047857; }
+.invoice-type-tag.supervision { background: #e0f2fe; color: #0369a1; }
+
+/* Edit Warning Badge */
+.edit-warning-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 20px;
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.edit-warning-badge i { font-size: 10px; }
+
+/* Company Info Strip */
+.invoice-company-strip {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 32px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    flex-wrap: wrap;
+}
+
+.invoice-company-strip .company-icon {
+    width: 44px;
+    height: 44px;
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    font-size: 18px;
+}
+
+.invoice-company-strip .company-details {
+    flex: 1;
+    min-width: 200px;
+}
+
+.invoice-company-strip .company-details .company-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 2px 0;
+}
+
+.invoice-company-strip .company-details .company-meta {
+    font-size: 13px;
+    color: #64748b;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.invoice-company-strip .company-details .company-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.invoice-company-strip .company-details .company-meta i {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+/* Header Actions */
+.invoice-header-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.btn-invoice-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 8px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    border: none;
+}
+
+.btn-invoice-header.back {
+    background: #ffffff;
+    color: #4f46e5;
+    border: 2px solid #e0e7ff;
+}
+
+.btn-invoice-header.back:hover {
+    background: #f5f3ff;
+    border-color: #c7d2fe;
+    color: #4338ca;
+    text-decoration: none;
+}
+
+.btn-invoice-header.prices {
+    background: #fefce8;
+    color: #a16207;
+    border: 2px solid #fde68a;
+}
+
+.btn-invoice-header.prices:hover {
+    background: #fef9c3;
+    border-color: #fcd34d;
+}
+
+/* Step Indicator */
+.invoice-step-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #166534;
+    font-weight: 500;
+}
+
+.invoice-step-indicator .step-number {
+    width: 24px;
+    height: 24px;
+    background: #16a34a;
+    color: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+/* Edit Mode Alert */
+.edit-mode-alert {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 32px;
+    background: #fef2f2;
+    border-top: 1px solid #fecaca;
+    color: #991b1b;
+    font-size: 13px;
+}
+
+.edit-mode-alert i {
+    color: #dc2626;
+    font-size: 16px;
+}
+
+.edit-mode-alert strong {
+    color: #dc2626;
+}
+
+/* Credit Note Info Card */
+.credit-note-info {
+    background: #fdf4ff;
+    border: 1px solid #f0abfc;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-top: 12px;
+}
+
+.credit-note-info .info-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #86198f;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.credit-note-info .invoice-ref {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.credit-note-info .invoice-ref-item {
+    background: #ffffff;
+    border: 1px solid #f0abfc;
+    border-radius: 8px;
+    padding: 12px 16px;
+    min-width: 140px;
+}
+
+.credit-note-info .invoice-ref-item label {
+    display: block;
+    font-size: 11px;
+    color: #a855f7;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.credit-note-info .invoice-ref-item span {
+    font-size: 15px;
+    font-weight: 600;
+    color: #581c87;
+}
+
+.credit-note-info .invoice-ref-item span a {
+    color: #7c3aed;
+    text-decoration: none;
+}
+
+.credit-note-info .invoice-ref-item span a:hover {
+    text-decoration: underline;
+}
+
+/* ============================================
+   TEXTAREA AUTOSUGGEST STYLES
+   ============================================ */
+
+/* Textarea Autosuggest Wrapper */
+.textarea-autosuggest-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.textarea-autosuggest-wrapper textarea {
+    width: 100%;
+    min-height: 85px;
+    resize: vertical;
+    padding-right: 85px !important;
+}
+
+/* Dropdown Container */
+.autosuggest-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 400px;
+    overflow: hidden;
+    background: #ffffff;
+    border: 2px solid #4f46e5;
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+    box-shadow: 0 10px 40px rgba(79, 70, 229, 0.2);
+    z-index: 9999;
+    display: none;
+}
+
+.autosuggest-dropdown.active {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header */
+.autosuggest-header {
+    padding: 14px 18px;
+    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.autosuggest-header .title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.autosuggest-header .count {
+    font-size: 12px;
+    color: #4f46e5;
+    background: #ffffff;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-weight: 700;
+}
+
+.autosuggest-close {
+    width: 28px;
+    height: 28px;
+    background: rgba(255,255,255,0.2);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.autosuggest-close:hover {
+    background: rgba(255,255,255,0.35);
+}
+
+/* Search Box */
+.autosuggest-search {
+    padding: 14px 18px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+    flex-shrink: 0;
+}
+
+.autosuggest-search input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.autosuggest-search input:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+}
+
+.autosuggest-search input::placeholder {
+    color: #94a3b8;
+}
+
+/* Content Area */
+.autosuggest-content {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 220px;
+}
+
+.autosuggest-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* Individual Items */
+.autosuggest-item {
+    padding: 14px 18px;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+    transition: all 0.15s;
+    position: relative;
+}
+
+.autosuggest-item:last-child {
+    border-bottom: none;
+}
+
+.autosuggest-item:hover,
+.autosuggest-item.active {
+    background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+}
+
+.autosuggest-item.active {
+    border-left: 4px solid #6366f1;
+    padding-left: 14px;
+}
+
+.autosuggest-item-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.autosuggest-item-id {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 24px;
+    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 6px;
+    padding: 0 10px;
+}
+
+.autosuggest-item-fee {
+    display: inline-block;
+    padding: 4px 12px;
+    background: #dcfce7;
+    color: #166534;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 12px;
+}
+
+.autosuggest-item-fee.no-fee {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.autosuggest-item-preview {
+    font-size: 13px;
+    color: #475569;
+    line-height: 1.6;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Full Text Tooltip */
+.autosuggest-item-full {
+    display: none;
+    position: absolute;
+    left: calc(100% + 10px);
+    top: 50%;
+    transform: translateY(-50%);
+    width: 400px;
+    max-height: 350px;
+    overflow-y: auto;
+    background: #ffffff;
+    border: 2px solid #4f46e5;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(79, 70, 229, 0.25);
+    padding: 0;
+    z-index: 10000;
+}
+
+.autosuggest-item:hover .autosuggest-item-full {
+    display: block;
+}
+
+.autosuggest-item-full-header {
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffffff;
+    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 10px 10px 0 0;
+    position: sticky;
+    top: 0;
+}
+
+.autosuggest-item-full-text {
+    font-size: 13px;
+    color: #334155;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    padding: 18px;
+}
+
+/* Loading State */
+.autosuggest-loading {
+    padding: 50px;
+    text-align: center;
+    color: #64748b;
+}
+
+.autosuggest-loading-spinner {
+    display: inline-block;
+    width: 36px;
+    height: 36px;
+    border: 4px solid #e2e8f0;
+    border-top-color: #6366f1;
+    border-radius: 50%;
+    animation: autosuggest-spin 0.7s linear infinite;
+    margin-bottom: 14px;
+}
+
+@keyframes autosuggest-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* No Results */
+.autosuggest-no-results {
+    padding: 50px;
+    text-align: center;
+    color: #64748b;
+}
+
+.autosuggest-no-results i {
+    font-size: 48px;
+    color: #cbd5e1;
+    margin-bottom: 14px;
+    display: block;
+}
+
+/* Trigger Button */
+.autosuggest-trigger {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+    color: #ffffff;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    z-index: 5;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+}
+
+.autosuggest-trigger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.45);
+}
+
+/* Keyboard Hints */
+.autosuggest-hint {
+    padding: 12px 18px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    font-size: 12px;
+    color: #64748b;
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.autosuggest-hint kbd {
+    display: inline-block;
+    padding: 3px 8px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 11px;
+    margin-right: 4px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+/* Highlight matching text */
+.autosuggest-highlight {
+    background: linear-gradient(135deg, #fef08a 0%, #fde047 100%);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .autosuggest-item-full {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 90%;
+        max-width: 450px;
+    }
+}
+
+@media (max-width: 768px) {
+    .invoice-form-header-content {
+        flex-direction: column;
+        text-align: center;
+        padding: 20px;
+    }
+    
+    .invoice-form-header-info h2 {
+        justify-content: center;
+        font-size: 18px;
+    }
+    
+    .invoice-company-strip {
+        flex-direction: column;
+        text-align: center;
+        padding: 16px 20px;
+    }
+    
+    .invoice-company-strip .company-details .company-meta {
+        justify-content: center;
+    }
+    
+    .invoice-header-actions {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .invoice-step-indicator {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .edit-mode-alert {
+        flex-direction: column;
+        text-align: center;
+        padding: 16px 20px;
+    }
+    
+    .credit-note-info .invoice-ref {
+        flex-direction: column;
+    }
+    
+    .autosuggest-dropdown {
+        position: fixed;
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        max-height: 75vh;
+        border-radius: 20px 20px 0 0;
+        border: none;
+        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.25);
+    }
+    
+    .autosuggest-content {
+        max-height: calc(75vh - 180px);
+    }
+    
+    .autosuggest-hint {
+        flex-wrap: wrap;
+    }
+    
+    .autosuggest-item-full {
+        width: 95%;
+    }
+}
 </style>
 <?php
-echo "<pre>";
-//print_r($GLOBALS);
-echo "</pre>";
+// Define invoice type configurations
+$invoice_type_config = [
+    'general' => [
+        'name' => 'General Invoice',
+        'icon' => 'fa-file-invoice',
+        'class' => 'general',
+        'desc' => 'Create a general service invoice'
+    ],
+    'credit_note' => [
+        'name' => 'Credit Note',
+        'icon' => 'fa-minus-circle',
+        'class' => 'credit',
+        'desc' => 'Issue a credit note for an existing invoice'
+    ],
+    'annual' => [
+        'name' => 'Annual Certificate',
+        'icon' => 'fa-certificate',
+        'class' => 'annual',
+        'desc' => 'Invoice for annual halal certificate'
+    ],
+    'shipment' => [
+        'name' => 'Shipment Certificate',
+        'icon' => 'fa-shipping-fast',
+        'class' => 'shipment',
+        'desc' => 'Invoice for shipment/batch certificates'
+    ],
+    'batch' => [
+        'name' => 'Batch Certificate',
+        'icon' => 'fa-boxes',
+        'class' => 'shipment',
+        'desc' => 'Invoice for batch certificates'
+    ],
+    'audit' => [
+        'name' => 'Audit',
+        'icon' => 'fa-clipboard-check',
+        'class' => 'audit',
+        'desc' => 'Invoice for audit services'
+    ],
+    'supervision' => [
+        'name' => 'Halal Supervision',
+        'icon' => 'fa-eye',
+        'class' => 'supervision',
+        'desc' => 'Invoice for halal supervision services'
+    ],
+    'hsa' => [
+        'name' => 'Saudi Shipment',
+        'icon' => 'fa-globe-asia',
+        'class' => 'hsa',
+        'desc' => 'Shipment certificate invoice for Saudi Arabia'
+    ],
+    'hfc' => [
+        'name' => 'Halal Facility (Saudi)',
+        'icon' => 'fa-building',
+        'class' => 'hfc',
+        'desc' => 'Halal Facility Certificate for Saudi Arabia'
+    ],
+    'expenses' => [
+        'name' => 'Expenses',
+        'icon' => 'fa-receipt',
+        'class' => 'general',
+        'desc' => 'Invoice for expenses'
+    ]
+];
+
+$currentType = isset($_GET['type']) ? $_GET['type'] : 'general';
+$typeConfig = isset($invoice_type_config[$currentType]) ? $invoice_type_config[$currentType] : $invoice_type_config['general'];
+
+$isEdit = isset($_GET['act']) && $_GET['act'] == 'edit';
+$isDraft = isset($_GET['act']) && $_GET['act'] == 'draft';
+$isScheduled = isset($_GET['act']) && $_GET['act'] == 'scheduled';
+$isClone = isset($_GET['act']) && $_GET['act'] == 'clone';
+
+// Determine go back URL for header
+$goBackUrl = '/iidc/invoices/?show=all';
+if (isset($_GET['goback'])) {
+    switch($_GET['goback']) {
+        case 'expenses':
+            $goBackUrl = '../expenses/index.php?inc=expenses';
+            break;
+        case 'audits':
+            $goBackUrl = '../audit/';
+            break;
+        case 'draft':
+            $goBackUrl = '/iidc/invoices/?show=draft';
+            break;
+        case 'halal-supervision':
+            $goBackUrl = '/audit/halal-supervision/index.php';
+            break;
+        default:
+            if (isset($_GET['show'])) {
+                $goBackUrl = '/iidc/invoices/?show=' . $_GET['show'];
+            }
+    }
+}
 ?>
-<h2 style="text-align:center"><?php echo $invoiceTitle; ?></h2>
-<div style="position: absolute; left: -1000; top: -1000;display:none;visibility:hidden"><iframe src="" name="invoice_frame" style="width:0px;height:0px"></iframe></div>
+
+<div class="invoice-form-header">
+    <div class="invoice-form-header-content">
+        <div class="invoice-form-header-icon <?php echo $typeConfig['class']; ?>">
+            <i class="fas <?php echo $typeConfig['icon']; ?>"></i>
+        </div>
+        
+        <div class="invoice-form-header-info">
+            <h2>
+                <?php echo $invoiceTitle; ?>
+                <span class="invoice-type-tag <?php echo $typeConfig['class']; ?>">
+                    <i class="fas <?php echo $typeConfig['icon']; ?>"></i>
+                    <?php echo $typeConfig['name']; ?>
+                </span>
+                <?php if ($isEdit) { ?>
+                    <span class="edit-warning-badge">
+                        <i class="fas fa-edit"></i>
+                        Editing
+                    </span>
+                <?php } elseif ($isDraft) { ?>
+                    <span class="edit-warning-badge" style="background:#fef3c7; color:#92400e; border-color:#fde68a;">
+                        <i class="fas fa-pencil-alt"></i>
+                        Draft
+                    </span>
+                <?php } elseif ($isScheduled) { ?>
+                    <span class="edit-warning-badge" style="background:#e0f2fe; color:#0369a1; border-color:#bae6fd;">
+                        <i class="fas fa-clock"></i>
+                        Scheduled
+                    </span>
+                <?php } ?>
+            </h2>
+            <p><?php echo $typeConfig['desc']; ?></p>
+        </div>
+        
+        <div class="invoice-step-indicator">
+            <span class="step-number">2</span>
+            Complete Invoice Details
+        </div>
+        
+        <div class="invoice-header-actions">
+            <?php if ($_GET['type'] == 'batch' || $_GET['type'] == 'shipment') { ?>
+                <a href="/invoices/service_prices_save.php?clid=<?php echo $clid; ?>&act=get_defaults" class="btn-invoice-header prices load_popup" title="Default prices">
+                    <i class="fas fa-tags"></i>
+                    Service Prices
+                </a>
+            <?php } ?>
+            <a href="<?php echo $goBackUrl; ?>" class="btn-invoice-header back">
+                <i class="fas fa-arrow-left"></i>
+                Back
+            </a>
+        </div>
+    </div>
+    
+    <?php if (isset($row) && isset($row['company_name'])) { ?>
+        <div class="invoice-company-strip">
+            <div class="company-icon">
+                <i class="fas fa-building"></i>
+            </div>
+            <div class="company-details">
+                <p class="company-name"><?php echo htmlspecialchars($row['company_name']); ?></p>
+                <p class="company-meta">
+                    <?php if (isset($row['city1']) && trim($row['city1']) != '') { ?>
+                        <span><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($row['city1']); ?><?php echo (isset($row['country1']) && trim($row['country1']) != '') ? ', ' . htmlspecialchars($row['country1']) : ''; ?></span>
+                    <?php } ?>
+                    <?php if (isset($row['email1']) && trim($row['email1']) != '') { ?>
+                        <span><i class="fas fa-envelope"></i> <?php echo htmlspecialchars($row['email1']); ?></span>
+                    <?php } ?>
+                    <?php if (isset($row['vatNr']) && trim($row['vatNr']) != '') { ?>
+                        <span><i class="fas fa-id-card"></i> VAT: <?php echo htmlspecialchars($row['vatNr']); ?></span>
+                    <?php } ?>
+                </p>
+            </div>
+            
+            <?php if (isset($row['offid']) && $row['offid'] != '0' && isset($office) && isset($office['office_name'])) { ?>
+                <span style="padding: 8px 14px; background: #f1f5f9; border-radius: 6px; font-size: 12px; color: #64748b; font-weight: 500;">
+                    <i class="fas fa-building" style="margin-right: 6px;"></i>
+                    <?php echo htmlspecialchars($office['office_name']); ?>
+                </span>
+            <?php } ?>
+        </div>
+    <?php } ?>
+    
+    <?php if ($isEdit) { ?>
+        <div class="edit-mode-alert">
+            <i class="fas fa-exclamation-triangle"></i>
+            <div>
+                <strong>You are editing this invoice.</strong> 
+                The invoice number and date will not be changed. <span style="color:#dc2626;">Please make a preview first before saving.</span>
+            </div>
+        </div>
+    <?php } ?>
+</div>
+
+<?php 
+// Credit note reference info (if applicable)
+if (isset($invoice) && isset($invoice['invoice_nr']) && $_GET['type'] == 'credit_note') { 
+?>
+<div class="credit-note-info" style="max-width: 750px; margin: 0 auto 20px auto;">
+    <div class="info-title">
+        <i class="fas fa-receipt"></i>
+        Credit Note Reference
+    </div>
+    <div class="invoice-ref">
+        <?php 
+        if (isset($credit_invoices) && count($credit_invoices) > 0) {
+            foreach ($credit_invoices as $credit_invoice) {
+                $invFile = "/iidc/client_data/invoices/$credit_invoice[invoice_nr].pdf";
+        ?>
+            <div class="invoice-ref-item">
+                <label>Invoice Number</label>
+                <span>
+                    <?php if (file_exists($prog_path . $invFile)) { ?>
+                        <a href="<?php echo $prog_www; ?>/client_data/invoices/<?php echo $credit_invoice['invoice_nr']; ?>.pdf" target="_blank">
+                            <?php echo $credit_invoice['invoice_nr']; ?>
+                        </a>
+                    <?php } else { 
+                        echo $credit_invoice['invoice_nr'];
+                    } ?>
+                </span>
+            </div>
+            <div class="invoice-ref-item">
+                <label>Date</label>
+                <span><?php echo $credit_invoice['date']; ?></span>
+            </div>
+            <div class="invoice-ref-item">
+                <label>Subtotal</label>
+                <span>&euro; <?php echo $credit_invoice['subtotal']; ?></span>
+            </div>
+            <div class="invoice-ref-item">
+                <label>Total</label>
+                <span style="color: #dc2626;">&euro; <?php echo $credit_invoice['total']; ?></span>
+            </div>
+        <?php 
+            }
+        } 
+        ?>
+    </div>
+</div>
+<?php } ?>
+
+<!-- REMOVED: Hidden iframe is no longer needed with AJAX approach -->
+
 <form action="pdf/pdf_invoice.php" method="post" target="_blank" name="invoice_form" autocomplete="off">
     <input type="hidden" name="splittedInvoice" id="splittedInvoice" value="">
+    <input type="hidden" name="ajax" value="0">
     <?php
     $client_emails = array();
     $client_country = 'Netherlands';
@@ -1286,7 +2422,7 @@ echo "</pre>";
                         $invoicing_address = '';
                         $invoicing_offices = $amdb->get_results("SELECT * FROM `hqc_invoicing_offices` WHERE invoice_company_name != '' ORDER BY invoice_company_name");
                         ?>
-                        <select size="1" name="invoffid" id="invoffid" style="margin-bottom: 10px;" onchange="jQuery('#invoicing_office').load('/invoices/get_invoicing_office.php?offid='+this.value)">
+                        <select size="1" name="invoffid" id="invoffid" style="margin-bottom: 10px;" onchange="jQuery('#invoicing_office').load('/iidc/invoices/get_invoicing_office.php?offid='+this.value)">
                             <?php
                             foreach ($invoicing_offices as $invoicing_office) {
                                 if (isset($invoffid) and $invoffid == $invoicing_office['offid']) {
@@ -1377,6 +2513,11 @@ echo "</pre>";
         <?php }; ?>
         <input type="hidden" name="act" value="">
         <input type="hidden" name="invoice_type" value="<?php echo  $_GET['type']; ?>">
+        
+        <!-- IMPORTANT: Missing hidden fields that were causing the issue -->
+        <input type="hidden" name="sbsid" id="sbsid" value="<?php echo isset($row['sbsid']) ? $row['sbsid'] : '1'; ?>">
+        <input type="hidden" name="service_type" value="<?php echo isset($serviceType) ? htmlspecialchars($serviceType) : ''; ?>">
+        
         <?php if (isset($_GET['exid'])) { ?>
             <input type="hidden" name="exid" value="<?php echo  $_GET['exid']; ?>">
         <?php }; ?>
@@ -1428,7 +2569,7 @@ echo "</pre>";
                 }
             }
         ?>
-            <table class="alternateOn" width="750" id="auditTable">
+            <table class="table table-striped table-bordered" width="750" id="auditTable">
                 <tr>
                     <th>Audit Date:</th>
                     <td><input type="text" class="date" name="audit[date]" data-required="yes" value="<?php echo (isset($audit['audit_date'])) ? date("d/m/Y", strtotime($audit['audit_date'])) : ''; ?>" /></td>
@@ -1507,7 +2648,7 @@ echo "</pre>";
                             <input type="text" id="searchPredefined" style="padding: 5px;margin-bottom: 10px;" placeholder="Search predefined" />
                             <ul id="searchPredefinedList">
                                 <?php
-                                $predefinedItems = '<ul id="predefinedItems" class="alternateOn">';
+                                $predefinedItems = '<ul id="predefinedItems" class="table table-striped table-bordered">';
                                 foreach ($defaultPrices['predefined'] as $price) {
                                     $predefinedItems .= '<li data-item="' . $price['item'] . '">' . $price['item'] . ' / ' . $price['service_type'] . '</li>';
                                 ?>
@@ -1532,7 +2673,7 @@ echo "</pre>";
         <table cellpadding="2" cellspacing="2" width="750" style="margin-top:20px;">
             <tr>
                 <th>Email comment:</th>
-                <th><?php echo (!in_array('invoices_draft_only', $user_permissions)) ? 'Send invoice by:' : '' ?></th>
+                <th></th>
             </tr>
             <?php if (isset($data['email_message'])) {
                 $email_message = $data['email_message'];
@@ -1553,7 +2694,7 @@ echo "</pre>";
                 </td>
                 <?php                ?>
                 <td style="background:#eee">
-                    <ul style="padding:0px 5px;<?php echo (in_array('invoices_draft_only', $user_permissions)) ? 'display:none' : '' ?>">
+                    <ul style="padding:0px 5px;">
                         <li>
                             <label>
                                 <input type="radio" name="mail_post" value="post" onclick="testMail(this);">
@@ -1626,55 +2767,21 @@ echo "</pre>";
                 <th style="width:50px !important">Vat:</th>
                 <td style="background:#eee;width:180px;" id="vatRate"></td>
                 <td style="text-align:center">
-                    <?php /*if ((isset($_GET['type']) && $_GET['type'] == 'general') or (isset($_GET['act']) and $_GET['act'] == 'scheduled')) {
-                        $scheduled = array();
-                        if (isset($invoice_options['scheduled']))
-                            $scheduled = $invoice_options['scheduled'];
-                    ?>
-                        <div style="float:left"><label><input type="checkbox" value="scheduled" name="scheduled" id="scheduledCheckBox" onclick="switchScheduleInputs()" <?php echo (isset($_GET['act']) && $_GET['act'] == 'scheduled') ? 'checked' : ''; ?> />Schedule invoice</label> <span id="scheduleInputs" style="display:none"><strong>Send on date:</strong><input type="text" name="scheduled[date]" id="scheduled_date" value="<?php echo isset($scheduled['date']) ? $scheduled['date'] : ''; ?>" class="date" /> <strong>Hour:</strong> <input type="number" max="23" min="1" name="scheduled[hour]" id="scheduled_hour" value="<?php echo isset($scheduled['hour']) ? $scheduled['hour'] : '1'; ?>" style="width:50px" /> (Between 1 & 23) </span></div>
-                        <script>
-                            function switchScheduleInputs() {
-                                if (document.getElementById("scheduledCheckBox").checked) {
-                                    jQuery("#scheduledButton").css("display", "")
-                                    jQuery("#scheduleInputs").css("display", "")
-                                    jQuery("#invoiceButtons").css("display", "none")
-                                } else {
-                                    jQuery("#scheduleInputs").css("display", "none")
-                                    jQuery("#scheduledButton").css("display", "none")
-                                    jQuery("#invoiceButtons").css("display", "")
-                                }
-                            }
-                        </script>
-                    <?php };*/ ?>
-
                     <input type="reset" value="Reset">
                     <input type="button" onclick="create_invoice('prv')" value="Preview" />
-                    <?php /*if ((isset($_GET['type']) && $_GET['type'] == 'general') or (isset($_GET['act']) and $_GET['act'] == 'scheduled')) { ?>
-                        <span id="scheduledButton" style="display: none;">
-                            <?php if (isset($_GET['act']) and $_GET['act'] == 'scheduled') { ?>
-                                <input type="button" onclick="create_invoice('update_scheduled')" value="Update scheduled" />
-                            <?php } else { ?>
-                                <input type="button" onclick="create_invoice('save_scheduled')" value="Save" />
-                            <?php }; ?>
-                        </span>
-                        <script>
-                            switchScheduleInputs();
-                        </script>
-                    <?php }; */ ?>
                     <span id="invoiceButtons">
                         <?php if (isset($_GET['act']) and $_GET['act'] == 'draft') { ?>
                             <input type="button" onclick="create_invoice('update_draft')" value="Update draft" />
                         <?php } elseif (!isset($_GET['act'])) { ?>
                             <input type="button" onclick="create_invoice('save_draft')" value="Save draft" />
                         <?php } ?>
-                        <?php if (!in_array('invoices_draft_only', $user_permissions) && (!isset($_GET['act']) or $_GET['act'] != 'scheduled')) { ?>
+                        <?php if (!isset($_GET['act']) || $_GET['act'] != 'scheduled') { ?>
                             <input type="button" onclick="create_invoice('crt')" value="Create">
                         <?php }; ?>
                     </span>
                 </td>
             </tr>
-        </table>
-        ver 1.1 20/05/2025
+        </table>        
 </form>
 
 <script>
@@ -1692,7 +2799,7 @@ echo "</pre>";
 
     function setInvoiceVatRate() {
         vatRate = jQuery("#vat_rate").val();
-        jQuery("#vatRate").html('<select name="vat" onchange="vatShifted(this.value)"><option value="' + vatRate + '">' + vatRate + '</option><option value="0">0</option></select> % <span id="vatShifted" style="display:none">VAT Shifted</span>')
+        jQuery("#vatRate").html('<select name="vat" onchange="vatShifted(this.value)" style="min-width:60px;"><option value="' + vatRate + '">' + vatRate + '</option><option value="0">0</option></select> % <span id="vatShifted" style="display:none">VAT Shifted</span>')
     }
     jQuery(document).ready(function(e) {
         setInvoiceVatRate();
@@ -1749,3 +2856,422 @@ echo "</pre>";
         });
     </script>
 <?php }; ?>
+
+<!-- ============================================
+     TEXTAREA AUTOSUGGEST JAVASCRIPT
+     ============================================ -->
+<script>
+(function() {
+    'use strict';
+    
+    /**
+     * Textarea Autosuggest Class
+     */
+    class TextareaAutosuggest {
+        constructor(options = {}) {
+            this.ajaxUrl = options.ajaxUrl || '/ajax/ajaxHandler.php';
+            this.minChars = options.minChars || 0;
+            this.debounceTime = options.debounceTime || 300;
+            this.cache = {};
+            this.currentDropdown = null;
+            this.currentTextarea = null;
+            this.activeIndex = -1;
+            this.services = [];
+            this.filteredServices = [];
+            this.isLoading = false;
+            this.hasLoaded = false;
+            this.initialized = false;
+            
+            this.init();
+        }
+        
+        init() {
+            if (this.initialized) return;
+            this.wrapTextareas();
+            this.bindEvents();
+            this.preloadData();
+            this.initialized = true;
+        }
+        
+        wrapTextareas() {
+            const textareas = document.querySelectorAll('textarea[name*="[description]"]');
+            
+            textareas.forEach((textarea, index) => {
+                if (textarea.parentElement.classList.contains('textarea-autosuggest-wrapper')) {
+                    return;
+                }
+                
+                const wrapper = document.createElement('div');
+                wrapper.className = 'textarea-autosuggest-wrapper';
+                wrapper.dataset.index = index;
+                
+                textarea.parentNode.insertBefore(wrapper, textarea);
+                wrapper.appendChild(textarea);
+                
+                const trigger = document.createElement('button');
+                trigger.type = 'button';
+                trigger.className = 'autosuggest-trigger';
+                trigger.innerHTML = '<i class="fas fa-search"></i> Services';
+                trigger.title = 'Search predefined services (Click or press Ctrl+Space)';
+                wrapper.appendChild(trigger);
+                
+                const dropdown = this.createDropdown(index);
+                wrapper.appendChild(dropdown);
+            });
+        }
+        
+        createDropdown(index) {
+            const dropdown = document.createElement('div');
+            dropdown.className = 'autosuggest-dropdown';
+            dropdown.id = `autosuggest-dropdown-${index}`;
+            dropdown.innerHTML = `
+                <div class="autosuggest-header">
+                    <span class="title"><i class="fas fa-list-alt"></i> Predefined Services</span>
+                    <span class="count">0 items</span>
+                    <button type="button" class="autosuggest-close" title="Close (Esc)">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="autosuggest-search">
+                    <input type="text" placeholder="🔍 Type to filter services..." class="autosuggest-search-input">
+                </div>
+                <div class="autosuggest-content">
+                    <div class="autosuggest-loading">
+                        <div class="autosuggest-loading-spinner"></div>
+                        <div>Loading services...</div>
+                    </div>
+                </div>
+                <div class="autosuggest-hint">
+                    <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
+                    <span><kbd>Enter</kbd> Select</span>
+                    <span><kbd>Esc</kbd> Close</span>
+                </div>
+            `;
+            
+            return dropdown;
+        }
+        
+        bindEvents() {
+            const self = this;
+            
+            document.addEventListener('click', (e) => {
+                if (e.target.closest('.autosuggest-trigger')) {
+                    e.preventDefault();
+                    const wrapper = e.target.closest('.textarea-autosuggest-wrapper');
+                    self.openDropdown(wrapper);
+                }
+                
+                if (e.target.closest('.autosuggest-close')) {
+                    self.closeDropdown();
+                }
+                
+                if (e.target.closest('.autosuggest-item')) {
+                    const item = e.target.closest('.autosuggest-item');
+                    self.selectItem(item);
+                }
+                
+                if (self.currentDropdown && !e.target.closest('.textarea-autosuggest-wrapper')) {
+                    self.closeDropdown();
+                }
+            });
+            
+            document.addEventListener('input', (e) => {
+                if (e.target.classList.contains('autosuggest-search-input')) {
+                    self.filterServices(e.target.value);
+                }
+            });
+            
+            document.addEventListener('keydown', (e) => {
+                // Ctrl+Space to open dropdown when in textarea
+                if (e.ctrlKey && e.code === 'Space') {
+                    const textarea = e.target.closest('textarea[name*="[description]"]');
+                    if (textarea) {
+                        e.preventDefault();
+                        const wrapper = textarea.closest('.textarea-autosuggest-wrapper');
+                        if (wrapper) {
+                            self.openDropdown(wrapper);
+                        }
+                    }
+                }
+                
+                if (!self.currentDropdown) return;
+                
+                switch (e.key) {
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        self.navigateItems(1);
+                        break;
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        self.navigateItems(-1);
+                        break;
+                    case 'Enter':
+                        if (self.activeIndex >= 0) {
+                            e.preventDefault();
+                            const activeItem = self.currentDropdown.querySelector('.autosuggest-item.active');
+                            if (activeItem) {
+                                self.selectItem(activeItem);
+                            }
+                        }
+                        break;
+                    case 'Escape':
+                        self.closeDropdown();
+                        break;
+                }
+            });
+        }
+        
+        async preloadData() {
+            if (this.hasLoaded || this.isLoading) return;
+            
+            this.isLoading = true;
+            
+            try {
+                const response = await this.fetchServices();
+                if (response && response.data && response.data.services) {
+                    this.services = response.data.services;
+                    this.filteredServices = [...this.services];
+                    this.hasLoaded = true;
+                }
+            } catch (error) {
+                console.error('Autosuggest: Failed to preload data:', error);
+            } finally {
+                this.isLoading = false;
+            }
+        }
+        
+        async fetchServices() {
+            if (this.cache.services) {
+                return this.cache.services;
+            }
+            
+            try {
+                const formData = new FormData();
+                formData.append('rtype', 'getServices');
+                formData.append('uid', '0');
+                
+                const response = await fetch(this.ajaxUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                this.cache.services = data;
+                
+                return data;
+            } catch (error) {
+                console.error('Autosuggest: Fetch error:', error);
+                throw error;
+            }
+        }
+        
+        async openDropdown(wrapper) {
+            this.closeDropdown();
+            
+            const dropdown = wrapper.querySelector('.autosuggest-dropdown');
+            const textarea = wrapper.querySelector('textarea');
+            
+            this.currentDropdown = dropdown;
+            this.currentTextarea = textarea;
+            this.activeIndex = -1;
+            
+            dropdown.classList.add('active');
+            
+            setTimeout(() => {
+                const searchInput = dropdown.querySelector('.autosuggest-search-input');
+                if (searchInput) {
+                    searchInput.focus();
+                    searchInput.value = '';
+                }
+            }, 100);
+            
+            if (!this.hasLoaded) {
+                await this.preloadData();
+            }
+            
+            this.filteredServices = [...this.services];
+            this.renderServices(this.filteredServices);
+        }
+        
+        closeDropdown() {
+            if (this.currentDropdown) {
+                this.currentDropdown.classList.remove('active');
+                
+                const searchInput = this.currentDropdown.querySelector('.autosuggest-search-input');
+                if (searchInput) {
+                    searchInput.value = '';
+                }
+                
+                this.currentDropdown = null;
+                this.activeIndex = -1;
+                this.filteredServices = [...this.services];
+            }
+        }
+        
+        renderServices(services) {
+            if (!this.currentDropdown) return;
+            
+            const content = this.currentDropdown.querySelector('.autosuggest-content');
+            const countEl = this.currentDropdown.querySelector('.count');
+            
+            if (!services || services.length === 0) {
+                content.innerHTML = `
+                    <div class="autosuggest-no-results">
+                        <i class="fas fa-inbox"></i>
+                        <div>No matching services found</div>
+                    </div>
+                `;
+                countEl.textContent = '0 items';
+                return;
+            }
+            
+            countEl.textContent = `${services.length} items`;
+            
+            let html = '<ul class="autosuggest-list">';
+            
+            services.forEach((service, index) => {
+                const preview = this.truncateText(service.service, 100);
+                const feeDisplay = service.fee 
+                    ? `<span class="autosuggest-item-fee">${service.fee}</span>`
+                    : `<span class="autosuggest-item-fee no-fee">No fee</span>`;
+                
+                html += `
+                    <li class="autosuggest-item" data-id="${service.id}" data-index="${index}">
+                        <div class="autosuggest-item-preview">${this.escapeHtml(preview)}</div>
+                        <div class="autosuggest-item-full">
+                            <div class="autosuggest-item-full-header">
+                                <i class="fas fa-file-alt"></i> Full Description
+                            </div>
+                            <div class="autosuggest-item-full-text">${this.escapeHtml(service.service)}</div>
+                        </div>
+                    </li>
+                `;
+            });
+            
+            html += '</ul>';
+            content.innerHTML = html;
+        }
+        
+        filterServices(query) {
+            if (!query || query.trim() === '') {
+                this.filteredServices = [...this.services];
+            } else {
+                const lowerQuery = query.toLowerCase().trim();
+                const queryWords = lowerQuery.split(/\s+/);
+                
+                this.filteredServices = this.services.filter(service => {
+                    const text = (service.service || '').toLowerCase();
+                    const id = String(service.id);
+                    return queryWords.every(word => text.includes(word) || id === word);
+                });
+            }
+            
+            this.activeIndex = -1;
+            this.renderServices(this.filteredServices);
+            
+            if (query && query.trim()) {
+                this.highlightMatches(query);
+            }
+        }
+        
+        highlightMatches(query) {
+            if (!this.currentDropdown) return;
+            
+            const items = this.currentDropdown.querySelectorAll('.autosuggest-item-preview');
+            const words = query.toLowerCase().trim().split(/\s+/);
+            
+            items.forEach(item => {
+                let html = item.textContent;
+                words.forEach(word => {
+                    if (word.length > 1) {
+                        const regex = new RegExp(`(${this.escapeRegex(word)})`, 'gi');
+                        html = html.replace(regex, '<span class="autosuggest-highlight">$1</span>');
+                    }
+                });
+                item.innerHTML = html;
+            });
+        }
+        
+        navigateItems(direction) {
+            if (!this.currentDropdown) return;
+            
+            const items = this.currentDropdown.querySelectorAll('.autosuggest-item');
+            if (items.length === 0) return;
+            
+            if (this.activeIndex >= 0 && items[this.activeIndex]) {
+                items[this.activeIndex].classList.remove('active');
+            }
+            
+            this.activeIndex += direction;
+            
+            if (this.activeIndex < 0) {
+                this.activeIndex = items.length - 1;
+            } else if (this.activeIndex >= items.length) {
+                this.activeIndex = 0;
+            }
+            
+            const activeItem = items[this.activeIndex];
+            activeItem.classList.add('active');
+            
+            activeItem.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest'
+            });
+        }
+        
+        selectItem(item) {
+            if (!this.currentTextarea) return;
+            
+            const index = parseInt(item.dataset.index);
+            const service = this.filteredServices[index];
+            
+            if (service) {
+                this.currentTextarea.value = service.service;
+                
+                this.currentTextarea.dispatchEvent(new Event('change', { bubbles: true }));
+                this.currentTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                
+                this.currentTextarea.focus();
+                
+                this.closeDropdown();
+            }
+        }
+        
+        truncateText(text, maxLength) {
+            if (!text) return '';
+            if (text.length <= maxLength) return text;
+            return text.substring(0, maxLength).trim() + '...';
+        }
+        
+        escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        escapeRegex(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+        
+        refresh() {
+            this.wrapTextareas();
+        }
+    }
+    
+    // Initialize on DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAutosuggest);
+    } else {
+        initAutosuggest();
+    }
+    
+    function initAutosuggest() {
+        window.textareaAutosuggest = new TextareaAutosuggest({
+            ajaxUrl: '/ajax/ajaxHandler.php',
+            minChars: 0,
+            debounceTime: 300
+        });
+    }
+})();
+</script>

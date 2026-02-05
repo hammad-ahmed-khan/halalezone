@@ -268,7 +268,7 @@ include "../config/paths.inc.php";
 </div>
 <?php
 ?>
-<table border=0 id="theClients" class="alternateOn" width="100%">
+<table border=0 id="theClients" class="table table-striped table-bordered" width="100%">
 	<thead>
 		<tr>
 			<th style="width:40px">::</th>

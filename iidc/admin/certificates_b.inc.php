@@ -118,7 +118,7 @@ if (!isset($_GET['offid']) or trim($_GET['offid'])==''){
 return;
 }
 ?>
-<table border=0 width=750 id="certificatesB" class="alternateOn">
+<table border=0 width=750 id="certificatesB" class="table table-striped table-bordered">
 <tr>
 <td colspan=8 class="sub_title"><b>Requested certificates <FONT COLOR=RED>CERTIFICATES B</FONT></b></td>
 </tr>

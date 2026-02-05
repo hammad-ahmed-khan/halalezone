@@ -33,7 +33,7 @@
     }
 </script>
 <h1 style="text-align: center;">New companies waiting for approval</h1>
-<table border=0 id="newCompanies" class="alternateOn" style="width: 100%; margin: 0 auto; text-align: left;">
+<table border=0 id="newCompanies" class="table table-striped table-bordered" style="width: 100%; margin: 0 auto; text-align: left;">
     <tr>
         <?php
         if (in_array("home_ceriticate_actions", $user_permissions) or $_SESSION['user_type'] == "admin") { ?>

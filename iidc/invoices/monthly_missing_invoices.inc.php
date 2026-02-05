@@ -94,7 +94,7 @@ function get_diff($start, $end = false)
 					<td><?php echo  isset($client['amount']) ? '&euro;' . do_currency($client['amount']) : ''; ?></td>
 					<td><?php echo  isset($client['starts_on']) ? date('d/m/Y', strtotime($client['starts_on'])) : ''; ?> - <?php echo  isset($client['ends_on']) ? date('d/m/Y', strtotime($client['ends_on'])) : ''; ?></td>
 					<td>
-						<ol style="padding:0px;margin:0px;" class="alternateOn" id="invoiceItems">
+						<ol style="padding:0px;margin:0px;" class="table table-striped table-bordered" id="invoiceItems">
 							<?php
 							if (trim($client['invoices']) != '' && is_array(json_decode($client['invoices'], true))) {
 								$invoices = json_decode($client['invoices'], true);
@@ -115,7 +115,7 @@ function get_diff($start, $end = false)
 						</ol>
 					</td>
 					<td>
-						<ol style="padding:0px;margin:0px;" class="alternateOn">
+						<ol style="padding:0px;margin:0px;" class="table table-striped table-bordered">
 							<?php
 							$invoices = array();
 							$diff = get_diff($client['starts_on']);

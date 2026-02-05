@@ -102,7 +102,7 @@ if (isset($_REQUEST['decid'])) {
                 <?php echo $meeting['company_name']; ?><br />
             </td>
             <td>
-                <ul style="padding: 0px;margin:0px;overflow:auto" id="committeeMembers" class="alternateOn">
+                <ul style="padding: 0px;margin:0px;overflow:auto" id="committeeMembers" class="table table-striped table-bordered">
                     <?php
                     if ($comMembers = $amdb->get_results("SELECT * FROM hqc_committee_members WHERE status='active' ORDER BY member_name ASC")) {
                         foreach ($comMembers as $member) {

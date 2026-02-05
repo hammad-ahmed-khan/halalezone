@@ -45,7 +45,7 @@ include "$prog_path/popup-dialog.inc.php";
 include "../date-picker.inc.php";
 include "search_for_certificates.inc.php";
 ?>
-<table border=0 width=750 id="resTable" class="alternateOn">
+<table border=0 width=750 id="resTable" class="table table-striped table-bordered">
 <tr>
 <td colspan=6><b>Search results for <FONT COLOR=RED>
 <?php

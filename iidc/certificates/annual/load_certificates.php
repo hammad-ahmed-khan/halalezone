@@ -3,8 +3,8 @@ include "../../check_user.inc.php";
 include "$prog_path/config/connect.inc.php";
 extract($_SESSION);
 
-$certFilesDir = $hcp_path . "/client_data/certificates";
-$dmc_file = '/data/DMC/reports/dmc-';
+$certFilesDir = $hcp_path . "/iidc/client_data/certificates";
+$dmc_file = '/iidc/data/DMC/reports/dmc-';
 include_once("$prog_path/config/connect.inc.php");
 if (!isset($_GET['oc']))
 	$status_completed = "and $tbl[prefix]_halal_certificates.invoice_nr = ''";
@@ -191,22 +191,21 @@ if (isset($result) and count($result) > 0) {
 								} else {
 									echo $row['certificate_nr'];
 								}
-								if (isset($old_versions[$row['crtNr']])) {
+									if (isset($old_versions[$row['crtNr']])) {
 									$verNr = 1; ?>
-									<fieldset style="margin-top: 2px;background: beige;border: 1px solid #bbb;" class="old_versions">
-										<legend style="font-weight:bold">Old versions</legend>
+									<fieldset class="old_versions">
+										<legend>Old versions</legend>
 										<ul>
 											<?php
 											foreach ($old_versions[$row['crtNr']] as $certVersions) {
 											?>
 												<li>
-													<?php echo $verNr++; ?>-
-													<?php /*
-										<a href="?inc=certificate_add_edit&act=edit&crtNr=<?php echo $row['crtNr']; ?>&clid=<?php echo $row['clid']; ?>&ver=<?php echo $certVersions['verid']; ?>&offid=<?php echo $_REQUEST['offid']; ?><?php echo (isset($options['verid'])) ? '&verid=' . $options['verid'] : ''; ?><?php echo (isset($options['stid'])) ? '&stid=' . $options['stid'] : ''; ?>" title="Edit Certificate">
-											<i class="far fa-edit"></i></a>*/ ?>
+													<span class="ver-num"><?php echo $verNr++; ?>.</span>
 													<?php if (trim($certVersions['item_url']) != '') { ?>
-														<i class="far fa-file-pdf"></i> <a target="_new" href="<?php echo $prog_www; ?>/client_data/certificates/<?php echo $certVersions['item_url']; ?>">
-															<?php echo date("d.m.Y", strtotime($certVersions['inserted_on'])); ?></a>
+														<i class="far fa-file-pdf"></i>
+														<a target="_new" href="<?php echo $prog_www; ?>/client_data/certificates/<?php echo $certVersions['item_url']; ?>">
+															<?php echo date("d.m.Y", strtotime($certVersions['inserted_on'])); ?>
+														</a>
 													<?php } else {
 														echo date("d.m.Y", strtotime($certVersions['inserted_on']));
 													}; ?>
@@ -381,18 +380,18 @@ if (isset($result) and count($result) > 0) {
 								}
 							?>
 								<i class="fa fa-th-large load_popup" data-id="company_name" data-url="download_products_list.php?clid=<?php echo $row['clid']; ?>&crtNr=<?php echo $row['crtNr']; ?>" title="Download Certificate's Products list" data-height="180" data-width="500"></i>
-								<i class="fas fa-qrcode load_popup" id="qr_<?php echo $row['crtNr']; ?>" data-url="/certificates/shared/qr/qr.php?crtNr=<?php echo $row['crtNr']; ?>" title="QR Certificate Status" style="color:<?php echo $qr_color; ?>"></i>
+								<i class="fas fa-qrcode load_popup" id="qr_<?php echo $row['crtNr']; ?>" data-url="/iidc/certificates/shared/qr/qr.php?crtNr=<?php echo $row['crtNr']; ?>" title="QR Certificate Status" style="color:<?php echo $qr_color; ?>"></i>
 								<?php /* if ($row['country1'] != 'Israel') { ?>
 									<i class="fas fa-recycle" onClick="document.location.href='?inc=certificate_add_edit&act=reissue&crtNr=<?php echo $row['crtNr']; ?>&clid=<?php echo $row['clid']; ?>&offid=<?php echo $row['offid']; ?>'" title="Reissue Certificate"></i>
 								<?php }; */ ?>
 							<?php } ?>
 							<?php if ($user_type != 'hqc_office') { ?>
-								<i class="fas fa-paperclip load_popup" id="qr_<?php echo $row['crtNr']; ?>" data-url="/certificates/annual/certificate_save.php?crtNr=<?php echo $row['crtNr']; ?>&act=internalMemo" title="Internal memo" style="color:<?php echo $qr_color; ?>"></i>
+								<i class="fas fa-paperclip load_popup" id="qr_<?php echo $row['crtNr']; ?>" data-url="/iidc/certificates/annual/certificate_save.php?crtNr=<?php echo $row['crtNr']; ?>&act=internalMemo" title="Internal memo" style="color:<?php echo $qr_color; ?>"></i>
 							<?php }; ?>
 
-							<img src="/images/edit.gif" onClick="document.location.href='/certificates/annual/?inc=certificate_add_edit&act=edit&crtNr=<?php echo $row['crtNr']; ?>&clid=<?php echo $row['clid']; ?>&offid=<?php echo $row['offid']; ?><?php echo (isset($options['verid'])) ? '&verid=' . $options['verid'] : ''; ?><?php echo (isset($options['stid'])) ? '&stid=' . $options['stid'] : ''; ?>'" title="Edit Certificate" />
+							<img src="/iidc/images/edit.gif" onClick="document.location.href='/iidc/certificates/annual/?inc=certificate_add_edit&act=edit&crtNr=<?php echo $row['crtNr']; ?>&clid=<?php echo $row['clid']; ?>&offid=<?php echo $row['offid']; ?><?php echo (isset($options['verid'])) ? '&verid=' . $options['verid'] : ''; ?><?php echo (isset($options['stid'])) ? '&stid=' . $options['stid'] : ''; ?>'" title="Edit Certificate" />
 
-							<img src="/images/delete.gif" onClick="deleteCert('<?php echo $row['crtNr']; ?>')" title="Delete Certificate" />
+							<img src="/iidc/images/delete.gif" onClick="deleteCert('<?php echo $row['crtNr']; ?>')" title="Delete Certificate" />
 						</td>
 					<?php }; ?>
 				</tr>

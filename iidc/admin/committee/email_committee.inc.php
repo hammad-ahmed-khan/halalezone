@@ -114,7 +114,7 @@ if (isset($_REQUEST['crtNr'])) {
             <tr>
                 <th style="width:100px" rowspan="2">Committee members:</th>
                 <td style="width:40%" rowspan="2">
-                    <ul style="padding: 0px;margin:0px;height:100px;overflow:auto" id="committeeMembers" class="alternateOn">
+                    <ul style="padding: 0px;margin:0px;height:100px;overflow:auto" id="committeeMembers" class="table table-striped table-bordered">
                         <?php
                         if ($comMembers = $amdb->get_results("SELECT * FROM hqc_committee_members WHERE status='active' ORDER BY member_name ASC")) {
                             foreach ($comMembers as $member) {

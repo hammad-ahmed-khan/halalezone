@@ -86,7 +86,7 @@ $clients = $amdb->get_results("SELECT * FROM companies
      <a href="<?php echo $prog_www ?>/invoices/service_prices_save.php?clid=-1&act=get_defaults" class="load_popup button" title="Add new client">Add new client</a>
 </div>
 <h2>DEFAULT SERVICE COSTS</h2>
-<table id="servicePrices" class="alternateOn" style="width:100%">
+<table id="servicePrices" class="table table-striped table-bordered" style="width:100%">
      <thead>
           <tr>
                <th>Nr</th>

@@ -257,7 +257,7 @@ if (isset($_SESSION['offid']) && $_SESSION['offid'] != '0') {
     }
 </script>
 
-<table class="alternateOn" style="min-width:100% !important" id="annualCertificates">
+<table class="table table-striped table-bordered" style="min-width:100% !important" id="annualCertificates">
     <thead>
         <tr class="alternateOff">
             <th colspan=7 style="padding:0px 10px;">

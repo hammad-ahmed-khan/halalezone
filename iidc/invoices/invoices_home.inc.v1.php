@@ -56,7 +56,7 @@ if (isset($user_options['invoices_view']) or in_array("menu_invoices", $user_per
 				}
 			</style>
 			<h2 style="text-align:center;text-transform:uppercase">invoices - Totals</h2>
-			<table border="0" cellpadding="0" style="border:1px solid #EEE" class="alternateOn">
+			<table border="0" cellpadding="0" style="border:1px solid #EEE" class="table table-striped table-bordered">
 				<tr>
 					<td class="sub_title" colspan="5"> <strong>Payments</strong></td>
 				</tr>
@@ -111,7 +111,7 @@ if (isset($user_options['invoices_view']) or in_array("menu_invoices", $user_per
 				$service_types = $defauls['service_type'];
 			}
 			?>
-			<table style="width:auto" class="alternateOn">
+			<table style="width:auto" class="table table-striped table-bordered">
 				<tr>
 					<th style="width:200px">Service type</th>
 					<th>Total invoices</th>
@@ -388,7 +388,7 @@ if (isset($user_options['invoices_view']) or in_array("menu_invoices", $user_per
 	<?php if ($_GET['show'] != 'draft' && $_GET['show'] != 'scheduled') { ?>
 		<div>To make multiple credit-notes select a client, a subsidiary and get invoices. Then select invoice by checkboxes</div>
 	<?php }; ?>
-	<table id="invoicesTable" class="alternateOn" style="background:#fff;width:100%">
+	<table id="invoicesTable" class="table table-striped table-bordered" style="background:#fff;width:100%">
 		<thead>
 			<tr class="firstHead">
 				<td></td>

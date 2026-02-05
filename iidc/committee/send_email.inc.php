@@ -53,7 +53,7 @@ if (isset($_REQUEST['act']) && $_REQUEST['act'] == 'sendEmail') {
             <tr>
                 <th style="width:100px">Committee members:</th>
                 <td>
-                    <ul style="padding: 0px;margin:0px;height:150px;overflow:auto" id="committeeMembers" class="alternateOn">
+                    <ul style="padding: 0px;margin:0px;height:150px;overflow:auto" id="committeeMembers" class="table table-striped table-bordered">
                         <?php
                         if ($comMembers = $amdb->get_results("SELECT * FROM hqc_committee_members WHERE status='active' ORDER BY member_name ASC")) {
                             foreach ($comMembers as $member) {

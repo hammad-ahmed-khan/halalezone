@@ -41,7 +41,7 @@ if (isset($_REQUEST['act']) and $_REQUEST['act'] == 'get_credit_notes_list' and 
 			<input type="hidden" name="act" value="attach_credit_note" />
 			<input type="hidden" name="nr" value="<?php echo $_REQUEST['nr']; ?>" />
 			<input type="hidden" name="invnr" value="<?php echo $_REQUEST['invnr']; ?>" />
-			<table class="alternateOn" style="width: 100%;">
+			<table class="table table-striped table-bordered" style="width: 100%;">
 				<thead>
 					<tr>
 						<th>Number</th>

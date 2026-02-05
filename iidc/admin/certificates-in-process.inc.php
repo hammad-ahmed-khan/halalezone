@@ -237,7 +237,7 @@
     }
 </script>
 
-<table class="alternateOn" style="min-width:100% !important" id="annualCertificatesInProcess">
+<table class="table table-striped table-bordered" style="min-width:100% !important" id="annualCertificatesInProcess">
     <thead>
         <tr class="alternateOff">
             <th colspan=7 style="padding:0px 10px;" title="CERTIFICATES In process" class="sub_title">
