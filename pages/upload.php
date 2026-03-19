@@ -99,7 +99,7 @@ catch (PDOException $e) {
   <div class="main-content">
     <div class="main-content-inner">
       <div class="page-content">
-        <div id="logo"></div>
+        <div id="logo"><img src="/img/logo.png" /></div>
         <div class="row">
           <div class="col-md-10 col-md-offset-1">
             <div class="clearfix">

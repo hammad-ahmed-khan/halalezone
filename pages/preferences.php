@@ -3,7 +3,7 @@
 <head>
 <?php include_once('pages/header.php');
  include_once ('includes/func.php');?>
-<title>Administration - Halal e-Zone</title>
+<title>Administration - Halal Digital</title>
 </head>
 
 <body>

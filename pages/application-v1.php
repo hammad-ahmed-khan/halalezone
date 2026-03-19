@@ -133,7 +133,7 @@ if ($isClient && count($clients) > 1) {
 <link rel='stylesheet' id='fileup-css'  href='css/fileup.css?ver=6.0.1' type='text/css' media='all' />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css" integrity="sha512-1sCRPdkRXhBV2PBLUdRb4tMg1w2YPf37qatUFeS7zlBy7jJI8Lf4VHwWfZZfpXtYSLy85pkm9GaYVYMfw5BC1A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <link rel='stylesheet' id='fileup-css'  href='css/all.css?v=<?php echo rand(); ?>' type='text/css' media='all' />
-<title>Applications and Documents - Halal e-Zone</title>
+<title>Applications and Documents - Halal Digital</title>
 <style>
   #last_login_sent {
   display:block;

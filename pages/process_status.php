@@ -227,17 +227,14 @@ table.dataTable td {
 	$auditors = $stmt->fetchAll();
 
     // Fetch all child clients and organize them in an array by parent_id
-    $sql = "SELECT id, name, prefix, parent_id FROM tusers WHERE isclient=1 AND IFNULL(parent_id,'0') <> '0' AND deleted = 0 ORDER BY name";
-
-    $childClients = [];
+    $sql = "SELECT DISTINCT country FROM `tusers` WHERE IFNULL(country, '') <> '' ORDER BY country;";
     $stmt = $dbo->prepare($sql);
     $stmt->setFetchMode(PDO::FETCH_ASSOC);
-    if ($stmt->execute()) { 
-        $allChildren = $stmt->fetchAll();
-        foreach ($allChildren as $child) {
-            $childClients[$child['parent_id']][] = $child; // Group children under parent_id
-        }
-    }  
+	if(!$stmt->execute()) {
+		echo json_encode(generateErrorResponse("Getting countries list failed"));
+		die();
+	}
+	$countries = $stmt->fetchAll();
     
 ?> 
 <?php include_once('pages/navigation.php');?>
@@ -282,29 +279,28 @@ table.dataTable td {
                  <?php endforeach; ?>
             </select>
         </div>
+
+         <div class="form-group col-md-2"> 
+            <label>Auditor:</label>
+            <select class="form-control" name="idauditor" id="idauditor" placeholder="idauditor">
+               <option value="">-- All Auditors -- </option>
+                <?php foreach ($auditors as $auditor): ?>
+                    <option value="<?php echo $auditor["id"]; ?>" <?php if ($auditor["id"] == $_GET["idauditor"]):?>selected<?php endif; ?>><?php echo $auditor["name"]; ?></option>
+                 <?php endforeach; ?>
+            </select>
+        </div>    
+
+       
         <div class="form-group col-md-2">
-        
-    <label for="last_activity">Last Activity:</label>
-    <select id="last_activity" class="form-control">
-        <option value="">-- All Activities --</option>
-        <option value="today">Today</option>
-        <option value="yesterday">Yesterday</option>
-        <option value="last7">Last 7 Days</option>
-        <option value="last30">Last 30 Days</option>
-        <option value="last2months">Last 2 Months</option>
-        <option value="last6months">Last 6 Months</option>
-        <option value="dateRange">Specific Date Range</option>
-    </select>
-    <div id="dateRangePicker" class="form-group" style="display: none; margin-top: 5px;">
-        <div class="row  no-gutters">
-            <div class="col-sm-6">
-                <input type="text" id="startDate" class="form-control" placeholder="From">
-            </div>
-            <div class="col-sm-6">
-                <input type="text" id="endDate" class="form-control" placeholder="To">
-            </div>
-        </div>
-    </div>
+            <label for="fcountry">Country:</label>
+            <select class="form-control" name="fcountry" id="fcountry" placeholder="Country">
+                <option value="">-- All Countries --</option>
+                <?php foreach ($countries as $country): ?>
+                    <option value="<?php echo $country["country"]; ?>" <?php if ($country["country"] == $_GET["country"]):?>selected<?php endif; ?>><?php echo $country["country"]; ?></option>
+                  ?>
+                 <?php endforeach; ?>
+
+            </select>
         </div>
         <div class="form-group col-md-2">
             <label for="industry">Industry:</label>
@@ -335,6 +331,30 @@ table.dataTable td {
                 <?php endforeach; ?>
             </select>
         </div>
+         <div class="form-group col-md-2">
+        
+    <label for="last_activity">Last Activity:</label>
+    <select id="last_activity" class="form-control">
+        <option value="">-- All Activities --</option>
+        <option value="today">Today</option>
+        <option value="yesterday">Yesterday</option>
+        <option value="last7">Last 7 Days</option>
+        <option value="last30">Last 30 Days</option>
+        <option value="last2months">Last 2 Months</option>
+        <option value="last6months">Last 6 Months</option>
+        <option value="dateRange">Specific Date Range</option>
+    </select>
+    <div id="dateRangePicker" class="form-group" style="display: none; margin-top: 5px;">
+        <div class="row  no-gutters">
+            <div class="col-sm-6">
+                <input type="text" id="startDate" class="form-control" placeholder="From">
+            </div>
+            <div class="col-sm-6">
+                <input type="text" id="endDate" class="form-control" placeholder="To">
+            </div>
+        </div>
+    </div>
+        </div>
         <div class="form-group col-md-2"> 
             <label>Cert Expires:</label>
             <div class="row no-gutters">
@@ -346,15 +366,7 @@ table.dataTable td {
                 </div>
             </div>
         </div>    
-         <div class="form-group col-md-2"> 
-            <label>Auditor:</label>
-            <select class="form-control" name="idauditor" id="idauditor" placeholder="idauditor">
-               <option value="">-- All Auditors -- </option>
-                <?php foreach ($auditors as $auditor): ?>
-                    <option value="<?php echo $auditor["id"]; ?>" <?php if ($auditor["id"] == $_GET["idauditor"]):?>selected<?php endif; ?>><?php echo $auditor["name"]; ?></option>
-                 <?php endforeach; ?>
-            </select>
-        </div>    
+        
         <div class="form-group col-md-2"> 
             <label>Need Attention <i class="fa fa-question-circle" data-toggle="modal" data-target="#attentionModal" style="cursor: pointer; "></i></label>
             <select class="form-control" name="need_attention" id="need_attention" placeholder="need_attention">
@@ -1077,6 +1089,7 @@ $(document).ready(function() {
         async: true,
         data: function (data) {
             data.idclient = $('#idclient').val();
+            data.country = $('#fcountry').val();
             data.industry = $('#industry').val();
             data.last_activity = $('#last_activity').val();
             data.start_date = $('#startDate').val();
@@ -1343,7 +1356,11 @@ $(document).ready(function() {
     $('#idclient').on('change', function() {
 		table_process.ajax.reload(null, false);
 	});
-    
+
+    $('#fcountry').on('change', function() {
+		table_process.ajax.reload(null, false);
+	});
+
     $('#industry').on('change', function() {
 		table_process.ajax.reload(null, false);
 	});

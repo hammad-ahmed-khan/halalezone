@@ -30,6 +30,7 @@ try {
 
     $contact_person = getPostParam('contact_person');
     $vat = getPostParam('vat');
+    $country = getPostParam('country');
     $industry = getPostParam('industry');
     $category = getPostParam('category');
     $state = getPostParam('state');
@@ -46,6 +47,7 @@ try {
     $filter = 'WHERE u.isclient=1 AND IFNULL(u.name, \'\') <> \'\' AND u.deleted='.$displaymode;
 
     if ($idclient!='') $filter.=" AND u.id = '".$idclient."'";
+    if ($country!='') $filter.=" AND u.country LIKE '%".$country."%'";
     if ($industry!='') $filter.=" AND u.industry LIKE '%".$industry."%'";
     if ($category!='') $filter.=" AND u.category LIKE '%".$category."%'";
     if ($state!='') $filter.=" AND app.state = '".$state."'";

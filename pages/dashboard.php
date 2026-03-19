@@ -3,22 +3,209 @@
 <head>
     <?php include_once('pages/header.php');
     include_once ('includes/func.php');?>
-    <title>Dashboard - Halal e-Zone</title>
+    <title>Dashboard - Halal Digital</title>
     <style>
+        .widget-main {
+    padding: 0 3px;
+}
     .grid-wrap-text {
     white-space: normal !important;
     word-wrap: break-word;
     }
+
+    .statistics-section {
+        /*
+      background-color: #fff;
+      border-radius: 5px;
+      padding: 15px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+     */
+    }
+
+    .statistics-header {
+        font-size:18px;
+        font-weight: 600;
+        color: #1e293b;
+            margin-bottom: 20px;
+
+    }
+
+    .panel-heading {
+      padding: 10px 15px;
+      display: flex;
+      align-items: center;
+    }
+
+    .panel-heading i {
+      margin-right: 8px;
+      color: #3498db;
+    }
+
+    .panel-heading h3 {
+      margin-bottom: 0px;      
+    }
+
+    .section-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #1e293b;
+}
+
+ 
+     .stat-card {
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 80px;
+            position: relative;
+            overflow: hidden;
+        }
+ 
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+        
+         .stat-card .value  {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .stat-card .label {
+            background: transparent !important;
+            font-size: 12px;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+    .stat-green {
+         
+      background: linear-gradient(135deg, #34a853, #2d8f3f);
+    }
+
+ 
+
+    .stat-blue {
+    background: linear-gradient(135deg, #4285f4, #3367d6);
+    }
+
+ 
+    .stat-cyan {
+      background: linear-gradient(135deg, #9c27b0, #8e24aa);
+    }
+
+   
+
+    .stat-purple {
+       background: linear-gradient(135deg, #ff9800, #f57c00);
+    }
+
+    
+
+    .stat-red {
+      background: linear-gradient(135deg, #ea4335, #d33b2c); 
+    }
+
+    .stat-info {
+            flex: 1;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 0;
+            color: white;
+        }
+
+        .stat-label {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 8px;
+            display: inline-block;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+        }
+        
+    .stat-card .infobox-progress {
+    width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: white;
+            position: relative;
+            flex-shrink: 0;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+}
+
+    .section-heading {
+      color: #4a89dc;
+      font-size: 14px;
+      font-weight: 600;
+      margin-top: 0;
+      margin-bottom: 15px;
+    }
+
+    .sub-panel {
+      background-color: white;
+      border-radius: 5px;
+      padding: 15px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Custom 20% width column to fit 5 boxes in a row */
+    .col-xs-2-4 {
+      width: 20%;
+      float: left;
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+
+    @media (max-width: 768px) {
+      .col-xs-2-4 {
+        width: 50%;
+        margin-bottom: 10px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .col-xs-2-4 {
+        width: 100%;
+      }
+    }
+ 
+
+
+ 
+
     </style>
 </head>
-<body>
+<body style="background-image:url(img/schiff.jpg)">
 <?php include_once('pages/navigation.php');?>
 <div class="main-container ace-save-state" id="main-container">
     <div class="main-content">
         <div class="main-content-inner">
             <div class="page-content">
                 <div class="row no-gutters">
-                    <div class="col-xs-6">
+                    <div class="col-xs-12">
+                   
                         <?php 
                         $db = acsessDb :: singleton();
                         $dbo =  $db->connect(); // Создаем объект подключения к БД
@@ -29,17 +216,23 @@
                         $parent_id = $myuser->userdata['id'];
                         $isClient = $myuser->userdata['isclient'] == "1" ? true : false;
                         $isAuditor = $myuser->userdata['isclient'] == '2' ? true : false;
-                        $isAdmin = !$isclient && !isAuditor;
+                        $isAdmin = !$isClient && !isAuditor;
                         $hasFacilities = false;
 
                         if ($isAuditor) { // Auditor
-                            $ids = [-1];
-                            $clients_audit = $myuser->userdata['clients_audit'];
-                            if ($clients_audit != "") {
-                              $ids = json_decode($clients_audit);
+                                if ($myuser->userdata['is_od_auditor'] == '1') {
+                                    // OD Auditor sees all clients
+                                    $sql = "SELECT id, name, prefix FROM tusers WHERE isclient=1 AND IFNULL(parent_id,'0') = '0' AND deleted = 0 ORDER BY name";
+                                } else {
+                                    // Regular Auditor sees only assigned clients
+                                    $ids = [-1];
+                                    $clients_audit = $myuser->userdata['clients_audit'];
+                                    if ($clients_audit != "") {
+                                        $ids = json_decode($clients_audit);
+                                    }
+                                    $sql = "SELECT id, name, prefix FROM tusers WHERE isclient=1 AND deleted = 0 AND id IN (".implode(",", $ids).") ORDER BY name";
+                                }
                             }
-                               $sql = "SELECT id, name, prefix FROM tusers WHERE isclient=1 AND deleted = 0 AND id IN (".implode(",", $ids).") ORDER BY name";
-                          }
                           else if ($isClient) {
                             // Get facilities
                             $sql = "SELECT id, name, prefix FROM tusers WHERE (id = '".$parent_id."' OR parent_id = '".$parent_id."') AND isclient = 1 AND deleted = 0 ORDER BY parent_id ASC, name";
@@ -79,6 +272,9 @@
             <?php endif;?>
 
             <?php if (!$isClient || $hasFacilities): ?>
+                 <div class="widget-box widget-border" style="margin:15px 0 20px;">
+                        <div class="widget-body">
+                            <div class="widget-main">
             <div class="form-inline">
               <div class="form-group">
                 <label><?php if ($isClient): ?> Facilities <?php else: ?> Clients <?php endif; ?> &nbsp;&nbsp;
@@ -106,156 +302,180 @@
                   ?>
                   </select>
                 </label>
-              </div>
+                </div>
+                </div>
+               </div>
             </div>
-            <?php endif;?>                        
-                         
-                    </div>
-                    <div class="col-xs-12">
-                        <div class="widget-box">
-                            <div class="widget-header widget-header-flat widget-header-small">
-                                <h5 class="widget-title"><i class="ace-icon fa fa-signal"></i>Statistics</h5>
-                            </div>
-                            <div class="widget-body">
-                                <div class="widget-main">
-                                <div class="row">
-                                    <div class="col-xs-12 col-md-6">
-                                        <div class="widget-box">
-                                            <div class="widget-header widget-header-flat widget-header-small">
-                                                <h5 class="widget-title">Ingredients</h5>
-                                            </div>
-                                            <div class="widget-body">
-                                                <div class="widget-main">
-                                                    <div class="infobox-container">
-                                                        <div class="infobox infobox-green2">
-                                                            <div class="infobox-icon">
-                                                                <i class="ace-icon fa fa-flask"></i>
-                                                            </div>
-                                                            <div class="infobox-data">
-                                                                <span id="ingredNumber" class="infobox-data-number">0</span>
-                                                                <div class="infobox-content">Allowed</div>
-                                                            </div>
-                                                            <div class="infobox-progress">
-                                                                <div id="ingredPublishedChart" class="easy-pie-chart percentage" data-percent="0" data-size="46" style="height: 46px; width: 46px; line-height: 45px;">
-                                                                    <span id="ingredPublishedPercent" class="percent">0</span>%
-                                                                    <canvas height="46" width="46"></canvas></div>
-                                                            </div>
-                                                            <div class="infobox-data">
-                                                                <span id="ingredPublished" class="infobox-data-number">0</span>
-                                                                <div class="infobox-content">Published</div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="infobox infobox-green2">
-                                                            <div class="infobox-progress">
-                                                                <div id="ingredConfirmedChart" class="easy-pie-chart percentage" data-percent="0" data-size="46" style="height: 46px; width: 46px; line-height: 45px;">
-                                                                    <span id="ingredConfirmedPercent" class="percent">0</span>%
-                                                                    <canvas height="46" width="46"></canvas></div>
-                                                            </div>
-                                                            <div class="infobox-data">
-                                                                <span id="ingredConfirmed" class="infobox-data-number">0</span>
-                                                                <div class="infobox-content">Confirmed</div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="infobox infobox-green2">
-                                                            <div class="infobox-progress">
-                                                                <div id="ingredRemainedChart" class="easy-pie-chart percentage" data-percent="0" data-size="46" style="height: 46px; width: 46px; line-height: 45px;">
-                                                                    <span id="ingredRemainedPercent" class="percent">0</span>%
-                                                                    <canvas height="46" width="46"></canvas></div>
-                                                            </div>
-                                                            <div class="infobox-data">
-                                                                <span id="ingredRemained" class="infobox-data-number">0</span>
-                                                                <div class="infobox-content">Remained</div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="infobox infobox-red">
-                                                            <div class="infobox-progress">
-                                                                <div id="ingredExceededChart" class="easy-pie-chart percentage" data-percent="0" data-size="46" style="height: 46px; width: 46px; line-height: 45px;">
-                                                                    <span id="ingredExceededPercent" class="percent">0</span>%
-                                                                    <canvas height="46" width="46"></canvas></div>
-                                                            </div>
-                                                            <div class="infobox-data">
-                                                                <span id="ingredExceeded" class="infobox-data-number">0</span>
-                                                                <div class="infobox-content">Exceeded</div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
+            <?php endif;?>   
+                </div>                     
+            </div>
+            <div class="col-xs-12">
+             <div class="statistics-header">
+                📊 Statistics
+        </div>
+             
+                            <div class="statistics-section">
+                           <div class="section-title">🧪 Ingredients</div>
+
+                            <div class="row">
+                                <!-- Ingredients Stats -->
+                                <div class="col-md-12">
+                                <div>
+                                    <div class="row">
+                                    <div class="col-xs-2-4">
+    <div class="stat-card stat-green">
+        <div class="stat-info">
+        <div class="value stat-number" id="ingredNumber">0</div>
+        <span class="label stat-label">Allowed</span>
+        </div>
+    </div>
+</div>
+
+<div class="col-xs-2-4">
+    <div class="stat-card stat-blue">
+        <div class="stat-info">
+          <div class="value stat-number" id="ingredPublished">0</div>
+          <span class="label stat-label">Published</span>
+        </div>
+        <div class="infobox-progress">
+            <div id="ingredPublishedChart" class="easy-pie-chart percentage" data-percent="0" data-size="46" style="height: 46px; width: 46px; line-height: 45px;">
+                <span id="ingredPublishedPercent" class="percent">0</span>%
+                <canvas height="46" width="46"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="col-xs-2-4">
+    <div class="stat-card stat-cyan">
+        <div class="stat-info">
+        <div class="stat-number" id="ingredConfirmed">0</div>
+        <span class="stat-label">Confirmed</span>
+                </div>
+        <div class="infobox-progress">
+            <div id="ingredConfirmedChart" class="easy-pie-chart percentage" data-percent="0" data-size="46" style="height: 46px; width: 46px; line-height: 45px;">
+                <span id="ingredConfirmedPercent" class="percent">0</span>%
+                <canvas height="46" width="46"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="col-xs-2-4">
+    <div class="stat-card stat-purple">
+        <div class="stat-info">
+        <div class="value stat-number" id="ingredRemained">0</div>
+        <span class="label stat-label">Remained</span>
+                </div>
+        <div class="infobox-progress">
+            <div id="ingredRemainedChart" class="easy-pie-chart percentage" data-percent="0" data-size="46" style="height: 46px; width: 46px; line-height: 45px;">
+                <span id="ingredRemainedPercent" class="percent">0</span>%
+                <canvas height="46" width="46"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="col-xs-2-4">
+    <div class="stat-card stat-red">
+        <div class="stat-info">
+        <div class="value stat-number" id="ingredExceeded">0</div>
+        <span class="label stat-label">Exceeded</span>
+                </div>
+        <div class="infobox-progress">
+            <div id="ingredExceededChart" class="easy-pie-chart percentage" data-percent="0" data-size="46" style="height: 46px; width: 46px; line-height: 45px;">
+                <span id="ingredExceededPercent" class="percent">0</span>%
+                <canvas height="46" width="46"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+                                    </div>
+                                </div>
+                                </div>
+                </div>
+                
+
+                                                <div class="section-title" style="margin-top:15px;">🛍️ Products</div>
+
+                <div class="row" style="margin-bottom:25px;">
+
+
+                                <!-- Products Stats -->
+                                <div class="col-md-12">
+                                <div>
+                                    <div class="row">
+                                    <div class="col-xs-2-4">
+                                        
+                                        <div class="stat-card stat-green">
+                                            <div class="stat-info">
+                                        <div class="value stat-number" id="prodNumber">0</div>
+                                        
+                                        <span class="label stat-label">Allowed</span>
+                                        </div>
                                         </div>
                                     </div>
-                                    <div class="col-xs-12 col-md-6">
-                                        <div class="widget-box">
-                                            <div class="widget-header widget-header-flat widget-header-small">
-                                                <h5 class="widget-title">Products</h5>
-                                            </div>
-                                            <div class="widget-body">
-                                                <div class="widget-main">
-                                                    <div class="infobox-container">
-                                                        <div class="infobox infobox-green">
-                                                            <div class="infobox-icon">
-                                                                <i class="ace-icon fa fa-shopping-cart"></i>
-                                                            </div>
-                                                            <div class="infobox-data">
-                                                                <span id="prodNumber" class="infobox-data-number">0</span>
-                                                                <div class="infobox-content">Allowed</div>
-                                                            </div>
-                                                            <div class="infobox-progress">
+                                    <div class="col-xs-2-4">
+                                        <div class="stat-card stat-blue">
+                                            <div class="stat-info">
+                                        <div class="value stat-number" id="prodPublished">0</div>
+                                        <span class="label stat-label">Published</span>
+                </div>
+                                        <div class="infobox-progress">
                                                                 <div id="prodPublishedChart" class="easy-pie-chart percentage" data-percent="0" data-size="46" style="height: 46px; width: 46px; line-height: 45px;">
                                                                     <span id="prodPublishedPercent" class="percent">0</span>%
                                                                     <canvas height="46" width="46"></canvas></div>
                                                             </div>
-                                                            <div class="infobox-data">
-                                                                <span id="prodPublished" class="infobox-data-number">0</span>
-                                                                <div class="infobox-content">Published</div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="infobox infobox-green">
-                                                            <div class="infobox-progress">
+                                        </div>
+                                    </div>
+                                    <div class="col-xs-2-4">
+                                        <div class="stat-card stat-cyan">
+                                            <div class="stat-info">
+                                        <div class="value stat-number" id="prodConfirmed">0</div>
+                                        <span class="label stat-label">Confirmed</span>
+                </div>
+<div class="infobox-progress">
                                                                 <div id="prodConfirmedChart" class="easy-pie-chart percentage" data-percent="0" data-size="46" style="height: 46px; width: 46px; line-height: 45px;">
                                                                     <span id="prodConfirmedPercent" class="percent">0</span>%
                                                                     <canvas height="46" width="46"></canvas></div>
-                                                            </div>
-                                                            <div class="infobox-data">
-                                                                <span id="prodConfirmed" class="infobox-data-number">0</span>
-                                                                <div class="infobox-content">Confirmed</div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="infobox infobox-green">
-                                                            <div class="infobox-progress">
+                                                            </div>                                        
+                                        </div>
+                                    </div>
+                                    <div class="col-xs-2-4">
+                                        <div class="stat-card stat-purple">
+                                            <div class="stat-info">
+                                        <div class="value stat-number" id="prodRemained">0</div>
+                                        <span class="label stat-label">Remained</span>
+                </div>
+<div class="infobox-progress">
                                                                 <div id="prodRemainedChart" class="easy-pie-chart percentage" data-percent="0" data-size="46" style="height: 46px; width: 46px; line-height: 45px;">
                                                                     <span id="prodRemainedPercent" class="percent">0</span>%
                                                                     <canvas height="46" width="46"></canvas></div>
-                                                            </div>
-                                                            <div class="infobox-data">
-                                                                <span id="prodRemained" class="infobox-data-number">0</span>
-                                                                <div class="infobox-content">Remained</div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="infobox infobox-red">
-                                                            <div class="infobox-progress">
+                                                            </div>                                        </div>
+                                    </div>
+                                    <div class="col-xs-2-4">
+                                        <div class="stat-card stat-red">
+                                            <div class="stat-info">
+                                        <div class="value stat-number" id="prodExceeded">0</div>
+                                        <span class="label stat-label">Exceeded</span>
+                                        </div>
+                                        <div class="infobox-progress">
                                                                 <div id="prodExceededChart" class="easy-pie-chart percentage" data-percent="0" data-size="46" style="height: 46px; width: 46px; line-height: 45px;">
                                                                     <span id="prodExceededPercent" class="percent">0</span>%
                                                                     <canvas height="46" width="46"></canvas></div>
                                                             </div>
-                                                            <div class="infobox-data">
-                                                                <span id="prodExceeded" class="infobox-data-number">0</span>
-                                                                <div class="infobox-content">Exceeded</div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
                                         </div>
                                     </div>
+                                    </div>
                                 </div>
-                                </div><!-- /.widget-main -->
-                            </div><!-- /.widget-body -->
-                        </div>
-                    </div><!-- /.col -->
-                </div><!-- /.row -->
+                            </div>
+                     </div>
+                </div>
+ 
                 <?php if(!$myuser->userdata['isclient']):?>
                     <div class="hr hr-dotted"></div>
-                    <div class="row gutters">
+                    <div class="row gutters" >
                     <label class="right">
                         <input id="filter-actions-confirmed" class="ace ace-switch ace-switch-4" type="checkbox">
                         <span class="lbl">&nbsp;&nbsp;Show only confirmed actions</span>
@@ -427,6 +647,8 @@
         </div>
     </div><!-- /.main-content -->
 </div><!-- /.main-container -->
+                </div>
+
 <!-- Certificate upload Modal -->
 <div class="modal fade" id="certificateModal" tabindex="-1" role="dialog" data-backdrop="static" aria-labelledby="certificateModal-label">
     <div class="modal-dialog" role="document">

@@ -18,6 +18,12 @@
         tr.highlighted-conformed .fa-flag {
             display: none !important;
         }
+        .form-group {
+            margin-bottom:10px;
+        }
+        #ulcert {
+            margin-bottom:10px;
+        }
     </style>
 </head>
 <body>
@@ -56,16 +62,23 @@ catch (PDOException $e) {
                         $parent_id = $myuser->userdata['id'];
                         $isClient = $myuser->userdata['isclient'] == "1" ? true : false;
                         $isAuditor = $myuser->userdata['isclient'] == '2' ? true : false;
-                        $isAdmin = !$isclient && !isAuditor;
+                        $isOdAuditor = $isAuditor && $myuser->userdata['is_od_auditor'] == '1';
+                        $isAdmin = !$isClient && !$isAuditor;
                         $hasFacilities = false;
 
                         if ($isAuditor) { // Auditor
-                            $ids = [-1];
-                            $clients_audit = $myuser->userdata['clients_audit'];
-                            if ($clients_audit != "") {
-                              $ids = json_decode($clients_audit);
+                            if ($isOdAuditor) {
+                                // OD Auditor sees all clients like an admin
+                                $sql = "SELECT id, name, prefix FROM tusers WHERE isclient=1 AND IFNULL(parent_id,'0') = '0' AND deleted = 0 ORDER BY name";
+                            } else {
+                                // Regular Auditor sees only assigned clients
+                                $ids = [-1];
+                                $clients_audit = $myuser->userdata['clients_audit'];
+                                if ($clients_audit != "") {
+                                    $ids = json_decode($clients_audit);
+                                }
+                                $sql = "SELECT id, name, prefix FROM tusers WHERE isclient=1 AND deleted = 0 AND id IN (".implode(",", $ids).") ORDER BY name";
                             }
-                               $sql = "SELECT id, name, prefix FROM tusers WHERE isclient=1 AND deleted = 0 AND id IN (".implode(",", $ids).") ORDER BY name";
                           }
                           else if ($isClient) {
                             // Get facilities
@@ -100,19 +113,20 @@ catch (PDOException $e) {
                           if ($isClient && count($clients) > 1) {
                             $hasFacilities = true;
                           }
-
+                           /* 
                           if ( $myuser->userdata['ingredients_preference'] == '1') {
                                $hasFacilities = false;
                           }
+                        */
 
 						?>
                         <input type="hidden" id="filter-rmid" <?php echo 'value="'.(isset($_GET['id']) ? $_GET['id'] : '').'"'; ?> />
                         <input type="hidden" id="filter-idclient" <?php echo 'value="'.(isset($_GET['idclient']) ? $_GET['idclient'] : '').'"'; ?> />
-                        <?php if ($isClient && !$hasFacilities): ?>              
+                        <?php if ($isClient): ?>              
                             <input type="hidden" id="ingred-clientid" data-email="<?php echo $myuser->userdata['email']; ?>" value=<?php echo $_SESSION['halal']['id']; ?> data-clientname="<?php echo $myuser->userdata['name']," (",$myuser->userdata['prefix'],$myuser->userdata['id'],")"; ?>"/>
                         <?php endif;?>
 
-                        <?php if (!$isClient || $hasFacilities): ?>
+                        <?php if (!$isClient): ?>
                         <div class="form-inline">
                         <div class="form-group">
                             <label><?php if ($isClient): ?> Facilities <?php else: ?> Clients <?php endif; ?> &nbsp;&nbsp;
@@ -120,12 +134,14 @@ catch (PDOException $e) {
                             <?php if (!$isClient): ?>
                                 <option value="-1">Select <?php if ($isClient): ?> Facility <?php else: ?> Client <?php endif; ?></option>
                             <?php endif; ?>
+                            
                             <?php
                                 foreach ($clients as $client) {
-                                ?>
+
+                                 ?>
                                     <option value="<?php echo $client["id"]; ?>" <?php if ($client["id"] == $_GET["idclient"] || $client["id"] == $myuser->userdata['id']):?>selected<?php endif; ?> data-clientname="<?php echo $client['name']," (",$client['prefix'],$client['id'],")"; ?>" ><?php echo $client["name"]; ?> - <?php echo $client["prefix"]; ?><?php echo $client["id"]; ?></option>
                                         <?php
-                      // Check if there are children for this parent and display them with indentation
+                       // Check if there are children for this parent and display them with indentation
                       if (isset($childClients[$client['id']])) {
                         foreach ($childClients[$client['id']] as $child) {
                           ?>
@@ -143,6 +159,42 @@ catch (PDOException $e) {
                         </div>
                         </div>
                         <?php endif;?> 
+
+<?php if (1): ?> 
+    <div class="form-inline facilities" style="<?php if (!$hasFacilities): ?>display: none; <?php endif;?>">
+        <div class="form-group">
+            <label>
+                Facilities &nbsp;&nbsp; 
+                <select class="form-control facilitieslist" id="ingred-facilityid">
+                    <option value="">All Facilities</option>
+                    <?php
+                    foreach ($clients as $client) { 
+                        if (isset($childClients[$client['id']])) { ?>
+                            <option data-idparent="<?php echo $client["id"]; ?>"  value="<?php echo $client["id"]; ?>" <?php if ($client["id"] == $_GET["idclient"] || $client["id"] == $myuser->userdata['id']):?>selected<?php endif; ?> data-clientname="<?php echo $client['name']," (",$client['prefix'],$client['id'],")"; ?>" ><?php echo $client["name"]; ?> - <?php echo $client["prefix"]; ?><?php echo $client["id"]; ?></option>
+                            <?php
+                            foreach ($childClients[$client['id']] as $child) {
+                                ?>
+                                <option 
+                                    data-idparent="<?php echo $child['parent_id']; ?>" 
+                                    value="<?php echo $child['id']; ?>" 
+                                    <?php if ($child['id'] == $_GET['idfacility'] || $child['id'] == $myuser->userdata['id']): ?>selected<?php endif; ?>
+                                    data-clientname="<?php echo $child['name'], ' (', $child['prefix'], $child['id'], ')'; ?>" 
+                                    style="padding-left-: 40px;">
+                                    <!--&nbsp;&nbsp;└── --><?php echo $child['name']; ?> - <?php echo $child['prefix']; ?><?php echo $child['id']; ?>
+                                </option>
+                                <?php
+                            }
+                        }
+                    }
+                    ?>
+                </select>
+            </label>
+        </div>
+    </div>
+<?php endif; ?>
+
+                        
+
                         </div>
                         </div>
                         </div>
@@ -194,192 +246,276 @@ catch (PDOException $e) {
                     </div>
                 </div>
                 <div class="row">
-                <from id="ingred-form" class="col-md-12 form-horizontal">
-                    <div class="row form-group">
-                        <label class="col-xs-12 col-md-4">RM ID</label>
-                        <div class='col-xs-12 col-md-8'>
-                            <input type="text" class="form-control" readonly id="rmid"/>
-                            <div class="alert-string"></div>
-                        </div></div>
-                    <div class="row form-group">
-                        <label class="col-xs-12 col-md-4"><b>RM Code</b>&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please add your internal raw material number if you have any"></sup></label>
-                        <div class='col-xs-12 col-md-8'>
-                            <input type="text" class="form-control" id="code" maxlength="50"/>
-                            <div class="alert-string"></div>
-                        </div></div>
-                    <div class="row form-group">
-                        <label class="col-xs-12 col-md-4"><b>Name</b>&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please add the name of the ingredient"></sup></label>
-                        <div class='col-xs-12 col-md-8'>
-                            <input type="text" class="form-control" id="name" maxlength="100"/>
-                            <div class="alert-string"></div>
-                        </div></div>
-                    <div class="row form-group">
-                        <label class="col-xs-12 col-md-4"><b>Supplier Name</b>&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please add the name of your supplier"></sup></label>
-                        <div class='col-xs-12 col-md-8'>
-                            <input type="text" class="form-control" id="supplier" maxlength="100"/>
-                            <div class="alert-string"></div>
-                        </div></div>
-                    <div class="row form-group">
-                        <label class="col-xs-12 col-md-4"><b>Producer Name</b>&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please add the name of your producer"></sup></label>
-                        <div class='col-xs-12 col-md-8'>
-                            <input type="text" class="form-control" id="producer" maxlength="100"/>
-                            <div class="alert-string"></div>
-                        </div></div>
-                    <div class="row form-group">
-                        <label class="col-xs-12 col-md-4"><b>Source of Raw Material</b>&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please choose the source of the raw material from the dropdown list"></sup></label>
-                        <div class='col-xs-12 col-md-8'>
-                            <select class="form-control" id="material" title="Select material">
-                                <option role="option" value="">Not specified</option>
-                                <?php if ($myuser->userdata['isclient'] == '2'):?>
-                                    <?php if (in_array('Animal', $sources)): ?>
-                                    <option role="option" value="Animal">Animal</option>
-                                    <?php endif; ?>
-                                    <?php if (in_array('Plant', $sources)): ?>
-                                    <option role="option" value="Plant">Plant</option>
-                                    <?php endif; ?>
-                                    <?php if (in_array('Synthetic', $sources)): ?>
-                                    <option role="option" value="Synthetic">Synthetic</option>
-                                    <?php endif; ?>
-                                    <?php if (in_array('Mineral', $sources)): ?>
-                                    <option role="option" value="Mineral">Mineral</option>
-                                    <?php endif; ?>
-                                    <?php if (in_array('Cleaning agents', $sources)): ?>
-                                    <option role="option" value="Cleaning agents">Cleaning agents</option>
-                                    <?php endif; ?>
-                                    <?php if (in_array('Other agents', $sources)): ?>
-                                    <option role="option" value="Other agents">Other agents</option>
-                                    <?php endif; ?>
-                                <?php else: ?>
-                                <option role="option" value="Animal">Animal</option>
-                                <option role="option" value="Plant">Plant</option>
-                                <option role="option" value="Synthetic">Synthetic</option>
-                                <option role="option" value="Mineral">Mineral</option>
-                                <option role="option" value="Cleaning agents">Cleaning agents</option>
-                                <option role="option" value="Packaging Material">Packaging Material</option>
-                                <option role="option" value="Other agents">Other agents</option>
-                                <?php endif;?>
-                            </select>
-                            <div class="alert-string"></div>
-                        </div></div>
-                    <div class="row form-group">
-                        <label class="col-xs-12 col-md-4">Subingredient&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please activate this function if required by auditor"></sup></label>
-                        <div class='col-xs-12 col-md-8'>
-                            <label>
-                                <input id="subingredient" class="ace ace-switch ace-switch-4" type="checkbox" value="0">
-                                <span class="lbl"></span>
-                            </label>
-                            <div class="alert-string"></div>
-                        </div></div>
-                    <div class="row form-group">
-                        <label class="col-xs-12 col-md-4">Ingredients&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please use this function only if required by auditor"></sup></label>
-                        <div class='col-xs-12 col-md-8'>
-                            <select class="form-control selectpicker" id="ingredients" multiple
-                                    title="Choose ingredients"></select>
-                            <div class="alert-string"></div>
-                        </div></div>
-                    <div class="row form-group">
-                        <label class="col-xs-12 col-md-4">Specification&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please upload the ingredient specification"></sup></label>
-                        <div class='col-xs-12 col-md-8'>
-                        <div class="progress">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: %"></div>
+                    <form id="ingred-form" class="col-md-12 form-horizontal">
+                        <div class="row">
+                            <!-- Left Column -->
+                            <div class="col-md-6">
+                                <div class="row form-group facilities" style="<?php if (!$hasFacilities): ?>display: none; <?php endif;?>">
+                                    <label class="col-xs-12 col-md-5">Facility</label>
+                                    <div class='col-xs-12 col-md-7'>
+                                        <select class="form-control facilitieslist" id="facilityIds" multiple>
+                                            <option value="">Select Facility</option>
+                                            <option value="<?php echo $client["id"]; ?>" <?php if ($client["id"] == $_GET["idclient"] || $client["id"] == $myuser->userdata['id']):?>selected<?php endif; ?> data-clientname="<?php echo $client['name']," (",$client['prefix'],$client['id'],")"; ?>" ><?php echo $client["name"]; ?> - <?php echo $client["prefix"]; ?><?php echo $client["id"]; ?></option>
+                                            <?php
+                                            foreach ($clients as $client) {
+                                                if (isset($childClients[$client['id']])) { ?>
+                                                    <option data-idparent="<?php echo $client["id"]; ?>"  value="<?php echo $client["id"]; ?>" <?php if ($client["id"] == $_GET["idclient"] || $client["id"] == $myuser->userdata['id']):?>selected<?php endif; ?> data-clientname="<?php echo $client['name']," (",$client['prefix'],$client['id'],")"; ?>" ><?php echo $client["name"]; ?> - <?php echo $client["prefix"]; ?><?php echo $client["id"]; ?></option>
+                                                    <?php
+                                                    foreach ($childClients[$client['id']] as $child) {
+                                                        ?>
+                                                        <option 
+                                                            data-idparent="<?php echo $child['parent_id']; ?>" 
+                                                            value="<?php echo $child['id']; ?>" 
+                                                            <?php if ($child['id'] == $_GET['idfacility'] || $child['id'] == $myuser->userdata['id']): ?>selected<?php endif; ?>
+                                                            data-clientname="<?php echo $child['name'], ' (', $child['prefix'], $child['id'], ')'; ?>" 
+                                                            style="padding-left-: 40px;">
+                                                            <?php echo $child['name']; ?> - <?php echo $child['prefix']; ?><?php echo $child['id']; ?>
+                                                        </option>
+                                                        <?php
+                                                    }
+                                                }
+                                            }
+                                            ?>
+                                        </select>
+                                    </div>
+                                </div>        
+                              
+                                <div class="row form-group">
+                                    <label class="col-xs-12 col-md-5">RM ID</label>
+                                    <div class='col-xs-12 col-md-7'>
+                                        <input type="text" class="form-control" readonly id="rmid"/>
+                                        <div class="alert-string"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row form-group">
+                                    <label class="col-xs-12 col-md-5"><b>RM Code</b>&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please add your internal raw material number if you have any"></sup></label>
+                                    <div class='col-xs-12 col-md-7'>
+                                        <input type="text" class="form-control" id="code" maxlength="50"/>
+                                        <div class="alert-string"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row form-group">
+                                    <label class="col-xs-12 col-md-5"><b>Name</b>&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please add the name of the ingredient"></sup></label>
+                                    <div class='col-xs-12 col-md-7'>
+                                        <input type="text" class="form-control" id="name" maxlength="100"/>
+                                        <div class="alert-string"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row form-group">
+                                    <label class="col-xs-12 col-md-5"><b>Supplier Name</b>&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please add the name of your supplier"></sup></label>
+                                    <div class='col-xs-12 col-md-7'>
+                                        <input type="text" class="form-control" id="supplier" maxlength="100"/>
+                                        <div class="alert-string"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row form-group">
+                                    <label class="col-xs-12 col-md-5"><b>Producer Name</b>&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please add the name of your producer"></sup></label>
+                                    <div class='col-xs-12 col-md-7'>
+                                        <input type="text" class="form-control" id="producer" maxlength="100"/>
+                                        <div class="alert-string"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row form-group">
+                                    <label class="col-xs-12 col-md-5"><b>Raw Material Source</b>&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please choose the source of the raw material from the dropdown list"></sup></label>
+                                    <div class='col-xs-12 col-md-7'>
+                                        <select class="form-control" id="material" title="Select material">
+                                            <option role="option" value="">Not specified</option>
+                                            <?php if ($myuser->userdata['isclient'] == '2'):?>
+                                                <?php if (in_array('Animal', $sources)): ?>
+                                                <option role="option" value="Animal">Animal</option>
+                                                <?php endif; ?>
+                                                <?php if (in_array('Plant', $sources)): ?>
+                                                <option role="option" value="Plant">Plant</option>
+                                                <?php endif; ?>
+                                                <?php if (in_array('Synthetic', $sources)): ?>
+                                                <option role="option" value="Synthetic">Synthetic</option>
+                                                <?php endif; ?>
+                                                <?php if (in_array('Mineral', $sources)): ?>
+                                                <option role="option" value="Mineral">Mineral</option>
+                                                <?php endif; ?>
+                                                <?php if (in_array('Cleaning agents', $sources)): ?>
+                                                <option role="option" value="Cleaning agents">Cleaning agents</option>
+                                                <?php endif; ?>
+                                                <?php if (in_array('Other agents', $sources)): ?>
+                                                <option role="option" value="Other agents">Other agents</option>
+                                                <?php endif; ?>
+                                            <?php else: ?>
+                                            <option role="option" value="Animal">Animal</option>
+                                            <option role="option" value="Plant">Plant</option>
+                                            <option role="option" value="Synthetic">Synthetic</option>
+                                            <option role="option" value="Mineral">Mineral</option>
+                                            <option role="option" value="Cleaning agents">Cleaning agents</option>
+                                            <option role="option" value="Packaging Material">Packaging Material</option>
+                                            <option role="option" value="Other agents">Other agents</option>
+                                            <?php endif;?>
+                                        </select>
+                                        <div class="alert-string"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row form-group">
+                                    <label class="col-xs-12 col-md-5">Subingredient&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please activate this function if required by auditor"></sup></label>
+                                    <div class='col-xs-12 col-md-7'>
+                                        <label>
+                                            <input id="subingredient" class="ace ace-switch ace-switch-4" type="checkbox" value="0">
+                                            <span class="lbl"></span>
+                                        </label>
+                                        <div class="alert-string"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row form-group">
+                                    <label class="col-xs-12 col-md-5">Ingredients&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please use this function only if required by auditor"></sup></label>
+                                    <div class='col-xs-12 col-md-7'>
+                                        <select class="form-control selectpicker" id="ingredients" multiple title="Choose ingredients"></select>
+                                        <div class="alert-string"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row form-group" style="margin-bottom:0px;">
+                                    <label class="col-xs-12 col-md-5">Specification&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please upload the ingredient specification"></sup></label>
+                                    <div class='col-xs-12 col-md-7'>
+                                        <div class="progress">
+                                            <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: %"></div>
+                                        </div>
+                                        <span class="fileinput-button i-dropzone" id="dropzone1"><span class="spinner-border spinner-border-sm"></span>Drop files here or click to upload
+                                        <input class="fileupload" id="fileupload1" type="file" name="files[]" multiple foldertype="spec" infotype="ingredient">
+                                        </span>
+                                        <div class="alert-string"></div>
+                                    </div>
+                                </div>
+                                <ul id="ulspec"></ul>
+                                
+                                <div class="row form-group" style="margin-bottom:0px;">
+                                    <label class="col-xs-12 col-md-5">Supplier Questionnaire&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please upload the questionnaire only if required by auditor"></sup></label>
+                                    <div class='col-xs-12 col-md-7'>
+                                        <div class="progress">
+                                            <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: %"></div>
+                                        </div>
+                                        <span class="fileinput-button i-dropzone" id="dropzone2">Drop files here or click to upload
+                                        <input class="fileupload" id="fileupload2" type="file" name="files[]" multiple foldertype="quest" infotype="ingredient">
+                                        </span>
+                                        <div class="alert-string"></div>
+                                    </div>
+                                </div>
+                                <ul id="ulquest"></ul>
+                                
+                            </div>
+
+                            <!-- Right Column -->
+                            <div class="col-md-6">
+                                <div class="row form-group" style="margin-bottom:0px;">
+                                    <label class="col-xs-12 col-md-5">Supplier Statement&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please upload the statement only if required by auditor"></sup></label>
+                                    <div class='col-xs-12 col-md-7'>
+                                        <div class="progress">
+                                            <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: %"></div>
+                                        </div>
+                                        <span class="fileinput-button i-dropzone" id="dropzone3">Drop files here or click to upload
+                                        <input class="fileupload" id="fileupload3" type="file" name="files[]" multiple foldertype="state" infotype="ingredient">
+                                        </span>
+                                        <div class="alert-string"></div>
+                                    </div>
+                                </div>
+                                <ul id="ulstate"></ul>
+                                
+                                <div class="row form-group">
+                                    <label class="col-xs-12 col-md-5">Statement Expiry Date &nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please specify Halal statement expiry date"></sup></label>
+                                    <div class='col-xs-12 col-md-7'>
+                                        <input type="text" class="form-control datepicker" id="stmt_exp_date"/>
+                                        <div class="alert-string"></div>
+                                    </div>
+                                </div>                        
+                                
+                                <div class="row form-group">
+                                    <label class="col-xs-12 col-md-5">Halal Certified&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please set certified if Halal certificate is available"></sup></label>
+                                    <div class='col-xs-12 col-md-7'>
+                                        <label>
+                                            <input id="certified" class="ace ace-switch ace-switch-4" type="checkbox" value="0">
+                                            <span class="lbl"></span>
+                                        </label>
+                                        <div class="alert-string"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row form-group" style="margin-bottom:0px;">
+                                    <label class="col-xs-12 col-md-5">Halal Certificate&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please upload Halal certifiate if available"></sup></label>
+                                    <div class='col-xs-12 col-md-7'>
+                                        <div class="progress cert-progress">
+                                            <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: %"></div>
+                                        </div>
+                                        <span class="fileinput-button cert-dropzone" id="dropzone4">Drop files here or click to upload
+                                        <input class="cert-fileupload" id="fileupload4" disabled type="file" name="files[]" multiple foldertype="cert" infotype="ingredient">
+                                         </span>
+                                        <div class="alert-string"></div>
+                                    </div>
+                                </div>
+                                <ul id="ulcert"></ul>
+
+                                <div class="row form-group">
+                                    <label class="col-xs-12 col-md-5">HC Body Name&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please specify Halal certifiation body name"></sup></label>
+                                    <div class='col-xs-12 col-md-7'>
+                                        <input type="text" class="form-control" disabled id="cb" maxlength="100"/>
+                                        <div class="alert-string"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row form-group">
+                                    <label class="col-xs-12 col-md-5">HC Expiry Date&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please specify Halal certifiate expiry date"></sup></label>
+                                    <div class='col-xs-12 col-md-7'>
+                                        <input type="text" class="form-control datepicker" disabled id="date"/>
+                                        <div class="alert-string"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row form-group">
+                                    <label class="col-xs-12 col-md-5">RM Position&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please specify raw material position in the certificate"></sup></label>
+                                    <div class='col-xs-12 col-md-7'>
+                                        <input type="text" class="form-control" disabled id="rmposition" maxlength="50"/>
+                                        <div class="alert-string"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row form-group" style="margin-bottom:0px;">
+                                    <label class="col-xs-12 col-md-5">Additional Documents&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please add any additional related documents"></sup></label>
+                                    <div class='col-xs-12 col-md-7'>
+                                        <div class="cert-progress">
+                                            <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: %"></div>
+                                        </div>
+                                        <span class="fileinput-button i-dropzone" id="dropzone5">Drop files here or click to upload
+                                        <input class="fileupload" id="fileupload5" type="file" name="files[]" multiple foldertype="add" infotype="ingredient">
+                                         </span>
+                                        <div class="alert-string"></div>
+                                    </div>
+                                </div>
+                                <ul id="uladd"></ul>
+                                
+                                <div class="row form-group">
+                                    <label class="col-xs-12 col-md-5">Note&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please write any notes you would like to inform your auditor about"></sup></label>
+                                    <div class='col-xs-12 col-md-7'>
+                                        <textarea class="form-control input" id="note" rows="2" maxlength="500"></textarea>
+                                        <div class="alert-string"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row form-group">
+                                    <label class="col-xs-12 col-md-5">Halal Conformed</label>
+                                    <div class='col-xs-12 col-md-7'>
+                                        <label>
+                                            <input id="conformed" class="ace ace-switch ace-switch-4" type="checkbox" value="0">
+                                            <span class="lbl"></span>
+                                        </label>
+                                        <div class="alert-string"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <span class="fileinput-button i-dropzone" id="dropzone1"><span class="spinner-border spinner-border-sm"></span>Drop files here or click to upload
-                        <input class="fileupload" id="fileupload1" type="file" name="files[]" multiple foldertype="spec" infotype="ingredient">
-                            </span>
-                            <ul id="ulspec"></ul>
-                            <div class="alert-string"></div>
-                        </div></div>
-                    <div class="row form-group">
-                        <label class="col-xs-12 col-md-4">Supplier Questionnaire&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please upload the questionnaire only if required by auditor"></sup></label>
-                        <div class='col-xs-12 col-md-8'><!-- The fileinput-button span is used to style the file input field as button -->
-                        <div class="progress">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: %"></div>
-                        </div>
-                        <span class="fileinput-button i-dropzone" id="dropzone2">Drop files here or click to upload
-                        <input class="fileupload" id="fileupload2" type="file" name="files[]" multiple foldertype="quest" infotype="ingredient">
-                            </span>
-                            <ul id="ulquest"></ul>
-                            <div class="alert-string"></div>
-                        </div></div>
-                    <div class="row form-group">
-                        <label class="col-xs-12 col-md-4">Supplier Statement&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please upload the statement only if required by auditor"></sup></label>
-                        <div class='col-xs-12 col-md-8'><!-- The fileinput-button span is used to style the file input field as button -->
-                        <div class="progress">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: %"></div>
-                        </div>
-                        <span class="fileinput-button i-dropzone" id="dropzone3">Drop files here or click to upload
-                        <input class="fileupload" id="fileupload3" type="file" name="files[]" multiple foldertype="state" infotype="ingredient">
-                            </span>
-                            <ul id="ulstate"></ul>
-                            <div class="alert-string"></div>
-                        </div></div>
-                    <div class="row form-group">
-                        <label class="col-xs-12 col-md-4">Halal Certified&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please set certified if Halal certificate is available"></sup></label>
-                        <div class='col-xs-12 col-md-8'>
-                            <label>
-                                <input id="certified" class="ace ace-switch ace-switch-4" type="checkbox" value="0">
-                                <span class="lbl"></span>
-                            </label>
-                            <div class="alert-string"></div>
-                        </div></div>
-                    <div class="row form-group">
-                        <label class="col-xs-12 col-md-4">Halal Certificate&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please upload Halal certifiate if available"></sup></label>
-                        <div class='col-xs-12 col-md-8'><!-- The fileinput-button span is used to style the file input field as button -->
-                        <div class="progress">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: %"></div>
-                        </div>
-                        <span class="fileinput-button cert-dropzone" id="dropzone4">Drop files here or click to upload
-                        <input class="cert-fileupload" id="fileupload4" disabled type="file" name="files[]" multiple foldertype="cert" infotype="ingredient">
-                         </span>
-                            <ul id="ulcert"></ul>
-                            <div class="alert-string"></div>
-                        </div></div>
-                    <div class="row form-group">
-                        <label class="col-xs-12 col-md-4">HC Body Name&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please specify Halal certifiation body name"></sup></label>
-                        <div class='col-xs-12 col-md-8'>
-                            <input type="text" class="form-control" disabled id="cb" maxlength="100"/>
-                            <div class="alert-string"></div>
-                        </div></div>
-                    <div class="row form-group">
-                        <label class="col-xs-12 col-md-4">HC Expiry Date&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please specify Halal certifiate expiry date"></sup></label>
-                        <div class='col-xs-12 col-md-8'>
-                            <input type="text" class="form-control datepicker" disabled id="date"/>
-                            <div class="alert-string"></div>
-                        </div></div>
-                    <div class="row form-group">
-                        <label class="col-xs-12 col-md-4">RM Position&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please specify raw material position in the certificate"></sup></label>
-                        <div class='col-xs-12 col-md-8'>
-                            <input type="text" class="form-control" disabled id="rmposition" maxlength="50"/>
-                            <div class="alert-string"></div>
-                        </div></div>
-                    <div class="row form-group">
-                        <label class="col-xs-12 col-md-4">Additional Documents&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please add any additional related documents"></sup></label>
-                        <div class='col-xs-12 col-md-8'><!-- The fileinput-button span is used to style the file input field as button -->
-                        <div class="cert-progress">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: %"></div>
-                        </div>
-                        <span class="fileinput-button i-dropzone" id="dropzone5">Drop files here or click to upload
-                        <input class="fileupload" id="fileupload5" type="file" name="files[]" multiple foldertype="add" infotype="ingredient">
-                         </span>
-                            <ul id="uladd"></ul>
-                            <div class="alert-string"></div>
-                        </div></div>
-                    <div class="row form-group">
-                        <label class="col-xs-12 col-md-4">Note&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please write any notes you would like to inform your auditor about"></sup></label>
-                        <div class='col-xs-12 col-md-8'>
-                            <textarea class="form-control input" id="note" rows="3" maxlength="500"></textarea>
-                            <div class="alert-string"></div>
-                        </div></div>
-                    <div class="row form-group">
-                        <label class="col-xs-12 col-md-4">Halal Conformed</label>
-                        <div class='col-xs-12 col-md-8'>
-                            <label>
-                                <input id="conformed" class="ace ace-switch ace-switch-4" type="checkbox" value="0">
-                                <span class="lbl"></span>
-                            </label>
-                            <div class="alert-string"></div>
-                        </div></div>
-                </from></div>
+                    </form>
+                </div>
             </div>
             <div class="modal-footer">
                 <div class="row">
@@ -488,6 +624,7 @@ catch (PDOException $e) {
     <th>Product Specification</th>
     <th>Supplier Questionnaire</th>
     <th>Supplier Statement</th>
+    <th>Stmt  Exp. Date</th>
     <th>Additional Documents</th>
     <th>Note</th>
     <th>status</th>
@@ -600,20 +737,20 @@ catch (PDOException $e) {
 
 
                     <div class="row form-group">
-                        <label class="col-xs-12 col-md-4">HC Body Name&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please specify Halal certifiation body name"></sup></label>
-                        <div class='col-xs-12 col-md-8'>
+                        <label class="col-xs-12 col-md-5">HC Body Name&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please specify Halal certifiation body name"></sup></label>
+                        <div class='col-xs-12 col-md-7'>
                             <input type="text" class="form-control"  id="cb" maxlength="100"/>
                             <div class="alert-string"></div>
                         </div></div>
                     <div class="row form-group">
-                        <label class="col-xs-12 col-md-4">HC Expiry Date&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please specify Halal certifiate expiry date"></sup></label>
-                        <div class='col-xs-12 col-md-8'>
+                        <label class="col-xs-12 col-md-5">HC Expiry Date&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please specify Halal certifiate expiry date"></sup></label>
+                        <div class='col-xs-12 col-md-7'>
                             <input type="text" class="form-control datepicker"  id="date"/>
                             <div class="alert-string"></div>
                         </div></div>
                     <div class="row form-group">
-                        <label class="col-xs-12 col-md-4">RM Position&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please specify raw material position in the certificate"></sup></label>
-                        <div class='col-xs-12 col-md-8'>
+                        <label class="col-xs-12 col-md-5">RM Position&nbsp;<sup class="fa fa-info-circle tooltip-info" data-toggle="tooltip" data-placement="right" title="Please specify raw material position in the certificate"></sup></label>
+                        <div class='col-xs-12 col-md-7'>
                             <input type="text" class="form-control"  id="rmposition" maxlength="50"/>
                             <div class="alert-string"></div>
                         </div></div>
@@ -909,6 +1046,92 @@ catch (PDOException $e) {
         </div>
     </div>
 </div>
+
+<!-- Bulk Assign Ingredients to Facilities Modal -->
+<div class="modal fade" id="bulkAssignModal" tabindex="-1" role="dialog" data-backdrop="static" aria-labelledby="bulkAssignModalLabel">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title" id="bulkAssignModal-label">
+                    <i class="fa fa-building"></i> Bulk Assign Ingredients to Facilities
+                </h4>
+            </div>
+            <div class="modal-body">
+                <!-- Selected Ingredients Info -->
+                <div id="selected-ingredients-info" class="alert alert-info">
+                    <strong><span id="selected-ingredients-count">0</span> ingredients selected</strong> for facility assignment.
+                </div>
+
+                <!-- Facilities Selection -->
+                <div class="form-group">
+                    <label><strong>Select Facilities:</strong></label>
+                    <select class="form-control" id="bulkAssignFacilities" multiple="multiple" style="height: 200px;">
+                        <!-- Facilities will be populated dynamically -->
+                    </select>
+                    <small class="help-block">Hold Ctrl/Cmd to select multiple facilities</small>
+                </div>
+
+                <!-- Assignment Options -->
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="replaceExistingAssignments" value="1">
+                        Replace existing facility assignments for selected ingredients
+                    </label>
+                    <small class="help-block">If unchecked, new assignments will be added to existing ones</small>
+                </div>
+
+                <!-- Progress Section -->
+                <div id="bulk-assign-progress" style="display: none;">
+                    <h5>Processing Assignments...</h5>
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%">
+                            <span class="progress-text">0%</span>
+                        </div>
+                    </div>
+                    <div id="assign-progress-details"></div>
+                </div>
+
+                <!-- Results Section -->
+                <div id="bulk-assign-results" style="display: none;">
+                    <div class="alert alert-success">
+                        <h5><i class="fa fa-check-circle"></i> Assignment Complete</h5>
+                        <p>
+                            <strong>Total Ingredients:</strong> <span id="assign-result-total">0</span> | 
+                            <strong>Success:</strong> <span id="assign-result-success">0</span> | 
+                            <strong>Failed:</strong> <span id="assign-result-failed">0</span>
+                        </p>
+                    </div>
+                    
+                    <div id="assign-error-details" style="display: none;">
+                        <h5>Failed Assignments:</h5>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-condensed">
+                                <thead>
+                                    <tr>
+                                        <th>Ingredient</th>
+                                        <th>Error</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="assign-error-list"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" id="processBulkAssignBtn">
+                    <i class="fa fa-building"></i> Assign to Facilities
+                </button>
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?php include_once('pages/footer.php');?>
 <!-- page specific plugin scripts -->
 <script src="js/bootstrap-datepicker.min.js"></script>
@@ -948,18 +1171,18 @@ catch (PDOException $e) {
             doc.ids = $('#table_tank tbody input:checked').map(function() {return this.value;}).get().join(',');
 
             $.post("ajax/ajaxHandler.php", {
-            rtype: "savePAIngredient",
-            uid: 0,
-            data: doc,
-            }).done(function (data) {
-            var response = JSON.parse(data);
-            if (response.status == 0) {
-                Utils.notify("error", response.statusDescription);
-                return;
-            }
-            $("#paModal").modal("hide");
-            jQuery("#ingredGrid").jqGrid().trigger("reloadGrid");
-            });
+                rtype: "savePAIngredient",
+                uid: 0,
+                data: doc,
+                }).done(function (data) {
+                var response = JSON.parse(data);
+                if (response.status == 0) {
+                    Utils.notify("error", response.statusDescription);
+                    return;
+                }
+                    $("#paModal").modal("hide");
+                    jQuery("#ingredGrid").jqGrid().trigger("reloadGrid");
+                    });
             return false;
         });
 
@@ -1043,6 +1266,7 @@ catch (PDOException $e) {
 	{ "data": "spec"},
 	{ "data": "quest"},
 	{ "data": "statement"},
+	{ "data": "stmt_exp_date"},
 	{ "data": "addoc"},
 	{ "data": "note"},
 	{ "data": "status"},
@@ -1056,7 +1280,105 @@ catch (PDOException $e) {
 
     });
 
+$(document).ready(function() {
+
+    // NEW: When facility dropdown changes, send facility ID to the grid
+$('#ingred-facilityid').on('change', function() {
+    var facilityId = $(this).val();
+     $("#ingredGrid")
+  .jqGrid("setGridParam", {
+     postData: { facilityId: $('#ingred-facilityid').val() }
+  })
+  .trigger("reloadGrid");
+  return false;
+});
+
+
+    // Optionally trigger it on page load if a client is already selected
+    
+
+        // When client dropdown changes
+    $('#ingred-clientid').on('change', function() {
+        checkFacilities();
+    });
+
+ });
+
+
+ function checkFacilities() {
+
+        var selectedClientId = $('#ingred-clientid').val();
+
+        // Hide the second dropdown by default
+        $('.facilities').hide();
+        toggleFrozenColumn('user_name', false);
+ 
+        // If selected client has facilities (children)
+        var matchingFacilities = $('.facilities select option').filter(function() {
+
+            return $(this).data('idparent') == selectedClientId;
+        });
+
+        console.log("Matching Facilities: ", matchingFacilities);
+
+        // Clear and repopulate facility dropdown
+        $('.facilities select').val('');
+        $('.facilities select option').hide(); // hide all first
+        $('.facilities select option[value=""]').show(); // keep the "Select Facility" option visible
+
+        if (matchingFacilities.length > 0) {
+            matchingFacilities.show(); // show only those with matching data-idparent
+            $('.facilities').show(); // show the facilities dropdown
+            toggleFrozenColumn('user_name', true);
+        } 
+    }
+ 
+
+ function toggleFrozenColumn(colName, show) {
+    
+  const $grid = $("#ingredGrid");
+
+  // Step 1: unfreeze first
+  $grid.jqGrid('destroyFrozenColumns');
+
+  // Step 2: hide/show the column
+  if (show) {
+    $grid.jqGrid('showCol', colName);
+  } else {
+    $grid.jqGrid('hideCol', colName);
+  }
+
+  // Step 3: re-freeze
+  $grid.jqGrid('setFrozenColumns');
+  
+}
+
+// Bulk Assign Ingredients to Facilities functionality
+// Add this to the existing IP object in the ingredients JS file
+
+
+
+
+
+// Event handlers for bulk assign modal
+$(document).ready(function() {
+
+   
+
+    // Process button click
+    $("#processBulkAssignBtn").on('click', function() {
+        IP.processBulkAssign();
+    });
+
+    // Reset modal when closed
+    $("#bulkAssignModal").on('hidden.bs.modal', function() {
+        $("#bulk-assign-progress").hide();
+        $("#bulk-assign-results").hide();
+        $("#processBulkAssignBtn").prop('disabled', false);
+    });
+});
 </script>
+
 <script src="pages/pa-ingreds/ingred.js"></script>
 </body>
 </html>

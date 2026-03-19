@@ -9,7 +9,7 @@ function get_user_signature($comemid)
 {
     global $prog_path;
 
-    $image_file = '/data/DMC/signatures/' . $comemid . '_signature';
+    $image_file = '/iidc/data/DMC/signatures/' . $comemid . '_signature';
 
     $image_exts = array('.jpg', '.jpeg', '.png', '.svg');
     foreach ($image_exts as $ext) {
@@ -29,6 +29,8 @@ if (isset($_REQUEST['crtNr'])) {
 } else {
     return;
 }
+
+
 
 $options = json_decode($certificate['options'], true);
 $certificate_validity = array();
@@ -84,17 +86,19 @@ $functions = array(
     'SBM' => 'Shariah Board Member',
 );
 
+
+
 if ($commebers = $amdb->get_results("SELECT * FROM hqc_committee_members WHERE comemid IN ($_POST[comemids]) order by member_name ASC")) {
 
     $member_title = '<tr>';
     $member_footer = '<tr>';
     foreach ($commebers as $member) {
-        $user_signature = get_user_signature($member['comemid']);
+        //$user_signature = get_user_signature($member['comemid']);
         $member_title .= '<th>' . $member['member_name'] . '<br/>' . (isset($functions[$member['member_function']]) ? $functions[$member['member_function']] : $member['member_function']) . '</th>';
         $member_footer .= '<td id="mem_' . $member['comemid'] . '">';
-        if ($user_signature != '') {
-            $member_footer .= '<img src="' . $user_signature . '" width="200px" height="100px" />';
-        }
+        //if ($user_signature != '') {
+            //$member_footer .= '<img src="' . $user_signature . '" width="200px" height="100px" />';
+        //}
         $member_footer .= '</td>';
     };
     $member_title .= '</tr>';
@@ -106,18 +110,21 @@ foreach ($_POST['branch'] as $key => $value) {
     $_POST[$key] = $value;
 }
 
-$_POST['userSignature'] = get_user_signature($_POST['bm']);
-if (trim($_POST['userSignature']) != '') {
-    $_POST['userSignature'] = '<img src="' . $_POST['userSignature'] . '"/>';
-}
+//$_POST['userSignature'] = get_user_signature($_POST['bm']);
+//if (trim($_POST['userSignature']) != '') {
+  //  $_POST['userSignature'] = '<img src="' . $_POST['userSignature'] . '"/>';
+//}
 
 include "../forms.class.php";
 
-$amdb->connect_portal();
-if ($theForm = $amdb->get_row("SELECT * FROM hqc_forms where foid='7'")) {
+//$amdb->connect_portal();
+if ($theForm = $amdb->get_row("SELECT * FROM hqc_forms where foid='45'")) {
+
+
+
     $data['theForm'] = $theForm;
-    $amdb->close_portal();
+    //$amdb->close_portal();
     $the_client = get_client($_REQUEST['clid']);
     $data = $data + $_POST + $the_client + $certificate_data + $committee_members;
-    $amform->view_form(7, $data, 'pdf', $dmc_file);
+    $amform->view_form(45, $data, 'pdf', $dmc_file);
 }

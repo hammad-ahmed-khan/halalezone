@@ -4,7 +4,7 @@
 <head>
     <?php include_once('pages/header.php');
     include_once ('includes/func.php');?>
-    <title>Applications and Documents - Halal e-Zone</title>
+    <title>Applications and Documents - Halal Digital</title>
 </head>
 
 <body>

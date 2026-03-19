@@ -8,7 +8,7 @@
 </style>
 <nav class="navbar navbar-default navbar-static-top" role="navigation" style="margin-bottom: 0">
     <div class="navbar-header">
-        <a class="navbar-brand" href="http://halal-e.zone/"><img src="img/logo.png" height="45"></a>
+        <a class="navbar-brand" href="http://iidc.eu/" target="_blank"><img src="/img/logo.png" height="45"></a>
         <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
             <span class="sr-only">Toggle navigation</span>
             <span class="icon-bar"></span>
@@ -19,35 +19,36 @@
     <?php
     $myuser = cuser::singleton();
         $myuser->getUserData();
+    $isOdAuditor = ($myuser->userdata['isclient'] == '2' && $myuser->userdata['is_od_auditor'] == '1');
     ?>
     <div id="navbar" class="navbar-collapse collapse">
-       <ul class="nav navbar-nav" id="mainMenu">
+        <ul class="nav navbar-nav" id="mainMenu">
 			<?php // if($myuser->userdata['dashboard']):?>
-            <li id="dashItem"><a href=""><i class="fa fa-dashboard fa-fw"></i> Dashboard</a></li>
+            <li id="dashItem"><a href="/"><i class="fa fa-dashboard fa-fw"></i> Home</a></li>
             <?php // endif;?>
             <?php if($myuser->userdata['application']):?>
-            <li id="appItem"><a href="application"><i class="fa fa-handshake-o fa-fw"></i> Applications</a></li> 
+            <li id="appItem"><a href="/application"><i class="fa fa-handshake-o fa-fw"></i> Applications</a></li> 
             <?php endif;?>
             <?php // if($myuser->userdata['calendar']):?>
             <li id="calendarItem"><a href="calendar"><i class="fa fa-calendar-o fa-fw"></i> Calendar</a></li>
             <?php // endif;?>
             <?php if($myuser->userdata['products']):?>
-            <li id="prodItem"><a href="products"><i class="fa fa-wrench fa-fw" ></i>Products</a></li>            
+            <li id="prodItem"><a href="/products"><i class="fa fa-wrench fa-fw" ></i>Products</a></li>            
             <?php endif;?>
             <?php if($myuser->userdata['ingredients']):?>
-            <li id="ingredItem"><a href="ingredients"><i class="fa fa-flask  fa-fw"></i>Ingredients</a></li>
+            <li id="ingredItem"><a href="/ingredients"><i class="fa fa-flask  fa-fw"></i>Ingredients</a></li>
             <?php endif;?>
             <?php if($myuser->userdata['documents']):?>
-            <li id="qmItem"><a href="qm"><i class="ace-icon fa fa-file-text  fa-fw"></i>QM Documents</a></li>
+            <li id="qmItem"><a href="/qm"><i class="ace-icon fa fa-file-text  fa-fw"></i>QM Docs</a></li>
             <?php endif;?>
             <?php if ($myuser->userdata['isclient'] == "1" && $myuser->userdata['company_id'] != "" && $myuser->userdata['company_admin'] == "1"): ?>
                <!-- <li><a href="branches"><i class="fa fa-wrench fa-fw" ></i>Branches</a></li> -->
             <?php endif;?> 
             <?php // if($myuser->userdata['canadmin'] || $myuser->userdata['isclient'] == "1"):?>
-                <li id="helpDesk"><a href="tickets"><i class="fa fa-bug fa-fw"></i>Bug Report</a> 
+                <li id="helpDesk"><a href="/tickets"><i class="fa fa-bug fa-fw"></i>Bugs</a> 
             </li>
 
-            <li id="customerService"><a href="customer_service"><i class="fa fa-envelope"></i>
+            <li id="customerService"><a href="/customer_service"><i class="fa fa-envelope"></i>
              Support</a>
             </li>
             <?php // endif;?> 
@@ -73,21 +74,20 @@ $totalRows = $rows->fetch(PDO::FETCH_ASSOC);
 $openedTasksCount = $totalRows['count'];
  
                 ?>
-                <li><a href="tasks"><i class="fa fa-tasks fa-fw"></i> Tasks (<?php echo $openedTasksCount; ?>)</a></li>
+                <li><a href="/tasks"><i class="fa fa-tasks fa-fw"></i> Tasks <!-- (<?php echo $openedTasksCount; ?>)--></a></li>
             <?php endif;?>
 
             <?php if($myuser->userdata['canadmin']):?>
                 <!--<li><a href="tasks"><i class="fa fa-tasks fa-fw"></i> Tasks</a></li>-->
             <?php endif;?>
-
-            <?php 
+<?php 
 // NEW: For Clients (isclient=1) - Show "My Tasks" (only assigned tasks)
 if ($myuser->userdata['isclient'] == "1"): 
     // Get task count for clients - only tasks assigned to them
     $db = acsessDb::singleton();
     $dbo = $db->connect();
-    $sql = "SELECT COUNT(id) AS count FROM ttasks AS t WHERE t.status = 1 AND  t.task_type='client' AND t.idclient = :clientId";
-
+    $sql = 'SELECT COUNT(id) AS count FROM ttasks AS t WHERE t.task_type=\'client\' AND t.status = 1 AND t.idclient = :clientId';
+    
     // Prepare the query
     $rows = $dbo->prepare($sql);
 
@@ -107,24 +107,41 @@ if ($myuser->userdata['isclient'] == "1"):
 <?php endif;?>
 
             <?php if ($myuser->userdata['isclient'] != "1"): ?>
-                <li id="training"><a href="training"><i class="fa fa-file-text fa-fw"></i> Activity Records</a></li>
+                <li id="training"><a href="/training"><i class="fa fa-file-text fa-fw"></i> Activity</a></li>
             <?php endif;?>
 
-            <?php
-             if ($myuser->userdata['canadmin']):?>
-            <li id="adminItem"><a class="dropdown-toggle" id="administration" data-toggle="dropdown" ><i class="fa fa-wrench fa-fw" ></i>Administration&nbsp;<i class="fa fa-caret-down"></i></a>
-				<?php if($myuser->userdata['canadmin']):?>
+            <?php if ($myuser->userdata['isclient'] != "2" || $isOdAuditor): ?>
+            <li id="training"><a href="/trainingRequests"><i class="fa fa-file-text fa-fw"></i> Training</a></li>
+            <?php endif;?>
+
+             <?php /*  if ( ($myuser->userdata['isclient'] != "1") || ($myuser->userdata['isclient'] == "1"  && ($myuser->userdata['industry'] == "Meat Processing" || $myuser->userdata['industry'] == "Slaughter Houses
+"))): */ ?>
+
+            <?php  if ( $myuser->userdata['isclient'] != "1"): ?>
+                <li id="sfda"><a href="/sfda_applications"><i class="fa fa-clipboard fa-fw"></i> SFDA</a></li>
+                <li id="hbc"><a href="/halal_slaughtering"><i class="fa fa-sticky-note fa-fw"></i> HBC</a></li>
+                <li id="hbc"><a href="/additional_items_applications"><i class="fa fa-book fa-fw"></i> Add. Items</a></li>
+            <?php endif; ?>
+                
+
+            <?php if ($myuser->userdata['canadmin'] || $isOdAuditor):?>
+            <li id="adminItem"><a class="dropdown-toggle" id="administration" data-toggle="dropdown" ><i class="fa fa-wrench fa-fw" ></i>Admin&nbsp;<i class="fa fa-caret-down"></i></a>
+				<?php if($myuser->userdata['canadmin'] || $isOdAuditor):?>
                 <ul class="dropdown-menu dropdown-admin">
                 <?php if($myuser->userdata['canadmin'] == "1"):?>
-                    <li><a href="administration"><?php if($myuser->userdata['superadmin'] == "1"):?>Clients<?php else: ?>Auditors<?php endif; ?></a></li>
+                    <li><a href="/administration"><?php if($myuser->userdata['superadmin'] == "1"):?>Clients<?php else: ?>Auditors<?php endif; ?></a></li>
                 <?php endif;?>
-                <li><a href="process_status">Process Status</a></li>
-                    <li><a href="tasks">Assign Tasks</a></li>
-                    <li><a href="paingreds">Pre-Approved Ingredients</a></li>
-                    <li><a href="faq_manager">FAQ Management</a></li>
-                    <li><a href="settings">Settings</a></li>
+                
+                <li><a href="/process_status">Process Status</a></li>
+                    <li><a href="/tasks">Assign Tasks</a></li>
+                    <li><a href="/paingreds">Pre-Approved Ingredients</a></li>
+                    <li><a href="/faq_manager">FAQ Management</a></li>
+                    <li><a href="/notificationsHistory">Notifications Management</a></li>
+                    <li><a href="/settings">Settings</a></li>
                 </ul>
                 <?php endif;?>
+
+                
             </li>
             <?php endif;?>
            <?php if ($myuser->userdata['isclient'] == "1" && $myuser->userdata['parent_id'] == ""):?>
@@ -136,7 +153,18 @@ if ($myuser->userdata['isclient'] == "1"):
                 </ul>
 
             </li>
+            
+
             <?php endif;?>            
+
+            <?php if ($myuser->userdata['isclient'] == "2" && !$isOdAuditor): ?>
+                <li id="training"><a href="settings"><i class="fa fa-cog fa-fw"></i> Settings</a></li>
+            <?php endif;?>
+
+            <?php if ($myuser->userdata['canadmin'] || $isOdAuditor):?>
+                <li  style="<?php echo $currentNav == "certs" ? 'background-color:#e7e7e7; ' : ""; ?>"><a href="/iidc/admin/"  style="<?php echo $currentNav == "certs" ? 'color:#000;' : ""; ?>"><i class="fa fa-certificate fa-fw"></i>Certs</a></li>
+            <?php endif;?>
+
             </ul>
             <ul class="nav navbar-nav navbar-right">
     <li>
@@ -147,7 +175,10 @@ if ($myuser->userdata['isclient'] == "1"):
         </a>
         <ul class="dropdown-menu dropdown-user">
             <!-- User Name in Dropdown -->
+            <li id="notifications"><a href="/notificationsHistory"><i class="fa fa-bell fa-fw"></i> Notifications</a></li>                
+
             <li><div class="pointer" title=""><i class="fa fa-user fa-fw"></i> <span id="navUserName"><?php echo $_SESSION['halal']['user'];?></span></div></li>            
+
             <li><div class="pointer" id="logout" title="Log out from the system"><i class="fa fa-sign-out fa-fw"></i> Logout</div></li>
         </ul>
     </li>

@@ -349,6 +349,17 @@
                         </div></div>
                     </div>
 
+                    <div class="row form-group rel" rel="isclient2">
+                        <label class="col-xs-12 col-md-4">Is OD Auditor</label>
+                        <div class='col-xs-12 col-md-8'>
+                            <label>
+                                <input type="checkbox" id="is_od_auditor" name="is_od_auditor" value="1">
+                                &nbsp;Is OD Auditor
+                            </label>
+                            <div class="alert-string"></div>
+                        </div>
+                    </div>
+
                 <!-- Type Radio Buttons -->
                 <div class="row form-group rel" rel="isclient1">
                         <label class="col-xs-12 col-md-4">Type</label>
@@ -521,6 +532,15 @@
                       </div>
                     </div>
 
+                     <!-- NEW: Add "Referred by" field -->
+                    <div class="row form-group">
+                      <label class="col-xs-12 col-md-4">Referred by</label>
+                      <div class='col-xs-12 col-md-8'>
+                        <input type="text" class="form-control" name="referred_by" id="referred_by" value="" placeholder="Optional - Enter name or company that referred this user" />
+                        <div class="alert-string referred_by"></div>
+                      </div>
+                    </div>
+                    
                     <div class="row form-group rel" rel="isclient1">
     <label class="col-xs-12 col-md-4">Is your facility a pork-free facility?</label>
     <div class='col-xs-12 col-md-8'>

@@ -2518,6 +2518,54 @@ if (isset($invoice) && isset($invoice['invoice_nr']) && $_GET['type'] == 'credit
         <input type="hidden" name="sbsid" id="sbsid" value="<?php echo isset($row['sbsid']) ? $row['sbsid'] : '1'; ?>">
         <input type="hidden" name="service_type" value="<?php echo isset($serviceType) ? htmlspecialchars($serviceType) : ''; ?>">
         
+
+        <!-- Invoice Category Selection -->
+        <?php
+        $invoice_categories = array(
+            'invoice' => 'Applications - Invoice for certification fees',
+            'invoicete' => 'Applications - Invoice for travel expenses',
+            'invoiceai' => 'Applications - Invoice for additional items',
+            'sfda_first_app_invoice' => 'SFDA - First Application',
+            'sfda_shipment_cert_invoice' => 'SFDA - Shipment Certificate',
+            'halal_slaughtering_invoice' => 'HBC - Halal Slaughtering',
+            'halal_batch_cert_invoice' => 'HBC - Halal Batch Certificate',
+            'activity_inbound_invoice' => 'Activity Records - Inbound Invoice',
+            'activity_travel_invoice' => 'Activity Records - Travel Expenses Invoice'
+        );
+        $selected_category = '';
+        if (isset($invoice_data) && isset($invoice_data['invoice_category'])) {
+            $selected_category = $invoice_data['invoice_category'];
+        }
+        ?>
+        <table border=0 width="750" style="margin-bottom:12px;border:0px" class="alternate">
+            <tr>
+                <td style="padding:12px 20px;">
+                    <b>Invoice Category:</b>
+                    <select name="invoice_category" id="invoice_category" style="padding:8px 12px;font-size:13px;border:1px solid #c0c0c0;border-radius:6px;min-width:300px;">
+                        <option value="">-- Select Category --</option>
+                        <?php
+                        $category_groups = array(
+                            'Applications' => array('invoice', 'invoicete', 'invoiceai'),
+                            'SFDA' => array('sfda_first_app_invoice', 'sfda_shipment_cert_invoice'),
+                            'HBC' => array('halal_slaughtering_invoice', 'halal_batch_cert_invoice'),
+                            'Activity Records' => array('activity_inbound_invoice', 'activity_travel_invoice')
+                        );
+                        foreach ($category_groups as $group => $keys) {
+                            echo '<optgroup label="' . htmlspecialchars($group) . '">';
+                            foreach ($keys as $key) {
+                                if (isset($invoice_categories[$key])) {
+                                    $sel = ($selected_category == $key) ? 'selected' : '';
+                                    echo '<option value="' . htmlspecialchars($key) . '" ' . $sel . '>' . htmlspecialchars($invoice_categories[$key]) . '</option>';
+                                }
+                            }
+                            echo '</optgroup>';
+                        }
+                        ?>
+                    </select>
+                </td>
+            </tr>
+        </table>
+
         <?php if (isset($_GET['exid'])) { ?>
             <input type="hidden" name="exid" value="<?php echo  $_GET['exid']; ?>">
         <?php }; ?>

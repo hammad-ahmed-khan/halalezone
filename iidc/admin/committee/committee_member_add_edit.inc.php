@@ -780,7 +780,7 @@ $badgeIcon = $isMyAccount ? 'fa-user-circle' : ($isEdit ? 'fa-edit' : 'fa-user-p
 
     async function delete_signature(comemid) {
         await confirm_message('Are you sure you want to delete this signature?');
-        jQuery.post('/admin/committee/committee_save.php', {
+        jQuery.post('/iidc/admin/committee/committee_save.php', {
             act: 'delete_signature',
             comemid: comemid
         }, function(data) {
@@ -855,7 +855,7 @@ $badgeIcon = $isMyAccount ? 'fa-user-circle' : ($isEdit ? 'fa-edit' : 'fa-user-p
     <?php } ?>
 </div>
 
-<form id="committeeMemberForm" autocomplete="off" action="<?php echo isset($_GET['comemid']) ? '/admin/committee/' : '' ?>committee_save.php" method="post" onsubmit="return post_this_form(this);" enctype="multipart/form-data">
+<form id="committeeMemberForm" autocomplete="off" action="<?php echo isset($_GET['comemid']) ? '/iidc/admin/committee/' : '' ?>committee_save.php" method="post" enctype="multipart/form-data">
     <input type="hidden" name="act" value="<?php echo isset($_GET['comemid']) ? 'update_committee_member' : 'add_committee_member' ?>">
     <?php if (isset($_GET['comemid'])) { ?>
         <input type="hidden" name="comemid" value="<?php echo $_GET['comemid']; ?>">
@@ -907,17 +907,18 @@ $badgeIcon = $isMyAccount ? 'fa-user-circle' : ($isEdit ? 'fa-edit' : 'fa-user-p
                             <ul class="phone-list">
                                 <li>
                                     <strong>Primary *</strong>
-                                    <input type="tel" name="member_mobile_phone" id="member_mobile_phone" data-required="yes" value="<?php echo htmlspecialchars($row['member_mobile_phone']); ?>" pattern="\+?[0-9]+" onkeyup="validatePhone(this)" placeholder="+31612345678" />
+                                    <input type="tel" name="member_mobile_phone" id="member_mobile_phone" data-required="yes" value="<?php echo htmlspecialchars($row['member_mobile_phone']); ?>" placeholder="+31612345678" />
                                 </li>
                                 <li>
                                     <strong>Secondary</strong>
-                                    <input type="tel" name="member_telephone" id="member_telephone" value="<?php echo htmlspecialchars($row['member_telephone']); ?>" pattern="\+?[0-9]+" onkeyup="validatePhone(this)" placeholder="+31612345678" />
+                                    <input type="tel" name="member_telephone" id="member_telephone" value="<?php echo htmlspecialchars($row['member_telephone']); ?>" placeholder="+31612345678" />
                                 </li>
                             </ul>
                             <p class="phone-hint"><i class="fas fa-info-circle"></i> Include international code, no spaces (e.g., +31612345678)</p>
                         </td>
                     </tr>
                     
+                    <?php /* Username and Password fields removed
                     <tr>
                         <th>Username *</th>
                         <td>
@@ -943,6 +944,10 @@ $badgeIcon = $isMyAccount ? 'fa-user-circle' : ($isEdit ? 'fa-edit' : 'fa-user-p
                             <span class="password-info"></span>
                         </td>
                     </tr>
+                    */ ?>
+                    <!-- Hidden fields to satisfy form validation -->
+                    <input type="hidden" name="username" value="<?php echo htmlspecialchars($row['username']); ?>" />
+                    <input type="hidden" name="password" value="<?php echo htmlspecialchars($row['password']); ?>" />
                     
                     <tr>
                         <th>Signature</th>
@@ -1017,7 +1022,7 @@ $badgeIcon = $isMyAccount ? 'fa-user-circle' : ($isEdit ? 'fa-edit' : 'fa-user-p
         
         <div class="committee-form-footer">
             <?php if (!$isMyAccount) { ?>
-            <button type="button" class="btn-form-action cancel" onclick="location='<?php echo $comDir == 'admin' ? '/admin/committee/' : '/committee/'; ?>'">
+            <button type="button" class="btn-form-action cancel" onclick="location='<?php echo $comDir == 'admin' ? '/iidc/admin/committee/' : '/committee/'; ?>'">
                 <i class="fas fa-times"></i>
                 Cancel
             </button>
@@ -1035,5 +1040,113 @@ $badgeIcon = $isMyAccount ? 'fa-user-circle' : ($isEdit ? 'fa-edit' : 'fa-user-p
 </form>
 
 <script>
+    // Override functions related to removed username/password fields
+    function committeeUsername() {}
+    function checkPasswordStrength() {}
+    function showPassword() {}
+    function generatePassword() {}
+    function validatePhone() { return true; }
     do_document_ready();
+
+    // AJAX form submission
+    jQuery('#committeeMemberForm').on('submit', function(e) {
+        e.preventDefault();
+
+        var form = jQuery(this);
+        var error = false;
+        var error_color = '#fee';
+
+        // Validate required fields
+        form.find('[data-required]').each(function() {
+            if (jQuery(this).attr('data-color'))
+                jQuery(this).css('background-color', jQuery(this).attr('data-color'));
+            else
+                jQuery(this).attr('data-color', jQuery(this).css('background-color'));
+
+            if (jQuery.trim(jQuery(this).val()) === '') {
+                jQuery(this).css('background-color', error_color);
+                error = true;
+            }
+        });
+
+        // Validate email
+        form.find('input[type="email"][data-required]').each(function() {
+            var val = jQuery(this).val();
+            if (val.indexOf('@') <= 0 || val.indexOf('.') <= 0) {
+                jQuery(this).css('background-color', error_color);
+                if (typeof alert_message === 'function')
+                    alert_message('Please use a valid email address!');
+                else
+                    alert('Please use a valid email address!');
+                error = true;
+                return false;
+            }
+        });
+
+        if (error) {
+            if (typeof alert_message === 'function')
+                alert_message('All fields with (*) are required.');
+            else
+                alert('All fields with (*) are required.');
+            return false;
+        }
+
+        var formData = new FormData(this);
+        var submitBtn = form.find('button[type="submit"]');
+        var originalBtnHtml = submitBtn.html();
+        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+
+        jQuery.ajax({
+            url: form.attr('action'),
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                console.log('Server response:', response);
+                var data = response.trim();
+
+                if (data.indexOf('alert:') > -1) {
+                    if (typeof alert_message === 'function')
+                        alert_message(data.replace('alert:', ''));
+                    else
+                        alert(data.replace('alert:', ''));
+                } else if (data.indexOf('reload:') > -1) {
+                    location.reload();
+                } else if (data.indexOf('topReload:') > -1) {
+                    top.location.reload();
+                } else if (data.indexOf('url:') > -1) {
+                    document.location = data.replace('url:', '');
+                } else if (data.indexOf('urlReplace:') > -1) {
+                    document.location.replace(data.replace('urlReplace:', ''));
+                } else if (data.indexOf('topUrl:') > -1) {
+                    top.location = data.replace('topUrl:', '');
+                } else if (data.indexOf('function:') > -1) {
+                    do_function(data.replace('function:', ''));
+                } else if (data.length > 0) {
+                    // Show any unexpected response for debugging
+                    console.log('Unhandled response:', data);
+                    if (typeof alert_message === 'function')
+                        alert_message(data);
+                    else
+                        alert(data);
+                } else {
+                    if (typeof alert_message === 'function')
+                        alert_message('Something went wrong, please try again.');
+                    else
+                        alert('Something went wrong, please try again.');
+                }
+            },
+            error: function(xhr, status, err) {
+                console.error('AJAX error:', status, err);
+                if (typeof alert_message === 'function')
+                    alert_message('Error: ' + err);
+                else
+                    alert('Error: ' + err);
+            },
+            complete: function() {
+                submitBtn.prop('disabled', false).html(originalBtnHtml);
+            }
+        });
+    });
 </script>

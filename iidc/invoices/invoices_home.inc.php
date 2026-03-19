@@ -725,9 +725,12 @@ $filterData = isset($filter_info[$currentFilter]) ? $filter_info[$currentFilter]
             <p id="filterDescription"><?php echo $filterData['desc']; ?></p>
         </div>
         
-        <div class="invoice-header-actions">
-             
-        </div>
+<div class="invoice-header-actions">
+    <a href="index.php?inc=create_general_invoice" class="btn-invoice-header" style="background:#4f46e5; color:#fff; border:2px solid #4f46e5;">
+        <i class="fas fa-plus"></i>
+        Create Invoice
+    </a>
+</div>
     </div>
     
     
@@ -743,6 +746,20 @@ $filterData = isset($filter_info[$currentFilter]) ? $filter_info[$currentFilter]
 	<div style="text-align:center !important;width:100%;background:#f0ede8 !important">
 		<?php include "search_engine.inc.php"; ?>
 	</div>
+
+	<script>
+	$(document).ready(function() {
+		// Inject hidden field into the search form so it gets serialized
+		if (jQuery("#seach_form").length) {
+			jQuery("#seach_form").append('<input type="hidden" name="invoice_category" id="invoice_category_hidden" value="all" />');
+		}
+		// Sync dropdown with hidden field
+		jQuery("#invoice_category_filter").on("change", function() {
+			jQuery("#invoice_category_hidden").val(jQuery(this).val());
+			loadInvoices();
+		});
+	});
+	</script>
 
 	<?php if ($_GET['show'] == 'overdue') { ?>
 		<script>

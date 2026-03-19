@@ -1,0 +1,11 @@
+ssh halaloff@dedi2843.your-server.de -p222
+password P91axFf6XF1xUZyC
+
+dump -------------------
+mysqldump -u halal_hqc -pYkM9qyr9afA4QAja halal_hqc > halal_hqc.sql
+password YkM9qyr9afA4QAja
+
+
+import ----------------------------------------
+mysql -D halalhqc_loc -u halalhqc_loc -pGAUyNHifTaxgz9sY halalhqc_loc < halal_hqc.sql
+password GAUyNHifTaxgz9sY

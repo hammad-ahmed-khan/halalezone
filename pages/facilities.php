@@ -4,7 +4,7 @@
 <head>
     <?php include_once('pages/header.php');
     include_once ('includes/func.php');?>
-    <title>Facility Management - Halal e-Zone</title>
+    <title>Facility Management - Halal Digital</title>
     <style>
     .rel {
 		display:none;

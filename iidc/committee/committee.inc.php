@@ -488,7 +488,7 @@ if (!defined("_HQC_")) {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 0;
+    padding: 6px 0 0;
     font-size: 13px;
     position: relative;
 }
@@ -564,7 +564,7 @@ if (!defined("_HQC_")) {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 2px 8px;
+    padding: 2px 0px;
     background: #eff6ff;
     border-radius: 4px;
     color: #1d4ed8;
@@ -698,8 +698,7 @@ $approvedCount = 0;
 $comemSqlCount = '';
 if (isset($_SESSION['comemid']) && $_SESSION['super_admin'] != 'yes')
     $comemSqlCount = "AND FIND_IN_SET('$_SESSION[comemid]',comemids)";
-if ($_SESSION['offid'] != 0)
-    $comemSqlCount .= " AND hqc_committee_decision.offid = $_SESSION[offid]";
+$comemSqlCount .= " AND hqc_committee_decision.offid = " . intval($_SESSION['offid']);
 
 if ($countResult = $amdb->get_row("SELECT 
     SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
@@ -719,7 +718,7 @@ if ($countResult = $amdb->get_row("SELECT
             : "Are you sure you want to undo this DMC decision?";
         await confirm_message(message);
         $.ajax({
-            url: "/committee/app_save.php",
+            url: "/iidc/committee/app_save.php",
             type: "POST",
             data: { act: "resetDMCProcess", decid: decid, status: status },
             success: function(data) {
@@ -742,8 +741,27 @@ if ($countResult = $amdb->get_row("SELECT
     }
 
     function editDMC(decid) {
-        var url = '/committee/dmc/?inc=dmc&act=edit&ref=reprint&decid=' + decid;
+        var url = '/iidc/committee/dmc/?inc=dmc&act=edit&ref=reprint&decid=' + decid;
         jQuery("#DMCUrl").attr('data-href', url).click();
+    }
+
+    async function approveDMC(decid) {
+        await confirm_message("Are you sure you want to approve this DMC meeting?");
+        $.ajax({
+            url: "/iidc/committee/app_save.php",
+            type: "POST",
+            data: { act: "approveDMC", decid: decid },
+            success: function(data) {
+                if (data.trim() == 'success') {
+                    location.reload();
+                } else {
+                    alert_message(data);
+                }
+            },
+            error: function() {
+                alert_message('Failed to approve DMC meeting. Please try again.');
+            }
+        });
     }
 </script>
 
@@ -864,8 +882,7 @@ if ($countResult = $amdb->get_row("SELECT
             $comemSql = '';
             if (isset($_SESSION['comemid']) && $_SESSION['super_admin'] != 'yes')
                 $comemSql = "AND FIND_IN_SET('$_SESSION[comemid]',comemids)";
-            if ($_SESSION['offid'] != 0)
-                $comemSql .= " AND hqc_committee_decision.offid = $_SESSION[offid]";
+            $comemSql .= " AND hqc_committee_decision.offid = " . intval($_SESSION['offid']);
 
             if ($meetings = $amdb->get_results("SELECT *, hqc_committee_decision.status AS status FROM hqc_committee_decision
                 JOIN companies ON companies.clid = hqc_committee_decision.clid 
@@ -908,18 +925,18 @@ if ($countResult = $amdb->get_row("SELECT
                                 if (is_array(json_decode($meeting['event_details'], true))) {
                                     $event_details = json_decode($meeting['event_details'], true);
                                 ?>
-                                    <div class="info-row"><strong>Date:</strong> <span><?php echo date("d/m/Y", strtotime($event_details['date'])); ?></span></div>
+                                    <div class="info-row"><strong>Date:</strong> <span><?php echo $event_details['date']; ?></span></div> 
                                     <div class="info-row"><strong>Time:</strong> <span><?php echo $event_details['time']; ?></span></div>
                                     <div class="info-row"><strong>Location:</strong> <span><?php echo $event_details['location']; ?></span></div>
                                     <?php if (isset($event_details['zoom-link'])) { ?>
                                         <div class="info-row">
                                             <strong>Zoom:</strong>
                                             <a href="<?php echo $event_details['zoom-link']; ?>" target="_new" class="zoom-link">
-                                                <img src="/images/zoom.svg" alt="Zoom"> Join Meeting
+                                                <img src="/iidc/images/zoom.svg" alt="Zoom"> Join Meeting
                                             </a>
                                         </div>
                                     <?php } ?>
-                                    <div class="info-row"><strong>Requested:</strong> <span><?php echo date("d M Y", strtotime($meeting['inserted_on'])); ?></span></div>
+                                    <div class="info-row"><strong>Requested:</strong> <span><?php echo date("d/m/Y", strtotime($meeting['inserted_on'])); ?></span></div>
                                     <?php if (isset($event_details['request_by'])) { ?>
                                         <div class="info-row"><strong>By:</strong> <span><?php echo htmlspecialchars($event_details['request_by']); ?></span></div>
                                     <?php } ?>
@@ -971,33 +988,60 @@ if ($countResult = $amdb->get_row("SELECT
                         </td>
                     </tr>
                     <tr class="Decisions" data-offid="<?php echo $meeting['offid']; ?>">
-                        <td class="subdirectory"><img src="/images/subdirectory.svg" alt=""></td>
+                        <td class="subdirectory"><img src="/iidc/images/subdirectory.svg" alt=""></td>
                         <td colspan="4">
                             <div class="decision-actions">
                                 <strong style="margin-right: 8px;"><?php echo $meeting['status'] == 'pending' ? 'Actions:' : 'Decision:'; ?></strong>
                                 
                                 <?php
                                 $pdfUrl = "";
-                                if (isset($decision['crtNr'])) {
+                                $certOffid = $meeting['offid']; // fallback to meeting offid
+                                
+                                // Get crtNr from decision or meeting
+                                $crtNr = '';
+                                if (isset($decision['crtNr']) && $decision['crtNr'] > 0) {
                                     $crtNr = $decision['crtNr'];
-                                    $certificate = $amdb->get_row("SELECT url FROM acms_halal_certificates WHERE crtNr = '$crtNr'");
-                                    if (isset($certificate['url']) && trim($certificate['url']) != '') {
-                                        $pdfUrl = "/client_data/certificates/$certificate[url]";
+                                } elseif (isset($meeting['crtNr']) && $meeting['crtNr'] > 0) {
+                                    $crtNr = $meeting['crtNr'];
+                                }
+                                
+                                if ($crtNr != '') {
+                                    $certificate = $amdb->get_row("SELECT url, offid FROM acms_halal_certificates WHERE crtNr = '" . intval($crtNr) . "'");
+                                    if ($certificate) {
+                                        if (isset($certificate['offid']) && $certificate['offid'] > 0) {
+                                            $certOffid = $certificate['offid'];
+                                        }
+                                        if (isset($certificate['url']) && trim($certificate['url']) != '') {
+                                            $pdfUrl = "/iidc/certificates/annual/certificate.pdf.php?crtnr=" . intval($crtNr) . "&crtDo=print";
+                                        }
                                     }
                                 }
                                 if ($pdfUrl == "") {
-                                    $pdfUrl = "/certificates/annual/?inc=certificate_add_edit&act=" . ($meeting['status'] == 'pending' ? 'add' : 'edit') . "&crtNr=$meeting[crtNr]&clid=$meeting[clid]&offid=$meeting[offid]&decid=$meeting[decid]";
+                                    $pdfUrl = "/iidc/certificates/annual/?inc=certificate_add_edit&act=" . ($meeting['status'] == 'pending' ? 'add' : 'edit') . "&crtNr=$meeting[crtNr]&clid=$meeting[clid]&offid=$certOffid&decid=$meeting[decid]";
                                 }
+                                $isPdfLink = ($pdfUrl != "" && strpos($pdfUrl, 'certificate.pdf.php') !== false);
                                 ?>
                                 
-                                <a href="<?php echo $pdfUrl; ?>" <?php echo $meeting['status'] != 'pending' ? 'target="_new"' : ''; ?> class="action-btn certificate">
-                                    <i class="fas fa-certificate"></i>
-                                    <?php echo $meeting['status'] == 'pending' ? 'Request Certificate' : 'View Certificate'; ?>
+                                <a href="<?php echo $pdfUrl; ?>" <?php echo ($isPdfLink || $meeting['status'] != 'pending') ? 'target="_new"' : ''; ?> class="action-btn certificate">
+                                    <i class="fas <?php echo $isPdfLink ? 'fa-file-pdf' : 'fa-certificate'; ?>"></i>
+                                    <?php 
+                                    if ($isPdfLink) {
+                                        echo 'View Certificate PDF';
+                                    } else {
+                                        echo $meeting['status'] == 'pending' ? 'Request Certificate' : 'View Certificate';
+                                    }
+                                    ?>
                                 </a>
                                 
                                 <?php if ($meeting['status'] == 'pending') { ?>
-                                    <a href="/committee/index.php?inc=schedule_committee&decid=<?php echo $meeting['decid']; ?>&act=reschedule&crtNr=<?php echo $meeting['crtNr']; ?>&clid=<?php echo $meeting['clid']; ?>" class="action-btn reschedule" title="Reschedule committee meeting">
-                                        <i class="fa fa-user-clock"></i>
+                                    <!--
+                                    <span class="action-btn certificate" style="cursor:pointer; background: linear-gradient(135deg, #16a34a, #22c55e); color:#fff;" onclick="approveDMC(<?php echo $meeting['decid']; ?>);">
+                                        <i class="fas fa-check-circle"></i>
+                                        Approve
+                                    </span>
+                                    -->
+                                    <a href="/iidc/committee/index.php?inc=schedule_committee&decid=<?php echo $meeting['decid']; ?>&act=reschedule&crtNr=<?php echo $meeting['crtNr']; ?>&clid=<?php echo $meeting['clid']; ?>" class="action-btn reschedule" title="Reschedule committee meeting">
+                                        <i class="fa fa-clock"></i>
                                         Reschedule
                                     </a>
                                     <span class="action-btn cancel" onclick="resetDMCProcess(<?php echo $meeting['decid']; ?>,'delete');">
@@ -1007,7 +1051,7 @@ if ($countResult = $amdb->get_row("SELECT
                                 <?php } ?>
                                 
                                 <?php if ($meeting['status'] == 'approved') {
-                                    $dmc_file = '/data/DMC/reports/dmc-' . $meeting['decid'] . '.pdf';
+                                    $dmc_file = '/iidc/data/DMC/reports/dmc-' . $meeting['decid'] . '.pdf';
                                     if (file_exists($root_path . $dmc_file)) {
                                 ?>
                                     <a href="<?php echo $dmc_file; ?>" target="_new" class="action-btn pdf">

@@ -4,7 +4,7 @@
 <head>
     <?php include_once('pages/header.php');
     include_once ('includes/func.php');?>
-    <title>Manage Branches - Halal e-Zone</title>
+    <title>Manage Branches - Halal Digital</title>
     <style>
     .rel {
 		display:none;

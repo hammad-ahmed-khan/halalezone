@@ -45,7 +45,7 @@ try {
             $filter .= " AND t.idclient = '".$tidclient."'";
         } else {
             if ($mytasks == "1") {
-                $filter .= " AND t.idauditor = '".$idauditor."'";
+                $filter .= " AND task_type='auditor' AND t.idauditor = '".$idauditor."'";
             } else {
                 $filter .= " AND t.user_id = '".$idauditor."'";
                 if ($tidauditor != "" && $tidauditor != $idauditor) { 
@@ -61,7 +61,7 @@ try {
             $filter .= " AND t.idclient = '".$tidclient."'";
         } else {
             if ($mytasks == "1") {
-                $filter .= " AND t.idauditor = '".$idauditor."'";
+                $filter .= " AND task_type='auditor' AND t.idauditor = '".$idauditor."'";
             } else {
                 $filter .= " AND t.user_id = '".$idauditor."'";
                 if ($tidauditor != "" && $tidauditor != $idauditor) { 
@@ -93,7 +93,7 @@ try {
     // Get the corresponding column name from the columns array
     $sortBy = $columns[$sortColumnIndex];
 
-	$sql = 'SELECT COUNT(id) AS count FROM ttasks AS t '.$filter;
+	$sql = 'SELECT COUNT(id) AS count FROM ttasks AS t WHERE 1 = 1  '.$filter;
 	$rows = $dbo->prepare($sql);
 	$rows->execute();
     $totalRows = $rows->fetch(PDO::FETCH_ASSOC);
@@ -147,9 +147,7 @@ LEFT JOIN
             }
 
             // Format task type
-
-
-            
+          
             $row['task_type'] = ucfirst($row["task_type"]);
 
             if ($row['task_type'] == 'Auditor') {

@@ -55,7 +55,7 @@ class cuser {
 	public function getUserData()
 	{
 		//$sql = "SELECT id, name, email, dashboard, prefix, isclient, clients,  application, audit, canadmin FROM tusers WHERE id=:id";
-		$sql = "SELECT id, company_id, parent_id, name, email, prefix, isclient, dashboard, application, calendar, products, ingredients, documents, clients, canadmin, superadmin, clients_audit, sources_audit, company_admin, products_preference, ingredients_preference, qm_documents_preference FROM tusers WHERE id=:id";
+		$sql = "SELECT id, company_id, parent_id, name, email, prefix, isclient, dashboard, application, calendar, products, ingredients, documents, clients, canadmin, superadmin, IFNULL(clients_audit, '') AS clients_audit, IFNULL(sources_audit, '') AS sources_audit, company_admin, products_preference, ingredients_preference, qm_documents_preference, is_od_auditor FROM tusers WHERE id=:id";
 		$res = $this->db->prepare($sql);
 		$res->bindValue(':id', $_SESSION['halal']['id']);
 		$userdata = [];
@@ -77,6 +77,12 @@ class cuser {
 				$userdata['documents'] = 1;			
 			}
 		}
+		if ($userdata['clients_audit'] == "null") {
+			$userdata['clients_audit'] = "";
+		}
+		if ($userdata['sources_audit'] == "null") {
+			$userdata['sources_audit'] = "";
+		}
 		$this->userdata = $userdata;
 		$res->closeCursor();
 	}
@@ -88,7 +94,7 @@ class cuser {
 	}
 
 	public function login($email, $password) {
-		$sql = "SELECT id, company_id, name, login, pass FROM tusers WHERE deleted=0 AND login =:email";
+		$sql = "SELECT id, company_id, name, login, pass, isclient FROM tusers WHERE deleted=0 AND login =:email";
 		$stmt = $this->db->prepare($sql);
 		$stmt->setFetchMode(PDO::FETCH_ASSOC);
 		$stmt->bindValue(':email', $email);
@@ -100,6 +106,8 @@ class cuser {
 				// Send an email to user saying their account is locked
 				return "Attempts number exceeded. Account is blocked";
 			} else {
+				
+
 				// Check if the password in the database matches
 				// the password the user submitted. We are using
 				// the password_verify function to avoid timing attacks.
@@ -112,6 +120,9 @@ class cuser {
 					$_SESSION['halal']['id'] = $user_id;
 					$_SESSION['halal']['company_id'] = $user['company_id'];
 					$_SESSION['halal']['user'] = $user['name'];
+					$_SESSION['username'] = $user['name'];
+					$_SESSION['user_type'] = ($user['isclient'] == "1" ? "client" : "admin");
+					$_SESSION['user_role'] = "super_admin";
 					$_SESSION['halal']['login_string'] = hash('sha512',
 						$user['pass'] . $user_browser);
 					// Login successful.
@@ -130,7 +141,7 @@ class cuser {
 			}
 		} else {
 			// No user exists.
-			return "Wrong login or password";
+			return "Wrong login or password ";
 		}
 	}
 
@@ -213,6 +224,12 @@ class cuser {
         include_once('pages/register.php');
     }
 
+	
+	 public function showTrainingRequestForm()
+    {
+        include_once('pages/training_request_form.php');
+    }
+	
     public function showCalendar()
     {
         $this->checkSession();
@@ -324,9 +341,9 @@ class cuser {
 	{
 		$this->checkSession();
 		$this->getUserData();
-		$this->checkExist('canadmin');
-		$this->checkAccess('canadmin');
-		include_once('pages/settings.php');
+		if ($this->userdata['isclient'] != "1") {
+			include_once('pages/settings.php');
+		}
 	}
 
 	public function showCompanies()
@@ -368,6 +385,27 @@ class cuser {
 		include_once('pages/training.php');
 	}
 
+	public function showTrainingRequests()
+	{
+		$this->checkSession();
+		$this->getUserData();
+		include_once('pages/training_requests.php');
+	}
+	
+	public function showNotificationsManagement()
+	{
+		$this->checkSession();
+		$this->getUserData();
+		include_once('pages/notifications_management.php');
+	}
+	
+	public function showNotificationsHistory()
+	{
+		$this->checkSession();
+		$this->getUserData();
+		include_once('pages/notifications_history.php');
+	}	
+	
 	public function showFAQManager()
 	{
 		$this->checkSession();
@@ -381,5 +419,37 @@ class cuser {
 		$this->getUserData();
 		include_once('pages/faq.php');
 	}	
+
+	public function showSfdaApplications()
+	{
+		$this->checkSession();
+		$this->getUserData();
+		include_once('pages/sfda_applications.php');
+	}	
+
+	public function showHalalSlaughtering()
+	{
+		$this->checkSession();
+		$this->getUserData();
+		include_once('pages/halal_slaughtering.php');
+	}		
+
+	public function showIidcCertificates() {
+		$this->checkSession();
+		$this->getUserData();
+		include_once('pages/iidc_certificates.php');
+	}
+	public function showAdditionalItemsApplications() {
+		$this->checkSession();
+		$this->getUserData();
+		include_once('pages/additional_items_applications.php');
+	}
+	public function showProductionSites() {
+		$this->checkSession();
+		$this->getUserData();
+		include_once('pages/production_sites.php');
+	}
+
+	
 }
 ?>

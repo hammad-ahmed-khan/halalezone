@@ -69,8 +69,20 @@ try {
 			// Otherwise, fetch only the child's own ingredients
 			$filter = "WHERE p.idclient='".$idclient."' AND p.deleted=".$displaymode;
 		}
-	}		
-	
+	}
+$group_filter = isset($_POST['group_filter']) ? $_POST['group_filter'] : 'all';
+
+	// UPDATE: Modified group filtering logic for many-to-many relationships
+	if ($group_filter !== 'all') {
+		if ($group_filter === 'null' || $group_filter === '') {
+			// Products with NO groups assigned
+			$filter .= " AND p.id NOT IN (SELECT DISTINCT product_id FROM tproduct_group_assignments)";
+		} else {
+			// Products belonging to the selected group
+			$filter .= " AND p.id IN (SELECT product_id FROM tproduct_group_assignments WHERE group_id = '".intval($group_filter)."')";
+		}
+	}
+
 	if ($myuser->userdata['isclient'] == '2') { // Auditor
 			
 		if ($sources_audit = json_decode($myuser->userdata['sources_audit'])) {
@@ -101,17 +113,26 @@ try {
 	$rows->execute();
   $uniquerecords = $rows->fetch(PDO::FETCH_ASSOC);
  
-	$sql = 'SELECT p.id, p.idclient, p.item, p.ean, p.spec, p.addoc, p.label, '.
-			'MIN(r.conf), r.status, p.deleted, DATE_FORMAT(p.created_at, "%d/%m/%Y %H:%i") as created_at_formated, 
-			p.created_at, p.deleted_at from tproducts p '.
-		'left join tp2i on (tp2i.idp=p.id) '.
-		'left join tingredients i on (i.id=tp2i.idi) '.
-		'left join (SELECT i.id, IF(COUNT(s.id) = 0, i.conf, IF(s.conf IS NOT NULL AND (COUNT(s.id) - SUM(s.conf)) = 0, 1, 0)) AS conf, 
-		GREATEST(MAX(getHalalExpStatus(s.halalexp)), getHalalExpStatus(i.halalexp)) as status from tingredients i '.
-		'left join ti2i on (ti2i.idi1=i.id) '.
-		'left join tingredients s on (s.id=ti2i.idi2) '.
-		'Group by i.id) r on (r.id=i.id) '
-		.$filter.' GROUP BY p.id ORDER BY p.'.strtolower(str_replace(' ', '', $sortingField)).' '.$sortingOrder;
+	// NEW: Updated main query to include group information (optional - shows group name in results)
+$sql = 'SELECT p.id, p.idclient, p.item, p.ean, p.spec, p.addoc, p.label, '.
+        '(SELECT GROUP_CONCAT(pg.name SEPARATOR ", ") 
+          FROM tproduct_group_assignments pga 
+          JOIN tproduct_groups pg ON pga.group_id = pg.id 
+          WHERE pga.product_id = p.id AND pg.deleted = 0) as group_names, '.
+        '(SELECT GROUP_CONCAT(pga.group_id SEPARATOR ",") 
+          FROM tproduct_group_assignments pga 
+          WHERE pga.product_id = p.id) as group_ids, '.
+        'MIN(r.conf), r.status, p.deleted, DATE_FORMAT(p.created_at, "%d/%m/%Y %H:%i") as created_at_formated, 
+        p.created_at, p.deleted_at from tproducts p '.
+    'left join tp2i on (tp2i.idp=p.id) '.
+    'left join tingredients i on (i.id=tp2i.idi) '.
+    'left join (SELECT i.id, IF(COUNT(s.id) = 0, i.conf, IF(s.conf IS NOT NULL AND (COUNT(s.id) - SUM(s.conf)) = 0, 1, 0)) AS conf, 
+    GREATEST(MAX(getHalalExpStatus(s.halalexp)), getHalalExpStatus(i.halalexp)) as status from tingredients i '.
+    'left join ti2i on (ti2i.idi1=i.id) '.
+    'left join tingredients s on (s.id=ti2i.idi2) '.
+    'Group by i.id) r on (r.id=i.id) '
+    .$filter.' GROUP BY p.id ORDER BY p.'.strtolower(str_replace(' ', '', $sortingField)).' '.$sortingOrder;
+
 
 	$response = new \stdClass();
     $response->page = 1;
@@ -154,17 +175,19 @@ try {
             if($filter != '') continue;
         }
 		// return only nonconformed if filter is set
-		if($conformed == 1) {
-			if($allconf == 0) {
+		if ($conformed == 1) {
+			if ($allconf == 0) {
 				$response->rows[$i]['id'] = $row['id'];
+				// NEW: Added group_names and group_ids to response
 				$response->rows[$i]['cell'] = array($row['id'], "HCP_" . $row['id'], $row['item'], $row['ean'], $str, $row['spec'], $row['addoc'], $row['label'],
-																						$allconf, $row['status'], $row['deleted'], $row['created_at'], $row['idclient'],$row['deleted'], $row['deleted_at']);
+													$allconf, $row['status'], $row['deleted'], $row['created_at'], $row['idclient'],$row['deleted'], $row['deleted_at'], $row['group_ids'] ?: '');
 				$i++;
 			}
-		}else{
+		} else { 
 			$response->rows[$i]['id'] = $row['id'];
+			// NEW: Added group_names and group_ids to response
 			$response->rows[$i]['cell'] = array($row['id'], "HCP_" . $row['id'], $row['item'], $row['ean'], $str, $row['spec'], $row['addoc'], $row['label'],
-																					$allconf, $row['status'], $row['deleted'], $row['created_at'], $row['idclient'],$row['deleted'], $row['deleted_at']);
+												$allconf, $row['status'], $row['deleted'], $row['created_at'], $row['idclient'],$row['deleted'], $row['deleted_at'], $row['group_ids'] ?: '');
 			$i++;
 		}
     }

@@ -263,7 +263,7 @@ $country_list = array(
 <head>
 <?php include_once('pages/header.php');?>
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-<title>Register - Halal e-Zone</title>
+<title>Register - Halal Digital</title>
 <style>
 label {
 	text-align:right;
@@ -293,7 +293,7 @@ body {
   <div class="main-content">
     <div class="main-content-inner">
       <div class="page-content">
-        <div id="logo"></div>
+        <div id="logo"><img src="/img/logo.png" /></div>
 
         <div id="success" class="alert- alert-success- hidden text-center" style="margin-top:25px; font-size:18px;">
                    <h1>Thanks for the registration!</h1>
@@ -311,13 +311,15 @@ body {
                   </div>
 
         <div class="row">
-          <div class="col-md-7 col-md-offset-2">
+          <div class="col-md-6 col-md-offset-3">
             <div class="clearfix">
               <div class="box">
                 <div class="content-wrap">
                   <div id="mainForm">
+                  <h2 style="text-align:center;margin-bottom:30px;">Registration</h2>
+
                    <div id="errors" class="alert alert-danger hidden"></div>
-                   <h3 style="text-align:center;margin-bottom:30px;">Registration</h3>
+                   
                    <form id="admin-form" class="col-md-12 form-horizontal">
                     <div class="row form-group">
                       <label class="col-xs-12 col-md-5">Language Preference</label>
@@ -454,7 +456,14 @@ body {
                       </div>
                     </div>
 <div class="row form-group">
-    <label class="col-xs-12 col-md-5">Is your facility a pork-free facility? <span class="text-danger">*</span></label>
+                      <label class="col-xs-12 col-md-5">Referred by: </label>
+                      <div class='col-xs-12 col-md-7'>
+                        <input type="text" class="form-control" name="referred_by" id="referred_by" value="" />
+                        <div class="alert-string cemail"></div>
+                      </div>
+                    </div>                    
+<div class="row form-group">
+    <label class="col-xs-12 col-md-5">Is your facility a porcine-free facility? <span class="text-danger">*</span></label>
     <div class='col-xs-12 col-md-7'>
         <label><input type="radio" name="pork_free_facility" value="Yes"> Yes</label>
         <label><input type="radio" name="pork_free_facility" value="No"> No</label>
@@ -498,7 +507,7 @@ body {
                     <div class="row form-group">
                       <label class="col-xs-12 col-md-5"></label>
                       <div class='col-xs-12 col-md-7'>
-                        <div class="g-recaptcha" data-callback="clearCaptchaError" data-sitekey="6Ld8HiIhAAAAAPovBwOTDSt-Q4g8lz0RfO5pHRai"></div>
+                        <div class="g-recaptcha" data-callback="clearCaptchaError" data-sitekey="6LfAxC0rAAAAAI19eMR3LrGs1_hhwd6udKdhqdvE"></div>
                         <div class="alert-string captcha"></div>
                       </div>
                     </div>
@@ -591,6 +600,7 @@ function clearCaptchaError() {
             data.phone = $('#phone').val();
             data.email = $('#email').val();
             data.cemail = $('#cemail').val();
+            data.referred_by = $('#referred_by').val();
 		      	data.captcha = grecaptcha.getResponse();
 			      data.lang = document.querySelector('html').getAttribute('lang');
             data.pork_free_facility = $("input[name='pork_free_facility']:checked").val();

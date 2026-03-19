@@ -198,7 +198,7 @@ if (!defined("_HQC_"))
 .members-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
+    gap: 12px;
 }
 
 .member-column {
@@ -212,6 +212,7 @@ if (!defined("_HQC_"))
     padding: 12px 16px;
     background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
     border-bottom: 1px solid #fed7aa;
+    margin-bottom: 5px;
 }
 
 .member-column-header h4 {
@@ -259,7 +260,7 @@ if (!defined("_HQC_"))
 }
 
 .member-list li {
-    padding: 10px 16px;
+    padding: 5px 16px;
     border-bottom: 1px solid #f1f5f9;
     transition: all 0.2s ease;
     position: relative;
@@ -280,6 +281,8 @@ if (!defined("_HQC_"))
     cursor: pointer;
     font-size: 14px;
     color: #374151;
+    padding: 0;
+    margin: 0;
 }
 
 .member-list li input[type="checkbox"] {
@@ -381,11 +384,11 @@ if (!defined("_HQC_"))
     cursor: pointer;
     font-size: 13px;
     color: #374151;
+    margin:0px;
+    
 }
 
 .clients-list li input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
     accent-color: #f97316;
 }
 
@@ -563,7 +566,7 @@ if (!defined("_HQC_"))
 .footer-options {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 0px;
     flex-wrap: wrap;
 }
 
@@ -735,7 +738,7 @@ if ($commebersAll = $amdb->get_results("SELECT comemid,uid,offid,bm,member_name,
                 $BM['comemid'] = $member['comemid'];
             }
         }
-        if (isset($functions[$member['member_function']]) && get_user_signature($member['comemid']))
+        if (isset($functions[$member['member_function']]))
             $members[$member['member_function']][$member['comemid']] = $member;
     }
 }
@@ -773,6 +776,10 @@ if (isset($_REQUEST['decid'])) {
     $oldMeeting = $amdb->get_row("SELECT * FROM hqc_committee_decision WHERE decid='$_REQUEST[decid]'");
     $comemids = explode(',', $oldMeeting['comemids']);
     $event_details = json_decode($oldMeeting['event_details'], true);
+    // Ensure date is in dd/mm/yyyy format for frontend display
+    if (isset($event_details['date']) && strpos($event_details['date'], '-') !== false) {
+        $event_details['date'] = date('d/m/Y', strtotime($event_details['date']));
+    }
     $row['email_body'] = str_replace('[proposed_date]', '<span class="proposed_date">' . date("d/m/Y", strtotime($event_details['date'])) . '</span>', $row['email_body']);
     $row['email_body'] = str_replace('[proposed_time]', '<span class="proposed_time">' . $event_details['time'] . '</span>', $row['email_body']);
     if (isset($event_details['zoom-link']) && $event_details['zoom-link'] != '')
@@ -803,14 +810,13 @@ $last_issued_date = '';
 if (isset($_GET['crtNr'])) {
     if ($certificate = $amdb->get_row("SELECT date_of_issue,reissued FROM `acms_halal_certificates` WHERE `crtNr` = $_GET[crtNr] ORDER BY reissued DESC, date_of_issue DESC LIMIT 1")) {
         $last_issued_date = ($certificate['reissued'] > $certificate['date_of_issue']) ? $certificate['reissued'] : $certificate['date_of_issue'];
-        $last_issued_date = date('Y-m-d', strtotime(date('Y-m-d', $last_issued_date) . ' -1 day'));
+        $last_issued_date = date('d/m/Y', strtotime(date('Y-m-d', $last_issued_date) . ' -1 day'));
         $event_details['time'] = date('H:00', strtotime('now -1 hour'));
     }
 }
 ?>
 
 <script>
-    jQuery(".ui-dialog .ui-dialog-buttonpane", window.parent.document).remove();
     jQuery("#page_title").html("<?php echo $isReschedule ? 'Reschedule' : 'Schedule'; ?> DMC Meeting");
 
     // Helper function to get the TinyMCE editor safely
@@ -830,12 +836,8 @@ if (isset($_GET['crtNr'])) {
             alert_message('Please select at least one Auditor');
             return false;
         }
-        if (jQuery("#signatories_involved_in_the_audit").val() == '') {
-            alert_message('Please answer the question:<br/>Were the signatories involved in the audit?');
-            return false;
-        }
-        if (jQuery("#signatories_involved_in_the_audit").val() == 'Yes') {
-            alert_message('Please select another Member not involved in the audit');
+        if (jQuery("input[name='hoc']").length > 0 && jQuery("input[name='hoc']:checked").length == 0) {
+            alert_message('Please select a Head of Committee (HOC) from the checked members');
             return false;
         }
         <?php if (!isset($_REQUEST['decid'])) { ?>
@@ -844,7 +846,7 @@ if (isset($_GET['crtNr'])) {
             return false;
         }
         <?php } ?>
-        return post_this_form(form);
+        return true;
     }
 
     function setZoomLink() {
@@ -868,7 +870,7 @@ if (isset($_GET['crtNr'])) {
         var value, className;
         
         if (dateTime == 'date') {
-            value = jQuery("#proposed_date").val().split('-').reverse().join('/');
+            value = jQuery("#proposed_date").val();
             className = 'proposed_date';
         } else if (dateTime == 'time') {
             value = jQuery("#proposed_time").val();
@@ -912,7 +914,7 @@ if (isset($_GET['crtNr'])) {
         jQuery(".member-list li").find(".hoc-label").remove();
         jQuery(".member-list li input[type='checkbox']:checked").each(function() {
             var checked = (hoc == jQuery(this).val()) ? 'checked' : '';
-            jQuery(this).closest('li').append('<label class="hoc-label"><input type="radio" name="hoc" value="' + jQuery(this).val() + '" data-required="yes" ' + checked + '/> HOC</label>');
+            jQuery(this).closest('li').append('<label class="hoc-label"><input type="radio" name="hoc" value="' + jQuery(this).val() + '" ' + checked + '/> HOC</label>');
         });
     }
     
@@ -1006,7 +1008,7 @@ if (isset($_GET['crtNr'])) {
     </div>
 </div>
 
-<form action="committee_email_save.php" method="post" name="committee_email" id="committee_email" onsubmit="return SendEmail(this)">
+<form action="committee_email_save.php" method="post" name="committee_email" id="committee_email">
     <input type="hidden" name="act" value="<?php echo $isReschedule ? 'reschedule_meeting' : 'send_email'; ?>" />
     <?php if (isset($_REQUEST['decid'])): ?>
         <input type="hidden" name="decid" value="<?php echo $_REQUEST['decid']; ?>" />
@@ -1168,10 +1170,13 @@ if (isset($_GET['crtNr'])) {
                     </div>
                     
                     <div class="meeting-details-card">
-                        <div class="meeting-field">
-                            <label>Date & Time</label>
-                            <div class="meeting-field-row">
-                                <input type="text" class="date date-input" name="event_details[date]" id="proposed_date" data-required="yes" onchange="changeTinymceContentDateTime('date');" value="<?php echo isset($event_details['date']) ? $event_details['date'] : $last_issued_date; ?>" placeholder="Select date">
+                        <div class="meeting-field-row">
+                            <div class="meeting-field" style="flex:1;">
+                                <label>Date</label>
+                                <input type="text" name="event_details[date]" id="proposed_date" data-required="yes" onchange="changeTinymceContentDateTime('date');" value="<?php echo isset($event_details['date']) ? $event_details['date'] : $last_issued_date; ?>" placeholder="dd/mm/yyyy">
+                            </div>
+                            <div class="meeting-field" style="width:120px;">
+                                <label>Time</label>
                                 <select name="event_details[time]" id="proposed_time" class="time-select" data-required="yes" onchange="changeTinymceContentDateTime('time');">
                                     <option value="">--:--</option>
                                     <?php for ($time_slot = 0; $time_slot <= 23; $time_slot++) {
@@ -1241,10 +1246,12 @@ if (isset($_GET['crtNr'])) {
                     <input type="checkbox" name="noEmail">
                     Don't send email
                 </label>
+                <!--
                 <label>
                     <input type="checkbox" name="createReport">
                     Create DMC report after save
                 </label>
+                -->
                 <label>
                     <input type="checkbox" name="sendTestEmail" onclick="showTestEmail(this)">
                     Send test email
@@ -1272,6 +1279,20 @@ if (isset($_GET['crtNr'])) {
 
 <script>
     jQuery(document).ready(function() {
+         jQuery.datepicker.setDefaults({
+            dateFormat: 'dd/mm/yy'
+        });
+        
+        // Force dd/mm/yy format on date picker
+        jQuery('#proposed_date').datepicker({
+            dateFormat: 'dd/mm/yy',
+            format: 'dd/mm/yyyy',
+            changeMonth: true,
+            changeYear: true,
+            onSelect: function() {
+                changeTinymceContentDateTime('date');
+            }
+        });
         
         setHOC(<?php echo isset($oldMeeting) && isset($oldMeeting['hoc']) ? $oldMeeting['hoc'] : '""'; ?>);
         
@@ -1284,25 +1305,109 @@ if (isset($_GET['crtNr'])) {
             updateEditorList(jQuery(this).attr('class'));
         });
         
-        // Wait for TinyMCE to initialize using its callback
+        // AJAX form submission
+        jQuery('#committee_email').on('submit', function(e) {
+            e.preventDefault();
+            
+            var form = jQuery(this);
+            
+            // Run validation
+            if (!SendEmail(this)) return false;
+            
+            // Sync TinyMCE content to textarea before submit
+            if (typeof tinyMCE !== 'undefined' && tinyMCE.get('tinymce_editor')) {
+                tinyMCE.get('tinymce_editor').save();
+            }
+            
+            // Validate required fields
+            var error = false;
+            var missingFields = [];
+            form.find('[data-required]').each(function() {
+                if (jQuery.trim(jQuery(this).val()) === '') {
+                    jQuery(this).css('background-color', '#fee');
+                    var fieldName = jQuery(this).closest('.meeting-field, .email-field, tr').find('label').first().text().trim();
+                    if (!fieldName) fieldName = jQuery(this).attr('name') || 'Unknown field';
+                    missingFields.push(fieldName);
+                    error = true;
+                } else {
+                    jQuery(this).css('background-color', '');
+                }
+            });
+            if (error) {
+                var msg = 'Please fill in the following required fields:<br/>' + missingFields.join('<br/>');
+                if (typeof alert_message === 'function')
+                    alert_message(msg);
+                else
+                    alert(msg.replace(/<br\/>/g, '\n'));
+                return false;
+            }
+            
+            var formData = new FormData(this);
+            var submitBtn = form.find('button[type="submit"]');
+            var originalBtnHtml = submitBtn.html();
+            submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Sending...');
+            
+            jQuery.ajax({
+                url: form.attr('action'),
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    var data = response.trim();
+                    if (data.indexOf('alert:') > -1) {
+                        if (typeof alert_message === 'function')
+                            alert_message(data.replace('alert:', ''));
+                        else
+                            alert(data.replace('alert:', ''));
+                    } else if (data.indexOf('reload:') > -1) {
+                        location.reload();
+                    } else if (data.indexOf('url:') > -1) {
+                        document.location = data.replace('url:', '');
+                    } else if (data.indexOf('topUrl:') > -1) {
+                        top.location = data.replace('topUrl:', '');
+                    } else if (data.indexOf('function:') > -1) {
+                        do_function(data.replace('function:', ''));
+                    } else {
+                        // Success - show confirmation and redirect
+                        if (typeof alert_message === 'function') {
+                            alert_message('Meeting scheduled successfully!');
+                            setTimeout(function() {
+                                document.location = '/iidc/committee/';
+                            }, 1500);
+                        } else {
+                            alert('Meeting scheduled successfully!');
+                            document.location = '/iidc/committee/';
+                        }
+                    }
+                },
+                error: function(xhr, status, err) {
+                    if (typeof alert_message === 'function')
+                        alert_message('Error: ' + err);
+                    else
+                        alert('Error: ' + err);
+                },
+                complete: function() {
+                    submitBtn.prop('disabled', false).html(originalBtnHtml);
+                }
+            });
+        });
+        
+        // Wait for TinyMCE editor to be ready, then init features
         if (typeof tinyMCE !== 'undefined') {
-            // Check if editor already exists
             var checkEditor = setInterval(function() {
                 var editor = tinyMCE.get('tinymce_editor');
                 if (editor) {
                     clearInterval(checkEditor);
-                    // Use TinyMCE's init event
                     editor.on('init', function() {
                         initEditorFeatures();
                     });
-                    // If already initialized
                     if (editor.initialized) {
                         initEditorFeatures();
                     }
                 }
             }, 100);
             
-            // Fallback timeout
             setTimeout(function() {
                 clearInterval(checkEditor);
                 initEditorFeatures();

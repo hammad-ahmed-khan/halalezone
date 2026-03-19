@@ -5,15 +5,6 @@ include_once 'config/config.php';
 include_once 'classes/users.php';
 include_once 'includes/func.php';
 
-// Check if user is logged in (optional - remove if FAQ should be public)
-/*
-$myuser = cuser::singleton();
-if (!$myuser->isLoggedIn()) {
-    header('Location: /login');
-    exit;
-}
-*/
-
 try {
     $db = acsessDb::singleton();
     $dbo = $db->connect();
@@ -22,6 +13,13 @@ try {
     header('Location: /error');
     exit;
 }
+
+// Get user data for permissions
+$myuser = cuser::singleton();
+$myuser->getUserData();
+$isAdmin = $myuser->userdata['isclient'] == "0";
+$isAuditor = $myuser->userdata['isclient'] == "2";
+$canAskQuestions = ($isAdmin || $isAuditor);
 ?>
 
 <!DOCTYPE html>
@@ -29,8 +27,6 @@ try {
 <head>
     <?php include_once('pages/header.php');
     include_once ('includes/func.php');?>
-    <link href="https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
-    <link href="https://cdn.datatables.net/responsive/2.2.8/css/responsive.bootstrap.min.css" rel="stylesheet" type="text/css" />
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.5.0/css/all.css" integrity="sha384-B4dIYHKNBt8Bc12p+WXckhzcICo0wtJAoU8YZTY5qE0Id1GSseTk6S+L3BlXeVIU" crossorigin="anonymous">
 
     <title>FAQ - Halal e-Zone</title>
@@ -223,6 +219,30 @@ try {
             margin-left: 5px;
         }
         
+        /* My Questions Section */
+        .my-questions-section {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #e0e0e0;
+        }
+        
+        .question-status {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-answered {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
         @media (max-width: 768px) {
             .faq-container {
                 margin: 10px;
@@ -243,8 +263,7 @@ try {
     <?php include_once('pages/navigation.php');?>
     
     <div class="main-container ace-save-state" id="main-container">
-        <?php include_once('pages/sidebar.php');?>
-        
+         
         <div class="main-content">
             <div class="main-content-inner">
                 <div class="page-content">
@@ -252,11 +271,22 @@ try {
                         <div class="faq-container">
                             <!-- FAQ Header -->
                             <div class="faq-header">
-                                <h1>
-                                    <i class="fa fa-question-circle text-primary"></i>
-                                    Frequently Asked Questions
-                                    <small>Find answers to common questions</small>
-                                </h1>
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h1>
+                                            <i class="fa fa-question-circle text-primary"></i>
+                                            Frequently Asked Questions
+                                            <small>Find answers to common questions</small>
+                                        </h1>
+                                    </div>
+                                    <?php if ($canAskQuestions): ?>
+                                    <div class="col-md-4" style="text-align: right; padding-top: 15px;">
+                                        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#askQuestionModal">
+                                            <i class="fa fa-question-circle"></i> Ask a Question
+                                        </button>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
                             </div>
 
                             <!-- Search Section -->
@@ -314,6 +344,17 @@ try {
                                 <p>We couldn't find any FAQs matching your search criteria.</p>
                                 <p>Try using different keywords or browse all categories.</p>
                             </div>
+                            
+                            <?php if ($canAskQuestions): ?>
+                            <!-- My Questions Section -->
+                            <div class="my-questions-section" id="myQuestionsSection" style="display: none;">
+                                <h3><i class="fa fa-user"></i> My Questions</h3>
+                                <p class="text-muted">Questions you've submitted</p>
+                                <div id="myQuestionsList">
+                                    <!-- User's questions will be loaded here -->
+                                </div>
+                            </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -321,11 +362,60 @@ try {
         </div>
     </div>
 
+    <?php if ($canAskQuestions): ?>
+    <!-- Ask Question Modal -->
+    <div class="modal fade" id="askQuestionModal" tabindex="-1" role="dialog" aria-labelledby="askQuestionModalLabel">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <h4 class="modal-title" id="askQuestionModalLabel">Ask a Question</h4>
+                </div>
+                <form id="askQuestionForm">
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <i class="fa fa-info-circle"></i>
+                            Submit your question, and our team will review it. You’ll receive an email notification once a response is available.
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="questionTitle" class="control-label">Question *</label>
+                            <textarea class="form-control" id="questionTitle" name="question" rows="3" required 
+                                    placeholder="Enter your question clearly and concisely"></textarea>
+                            <p class="help-block">Be as specific as possible to help us provide a better answer</p>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="questionCategory" class="control-label">Category</label>
+                            <select class="form-control" id="questionCategory" name="category_id">
+                                <option value="">Select a category (optional)</option>
+                                <!-- Categories will be loaded dynamically -->
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="questionContext" class="control-label">Additional Context</label>
+                            <textarea class="form-control" id="questionContext" name="context" rows="2" 
+                                    placeholder="Provide any additional context that might help us answer your question"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa fa-paper-plane"></i> Submit Question
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <?php include_once('pages/footer.php');?>
 
     <!-- Scripts -->
-    <script src="js/jquery-2.1.4.min.js"></script>
-    <script src="js/bootstrap.min.js"></script>
     <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/jquery.blockUI/2.70/jquery.blockUI.js?ver=1285677791'></script>
 
     <script>
@@ -341,6 +431,9 @@ try {
             function init() {
                 loadCategories();
                 loadFAQs();
+                <?php if ($canAskQuestions): ?>
+                loadMyQuestions();
+                <?php endif; ?>
                 bindEvents();
             }
 
@@ -406,6 +499,20 @@ try {
                         trackFAQView(faqId);
                     }
                 });
+
+                <?php if ($canAskQuestions): ?>
+                // Ask question form submission
+                $('#askQuestionForm').on('submit', function(e) {
+                    e.preventDefault();
+                    submitQuestion();
+                });
+
+                // Reset form when modal is closed
+                $('#askQuestionModal').on('hidden.bs.modal', function() {
+                    $('#askQuestionForm')[0].reset();
+                    $('.alert-danger').remove();
+                });
+                <?php endif; ?>
             }
 
             // Load categories from server
@@ -418,6 +525,9 @@ try {
                     success: function(response) {
                         if (response.success && response.data) {
                             renderCategories(response.data);
+                            <?php if ($canAskQuestions): ?>
+                            populateCategoryDropdown(response.data);
+                            <?php endif; ?>
                         }
                     },
                     error: function() {
@@ -450,6 +560,86 @@ try {
 
                 $('#categoryTabs').html(categoryHtml);
             }
+
+            <?php if ($canAskQuestions): ?>
+            // Populate category dropdown in ask question modal
+            function populateCategoryDropdown(categories) {
+                const $select = $('#questionCategory');
+                $select.find('option:not(:first)').remove();
+                
+                categories.forEach(function(category) {
+                    $select.append(`<option value="${category.id}">${category.name}</option>`);
+                });
+            }
+
+            // Submit question
+            function submitQuestion() {
+                const formData = $('#askQuestionForm').serialize();
+                
+                $.post('ajax/faqPublic.php', formData + '&action=submit_question')
+                    .done(function(response) {
+                        if (response.success) {
+                            $('#askQuestionModal').modal('hide');
+                            showAlert('Your question has been submitted successfully. You will be notified by email when it is answered.', 'success');
+                            loadMyQuestions(); // Reload user's questions
+                        } else {
+                            showAlert(response.message || 'Error submitting question', 'danger');
+                        }
+                    })
+                    .fail(function() {
+                        showAlert('Error submitting question. Please try again.', 'danger');
+                    });
+            }
+
+            // Load user's questions
+            function loadMyQuestions() {
+                $.get('ajax/faqPublic.php?action=get_my_questions')
+                    .done(function(response) {
+                        if (response.success && response.data && response.data.length > 0) {
+                            $('#myQuestionsSection').show();
+                            renderMyQuestions(response.data);
+                        }
+                    });
+            }
+
+            // Render user's questions
+            function renderMyQuestions(questions) {
+                let html = '';
+                questions.forEach(function(question) {
+                    const statusClass = question.status === 'answered' ? 'status-answered' : 'status-pending';
+                    const statusText = question.status === 'answered' ? 'Answered' : 'Pending';
+                    
+                    html += `
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h4 class="panel-title">${question.question}</h4>
+                                        <div style="margin-top: 8px;">
+                                            <span class="question-status ${statusClass}">${statusText}</span>
+                                            <small class="text-muted" style="margin-left: 10px;">
+                                                Asked on ${new Date(question.created_at).toLocaleDateString()}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            ${question.status === 'answered' && question.answer ? `
+                                <div class="panel-body">
+                                    <strong>Answer:</strong><br>
+                                    <p>${question.answer}</p>
+                                    <small class="text-muted">
+                                        Answered on ${new Date(question.updated_at).toLocaleDateString()}
+                                    </small>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                
+                $('#myQuestionsList').html(html);
+            }
+            <?php endif; ?>
 
             // Load FAQs from server with current filters
             function loadFAQs() {
@@ -609,6 +799,31 @@ try {
                     },
                     dataType: 'json'
                 });
+            }
+
+            // Show alert messages
+            function showAlert(message, type) {
+                const alertHtml = `
+                    <div class="alert alert-${type} alert-dismissible" role="alert">
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                        ${message}
+                    </div>
+                `;
+                
+                // Remove existing alerts
+                $('.alert').remove();
+                
+                // Add new alert at the top of the container
+                $('.faq-container').prepend(alertHtml);
+                
+                // Auto-hide success alerts after 5 seconds
+                if (type === 'success') {
+                    setTimeout(() => {
+                        $('.alert-success').fadeOut();
+                    }, 5000);
+                }
             }
         });
     </script>

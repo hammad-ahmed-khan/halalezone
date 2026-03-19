@@ -4,7 +4,16 @@
 <head>
     <?php include_once('pages/header.php');
     include_once ('includes/func.php');?>
-    <title>QM Documents - Halal e-Zone</title>
+    <title>QM Documents - Halal Digital</title>
+    <style>
+        .fileinput-button.highlight {
+  border: 1px solid #2196f3; /* Thicker and solid */
+  box-shadow: 0 0 15px rgba(33, 150, 243, 0.7); /* Blue glow */
+  background-color: #e3f2fd; /* Light blue bg */
+  z-index: 10;
+}
+
+    </style>
 </head>
 
 <body>
@@ -15,6 +24,9 @@
             <div class="page-content">
                 <div class="row no-gutters">
                     <div class="col-xs-12">
+                    <div class="widget-box widget-border" style="margin-bottom:15px;">
+                        <div class="widget-body">
+                            <div class="widget-main">
                         <?php 
                         $db = acsessDb :: singleton();
                         $dbo =  $db->connect(); // Создаем объект подключения к БД
@@ -25,16 +37,23 @@
                         $parent_id = $myuser->userdata['id'];
                         $isClient = $myuser->userdata['isclient'] == "1" ? true : false;
                         $isAuditor = $myuser->userdata['isclient'] == '2' ? true : false;
-                        $isAdmin = !$isclient && !isAuditor;
+                        $isOdAuditor = $isAuditor && $myuser->userdata['is_od_auditor'] == '1';
+                        $isAdmin = !$isClient && !$isAuditor;
                         $hasFacilities = false;
 
                         if ($isAuditor) { // Auditor
-                            $ids = [-1];
-                            $clients_audit = $myuser->userdata['clients_audit'];
-                            if ($clients_audit != "") {
-                              $ids = json_decode($clients_audit);
+                            if ($isOdAuditor) {
+                                // OD Auditor sees all clients like an admin
+                                $sql = "SELECT id, name, prefix FROM tusers WHERE isclient=1 AND IFNULL(parent_id,'0') = '0' AND deleted = 0 ORDER BY name";
+                            } else {
+                                // Regular Auditor sees only assigned clients
+                                $ids = [-1];
+                                $clients_audit = $myuser->userdata['clients_audit'];
+                                if ($clients_audit != "") {
+                                    $ids = json_decode($clients_audit);
+                                }
+                                $sql = "SELECT id, name, prefix FROM tusers WHERE isclient=1 AND deleted = 0 AND id IN (".implode(",", $ids).") ORDER BY name";
                             }
-                               $sql = "SELECT id, name, prefix FROM tusers WHERE isclient=1 AND deleted = 0 AND id IN (".implode(",", $ids).") ORDER BY name";
                           }
                           else if ($isClient) {
                             // Get facilities
@@ -109,11 +128,15 @@
                         </div>
                         </div>
                         <?php endif;?> 
+                        </div>
+                        </div>
+                        </div>
                     </div>
 
-                    <div class="row gutters" >
-                        <div class="col-md-12">
-                        <div style="display:flex; align-items:center; justify-content:space-between; width:100%; padding:20px 20px 0">
+                         <div class="col-xs-12">
+                        
+
+                        <div style="display:flex; align-items:center; justify-content:space-between; width:100%; ">
                     
                     <span class="alert alert-warning">The page displays only QM documents uploaded in the <strong>current year</strong>. To view documents uploaded in previous years, please click the toggle button on the right.</span>
 
@@ -123,7 +146,7 @@
                     </label>                    
                             </div>
                             </div>
-                </div>
+               
                     <div class="col-xs-12">
                         <!-- PAGE CONTENT BEGINS -->
                         <table id="qmGrid"></table>
@@ -321,6 +344,25 @@
     var userId = <?php echo $_SESSION['halal']['id'] ?>;
     Common.onDocumentReady();
     QP.onDocumentReady();
+
+    $(document).ready(function() {
+        $('.fileinput-button').each(function () {
+            const $zone = $(this);
+
+            $zone.on('dragenter dragover', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $('.dropzone').removeClass('highlight'); // remove highlight from others
+                $zone.addClass('highlight');
+            });
+
+            $zone.on('dragleave drop', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $zone.removeClass('highlight');
+            });
+        });
+    })
 </script>
 
 </body>

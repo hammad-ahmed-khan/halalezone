@@ -19,7 +19,7 @@ try {
     $totalRows = $rows->fetch(PDO::FETCH_ASSOC)["count"];          
 
     $sql = 'SELECT i.created_by,  i.idingredient AS id,  i.rmcode, i.rmcode, i.name, i.tasks, i.conf, i.sub, i.supplier, i.producer, 
-				   i.material, i.cert, i.halalcert, i.cb, i.halalexp, i.rmposition, i.ingredients, i.spec, i.quest, i.statement, i.note, i.addoc, i.note, 
+				   i.material, i.cert, i.halalcert, i.cb, i.halalexp, i.rmposition, i.ingredients, i.spec, i.quest, i.statement, i.stmt_exp_date, i.note, i.addoc, i.note, 
 				   status, DATE_FORMAT(i.created_at, "%d/%m/%Y %H:%i") as created_at_formated, i.created_at, i.deleted 
 				   from tingredients_log i 
 				   WHERE i.idingredient = '.$idingredient.'  ORDER BY id DESC LIMIT '.$pageNumber.' ,'.$pageSize;

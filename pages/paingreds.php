@@ -6,7 +6,7 @@
     <link href="https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
     <link href="https://cdn.datatables.net/responsive/2.2.8/css/responsive.bootstrap.min.css" rel="stylesheet" type="text/css" />
     <link rel='stylesheet' id='fileup-css'  href='https://cdn.rawgit.com/shabuninil/fileup/master/src/fileup.min.css?ver=6.0.1' type='text/css' media='all' />    
-    <title>Pre-Approved Ingredients - Halal e-Zone</title>
+    <title>Pre-Approved Ingredients - Halal Digital</title>
     <style>
         .blockUI h1 {
     font-size: 18px;

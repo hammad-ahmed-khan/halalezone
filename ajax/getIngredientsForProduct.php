@@ -38,11 +38,10 @@ try {
 			}
 
 			$filter .= ' AND (' . implode(' OR ', $conditions) . ')';
-		} 
+		}  
 	}
 
-
-	$sql = 'SELECT COUNT(id) AS count FROM tingredients i '.
+	$sql = 'SELECT COUNT(i.id) AS count FROM tingredients i '.
 			' left join tp2i on (i.id=tp2i.idi) '.
 			' WHERE tp2i.idp = '.$idproduct . $filter;
 	$rows = $dbo->prepare($sql);

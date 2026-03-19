@@ -18,13 +18,91 @@
         tr.highlighted-conformed .fa-flag {
             display: none !important;
         }
+        .mandatory-field::after {
+            content: " *";
+            color: red;
+            font-weight: bold;
+        }
+        .mandatory-field {
+            font-weight: bold;
+        }
+        .form-note {
+            font-size: 11px;
+            color: #666;
+            font-style: italic;
+            margin-top: 15px;
+        }
+        /* Toggle switch styles */
+        .paid-toggle {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+            cursor: pointer;
+        }
+        .paid-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .paid-toggle .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #d9534f;
+            transition: .3s;
+            border-radius: 24px;
+        }
+        .paid-toggle .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        .paid-toggle input:checked + .slider {
+            background-color: #5cb85c;
+        }
+        .paid-toggle input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        .paid-toggle .toggle-label {
+            position: absolute;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+            top: 5px;
+        }
+        .paid-toggle .toggle-label.yes {
+            left: 6px;
+            display: none;
+        }
+        .paid-toggle .toggle-label.no {
+            right: 6px;
+        }
+        .paid-toggle input:checked + .slider .toggle-label.yes {
+            display: block;
+        }
+        .paid-toggle input:checked + .slider .toggle-label.no {
+            display: none;
+        }
+        #service-type-other-container {
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
 <?php include_once('pages/navigation.php');
 try {
     $db = acsessDb :: singleton();
-    $dbo =  $db->connect(); // Create database connection object
+    $dbo =  $db->connect();
 }
 catch (PDOException $e) {
     echo 'Database error: '.$e->getMessage();
@@ -72,8 +150,6 @@ $isClient = $myuser->userdata['isclient'] == "1";
                             <div class="pull-right tableTools-container"></div>
                         </div>
                     
-                        <!-- div.table-responsive -->
-                        <!-- div.dataTables_borderWrap -->
                         <div>
                             <table id="activityGrid"></table>
                         </div>
@@ -84,7 +160,6 @@ $isClient = $myuser->userdata['isclient'] == "1";
     </div>
 </div>
 
-<!-- Activity Modal -->
 <div class="modal fade" id="activityModal" tabindex="-1" role="dialog" data-backdrop="static" aria-labelledby="activityModal-label">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
@@ -96,35 +171,69 @@ $isClient = $myuser->userdata['isclient'] == "1";
                 <form id="activity-form" class="form-horizontal">
                     <input type="hidden" id="activity-id" value="" />
                     <div class="row form-group">
-                        <label class="col-xs-12 col-md-4">Company Name</label>
+                        <label class="col-xs-12 col-md-4 mandatory-field">Company Name</label>
                         <div class='col-xs-12 col-md-8'>
                             <input type="text" class="form-control" id="company-name"/>
+                            <span class="form-warning"></span>
                         </div>
                     </div>
                     <div class="row form-group">
-                        <label class="col-xs-12 col-md-4">Date of Service</label>
+                        <label class="col-xs-12 col-md-4 mandatory-field">Date of Service</label>
                         <div class='col-xs-12 col-md-8'>
                             <input type="text" class="form-control datepicker" id="service-date"/>
+                            <span class="form-warning"></span>
                         </div>
                     </div>
                     <div class="row form-group">
-                        <label class="col-xs-12 col-md-4">Service Type</label>
+                        <label class="col-xs-12 col-md-4 mandatory-field">Service Type</label>
                         <div class='col-xs-12 col-md-8'>
                             <select class="form-control" id="service-type">
+                                <option value="">-- Select Service Type --</option>
                                 <option value="On-Site Audit">On-Site Audit</option>
                                 <option value="Remote Audit">Remote Audit</option>
                                 <option value="In-House Training">In-House Training</option>
                                 <option value="Online Training">Online Training</option>
+                                <option value="Others">Others</option>
+                            </select>
+                            <span class="form-warning"></span>
+                            <div id="service-type-other-container" style="display: none;">
+                                <input type="text" class="form-control" id="service-type-other" placeholder="Please specify service type"/>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row form-group">
+                        <label class="col-xs-12 col-md-4 mandatory-field">Auditor Type</label>
+                        <div class='col-xs-12 col-md-8'>
+                            <select class="form-control" id="auditor-type">
+                                <option value="">-- Select Auditor Type --</option>
+                                <option value="External">External</option>
+                                <option value="Internal">Internal</option>
+                            </select>
+                            <span class="form-warning"></span>
+                        </div>
+                    </div>
+                    <div class="row form-group">
+                        <label class="col-xs-12 col-md-4">Standards</label>
+                        <div class='col-xs-12 col-md-8'>
+                            <input type="text" class="form-control" id="standards"/>
+                        </div>
+                    </div>
+                    <div class="row form-group">
+                        <label class="col-xs-12 col-md-4">Audit Type</label>
+                        <div class='col-xs-12 col-md-8'>
+                            <select class="form-control" id="audit-type">
+                                <option value="">-- Select Audit Type --</option>
+                                <option value="Initial Audit">Initial Audit</option>
+                                <option value="Control Audit I">Control Audit I</option>
+                                <option value="Control Audit II">Control Audit II</option>
+                                <option value="Re-Certification">Re-Certification</option>
                             </select>
                         </div>
                     </div>
                     <div class="row form-group">
-                        <label class="col-xs-12 col-md-4">Auditor Type</label>
+                        <label class="col-xs-12 col-md-4">Audit Category</label>
                         <div class='col-xs-12 col-md-8'>
-                            <select class="form-control" id="auditor-type">
-                                <option value="External">External</option>
-                                <option value="Internal">Internal</option>
-                            </select>
+                            <input type="text" class="form-control" id="audit-category"/>
                         </div>
                     </div>
                     <div class="row form-group inbound-fields">
@@ -176,16 +285,26 @@ $isClient = $myuser->userdata['isclient'] == "1";
                         </div>
                     </div>
                     <div class="row form-group">
-                        <label class="col-xs-12 col-md-4">Invoice Number (Outbound)</label>
+                        <label class="col-xs-12 col-md-4 admin-only-">Invoice Number (Outbound)</label>
                         <div class='col-xs-12 col-md-8'>
                             <input type="text" class="form-control" id="invoice-number-outbound"/>
                         </div>
                     </div>
                     <div class="row form-group">
-                        <label class="col-xs-12 col-md-4">Paid</label>
+                        <label class="col-xs-12 col-md-4 admin-only">Paid</label>
                         <div class='col-xs-12 col-md-8'>
                             <select class="form-control" id="paid-status">
-                                <option value="">Select</option>
+                                <option value="">-- Select Status --</option>
+                                <option value="Yes">Yes</option>
+                                <option value="No">No</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row form-group">
+                        <label class="col-xs-12 col-md-4">Issuing Invoice</label>
+                        <div class='col-xs-12 col-md-8'>
+                            <select class="form-control" id="issuing-invoice-status">
+                                <option value="">-- Select Status --</option>
                                 <option value="Yes">Yes</option>
                                 <option value="No">No</option>
                             </select>
@@ -239,6 +358,11 @@ $isClient = $myuser->userdata['isclient'] == "1";
                             <ul id="ulattendance_certificates"></ul>
                         </div>
                     </div>
+                    <div class="row">
+                        <div class="col-xs-12">
+                            <p class="form-note">* Indicates mandatory field</p>
+                        </div>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
@@ -253,11 +377,9 @@ $isClient = $myuser->userdata['isclient'] == "1";
 </div>
 
 <?php include_once('pages/footer.php');?>
-<!-- page specific plugin scripts -->
 <script src="js/bootstrap-datepicker.min.js"></script>
 <script src="js/jquery.jqGrid.min.js"></script>
 <script src="js/grid.locale-en.js"></script>
-<!-- ace scripts -->
 <script src="js/ace-elements.min.js"></script>
 <script src="js/ace.min.js"></script>
 <script src="js/select2.full.min.js"></script>
@@ -271,7 +393,6 @@ $isClient = $myuser->userdata['isclient'] == "1";
 
 <script>
   $(document).ready(function() {
-    // Function to toggle inbound fields based on auditor type
     function toggleInboundFields() {
         var auditorType = $('#auditor-type').val();
         if (auditorType === 'Internal') {
@@ -281,15 +402,32 @@ $isClient = $myuser->userdata['isclient'] == "1";
         }
     }
     
-    // Initial toggle
-    toggleInboundFields();
+    function toggleServiceTypeOther() {
+        var serviceType = $('#service-type').val();
+        if (serviceType === 'Others') {
+            $('#service-type-other-container').show();
+            $('#service-type-other').attr('required', true);
+        } else {
+            $('#service-type-other-container').hide();
+            $('#service-type-other').attr('required', false).val('');
+        }
+    }
     
-    // Bind change event
-    $('#auditor-type').change(toggleInboundFields);
+    toggleInboundFields();
+    toggleServiceTypeOther();
+    
+    $('#auditor-type').change(function() {
+        toggleInboundFields();
+        TP.clearAlerts();
+    });
+    
+    $('#service-type').change(function() {
+        toggleServiceTypeOther();
+        TP.clearAlerts();
+    });
 });
 
-
-    var userId = <?php echo $_SESSION['halal']['id'] ?>;
+var userId = <?php echo $_SESSION['halal']['id'] ?>;
     Common.onDocumentReady();
     
     $(document).ready(function() {
@@ -357,7 +495,6 @@ var TP = {
       jQuery("#activityGrid").jqGrid().trigger("reloadGrid");
     });
 
- // Initialize file uploaders for activity documents
 initFileUploader({
   fileUploadSelector: "#activity-form .fileupload",
   dropzoneSelector: "#activity-form .dropzone",
@@ -375,7 +512,6 @@ initFileUploader({
     fileValidator: function (e, data) {
     const uploadFile = data.files[0];
 
-    // Acceptable formats: PDF, DOC, DOCX, XLS, XLSX, PNG, JPG, JPEG
     if (!/\.(pdf|doc|docx|xls|xlsx|png|jpe?g)$/i.test(uploadFile.name)) {
         return "You can upload files in PDF, Word, Excel, or image formats (PNG, JPG)";
     }
@@ -393,7 +529,6 @@ initFileUploader({
  
  
 
-    // Initialize the activity grid
     TP.initGrid();
   },
 
@@ -407,18 +542,39 @@ initFileUploader({
         mtype: "POST",
         width: $("#activityGrid").parent().width(),
         height: h,
+        postData: {
+          // These functions read filter toolbar input values on each request
+          name: function() { return $("input[name='name']").val() || ""; },
+          company_name: function() { return $("input[name='company_name']").val() || ""; },
+          date_of_service: function() { return $("input[name='date_of_service']").val() || ""; },
+          service_type: function() { return $("input[name='service_type']").val() || ""; },
+          auditor_type: function() { return $("input[name='auditor_type']").val() || ""; },
+          standards: function() { return $("input[name='standards']").val() || ""; },
+          audit_type: function() { return $("input[name='audit_type']").val() || ""; },
+          audit_category: function() { return $("input[name='audit_category']").val() || ""; },
+          invoice_number_inbound: function() { return $("input[name='invoice_number_inbound']").val() || ""; },
+          invoice_date_inbound: function() { return $("input[name='invoice_date_inbound']").val() || ""; },
+          travel_expenses: function() { return $("input[name='travel_expenses']").val() || ""; },
+          paid_on: function() { return $("input[name='paid_on']").val() || ""; },
+          invoice_number_outbound: function() { return $("input[name='invoice_number_outbound']").val() || ""; },
+          paid: function() { return $("select[name='paid']").val() || ""; },
+          issuing_invoice: function() { return $("select[name='issuing_invoice']").val() || ""; }
+        },
         colModel: [
           { name: "id", label: "ID", width: 50, key: true, hidden: true },
           
-          { name: "idauditor", label: "Auditor ID", width: 50,  hidden: true },
-          { name: "name", label: "Auditor", width: 155, frozen: true <?php if ($isAuditor): ?>, hidden: true<?php endif; ?> },
+          { name: "idauditor", label: "Auditor ID", width: 50, hidden: true },
+          { name: "name", label: "Auditor", width: 155 <?php if ($isAuditor): ?>, hidden: true<?php endif; ?> },
           
-          { name: "company_name", label: "Company Name", width: 155, frozen: true },
-          { name: "date_of_service", label: "Date of Service", width: 105, formatter: "date", formatoptions: { srcformat: "ISO8601Long", newformat: "j M Y" }, frozen: true },
-          { name: "service_type", label: "Service Type", width: 105, frozen: true },
+          { name: "company_name", label: "Company Name", width: 155 },
+          { name: "date_of_service", label: "Date of Service", width: 105, formatter: "date", formatoptions: { srcformat: "ISO8601Long", newformat: "j M Y" } },
+          { name: "service_type", label: "Service Type", width: 105 },
           { name: "auditor_type", label: "Auditor Type", width: 100 },
+          { name: "standards", label: "Standards", width: 120 },
+          { name: "audit_type", label: "Audit Type", width: 120 },
+          { name: "audit_category", label: "Audit Category", width: 120 },
           { name: "invoice_number_inbound", label: "Invoice No. (Inbound)", width: 125 },
-          { name: "invoice_date_inbound", label: "Invoice Date (Inbound)", width: 105, formatter: "date", formatoptions: { srcformat: "ISO8601Long", newformat: "j M Y" }, },
+          { name: "invoice_date_inbound", label: "Invoice Date (Inbound)", width: 105, formatter: "date", formatoptions: { srcformat: "ISO8601Long", newformat: "j M Y" } },
           { 
               name: "invoice_inbound", 
               index: "invoice_inbound", 
@@ -438,19 +594,49 @@ initFileUploader({
               unformat: unformatDoclink,
               search: false
           },
-          { name: "paid_on", label: "Paid On", width: 105, formatter: "date", formatoptions: { srcformat: "ISO8601Long", newformat: "j M Y" }, },
+          { name: "paid_on", label: "Paid On", width: 105, formatter: "date", formatoptions: { srcformat: "ISO8601Long", newformat: "j M Y" } },
           { name: "invoice_number_outbound", label: "Invoice No. (Outbound)", width: 125 },
           { 
             name: "paid", 
             label: "Paid", 
-            width: 100,
-            formatter: function(cellvalue) {
-              return cellvalue == 'Yes' ? 
-                '<span class="label label-success">Yes</span>' : 
-                '<span class="label label-danger">No</span>';
+            width: 80,
+            align: "center",
+            formatter: function(cellvalue, options, rowObject) {
+              var isChecked = cellvalue == 'Yes' ? 'checked' : '';
+              var rowId = options.rowId;
+              return '<label class="paid-toggle" title="Click to toggle">' +
+                     '<input type="checkbox" ' + isChecked + ' onchange="TP.togglePaidStatus(\'' + rowId + '\', this.checked)">' +
+                     '<span class="slider">' +
+                     '<span class="toggle-label yes">Yes</span>' +
+                     '<span class="toggle-label no">No</span>' +
+                     '</span></label>';
+            },
+            unformat: function(cellvalue, options, cell) {
+              return $(cell).find('input').is(':checked') ? 'Yes' : 'No';
             },
             stype: "select",
-            searchoptions: { value: ":[All];Yes:Yes;No:No" }
+            searchoptions: { value: ":All;Yes:Yes;No:No" }
+          },
+          { 
+            name: "issuing_invoice", 
+            label: "Issuing Invoice", 
+            width: 100,
+            align: "center",
+            formatter: function(cellvalue, options, rowObject) {
+              var isChecked = cellvalue == 'Yes' ? 'checked' : '';
+              var rowId = options.rowId;
+              return '<label class="paid-toggle" title="Click to toggle">' +
+                     '<input type="checkbox" ' + isChecked + ' onchange="TP.toggleIssuingInvoiceStatus(\'' + rowId + '\', this.checked)">' +
+                     '<span class="slider">' +
+                     '<span class="toggle-label yes">Yes</span>' +
+                     '<span class="toggle-label no">No</span>' +
+                     '</span></label>';
+            },
+            unformat: function(cellvalue, options, cell) {
+              return $(cell).find('input').is(':checked') ? 'Yes' : 'No';
+            },
+            stype: "select",
+            searchoptions: { value: ":All;Yes:Yes;No:No" }
           },
           { 
             name: "training_request_form", 
@@ -503,7 +689,6 @@ initFileUploader({
         multiselect: true,
         loadComplete: function() {
           Common.updatePagerIcons(this);
-          // Initialize file upload areas for document columns
           document.querySelectorAll(".upload-area").forEach((area) => {
             area.addEventListener("dragover", handleDragOver);
             area.addEventListener("dragleave", handleDragLeave);
@@ -511,7 +696,6 @@ initFileUploader({
           });
         },
         gridComplete: function() {
-          // Initialize file uploaders for document columns
           initFileUploader({
             fileUploadSelector: "#gbox_activityGrid .fileupload",
             dropzoneSelector: "#gbox_activityGrid .dropzone",
@@ -528,7 +712,6 @@ initFileUploader({
             fileValidator: function (e, data) {
                 const uploadFile = data.files[0];
 
-                // Acceptable formats: PDF, DOC, DOCX, XLS, XLSX, PNG, JPG, JPEG
                 if (!/\.(pdf|doc|docx|xls|xlsx|png|jpe?g)$/i.test(uploadFile.name)) {
                     return "You can upload files in PDF, Word, Excel, or image formats (PNG, JPG)";
                 }           
@@ -580,7 +763,6 @@ initFileUploader({
             }
           });
         },
- // Ingredient row color
         rowattr: function (rd) {
           console.log("DELETED:" + rd.deleted);
            var rowclass = "";
@@ -610,12 +792,10 @@ initFileUploader({
         },
       });
 
-      $("#activityGrid").jqGrid("filterToolbar", { 
-        searchOperators: true,
-        enableClear: false 
-      });
+      // Initialize filterToolbar - same as working page
+      $("#activityGrid").jqGrid("filterToolbar", { enableClear: false });
 
- $("#activityGrid").navButtonAdd("#activityGrid_toppager", {
+      $("#activityGrid").navButtonAdd("#activityGrid_toppager", {
         caption: "",
         title: "Toggle displaying removed records mode",
         buttonicon: "ace-icon fa fa-adjust gridmode-toggle",
@@ -624,34 +804,84 @@ initFileUploader({
         },
       });
 
-     
-     
-      /*
-      $("#activityGrid").navButtonAdd("#activityPager", {
-        caption: "",
-        title: "Export to Excel",
-        buttonicon: "ace-icon fa fa-file-excel-o",
-        onClickButton: function() {
-          TP.onExportGridToExcel();
-        }
-      });
-
-      $("#activityGrid").navButtonAdd("#activityGrid_toppager", {
-        caption: "",
-        title: "Export to Excel",
-        buttonicon: "ace-icon fa fa-file-excel-o",
-        onClickButton: function() {
-          TP.onExportGridToExcel();
-        }
-      });
-      */
-
-      $("#activityGrid").jqGrid("setFrozenColumns");
       resolve("grid initialized");
     });
   },
+  
+  // Filter grid function - similar to working page
+  filterGrid: function () {
+    new Promise(function (resolve) {
+      $("#activityGrid").jqGrid("setGridParam", { search: true });
+      resolve("params done");
+    }).then(function (res) {
+      jQuery("#activityGrid").jqGrid().trigger("reloadGrid");
+    });
+  },
 
-  // Document link formatters
+  togglePaidStatus: function(rowId, isChecked) {
+    var newStatus = isChecked ? 'Yes' : 'No';
+    
+    $.ajax({
+      url: "ajax/ajaxHandler.php",
+      type: "POST",
+      data: {
+        rtype: "updatePaidStatus",
+        id: rowId,
+        paid: newStatus
+      },
+      dataType: "json",
+      beforeSend: function() {
+        // Optional: show loading indicator
+      },
+      success: function(response) {
+        if (response.status == 0) {
+          Utils.notify("error", response.statusDescription);
+          // Revert the toggle if there was an error
+          $("#activityGrid").jqGrid().trigger("reloadGrid");
+          return;
+        }
+        Utils.notify("success", "Paid status updated to " + newStatus);
+      },
+      error: function(xhr, status, error) {
+        Utils.notify("error", "Error updating paid status: " + error);
+        // Revert the toggle on error
+        $("#activityGrid").jqGrid().trigger("reloadGrid");
+      }
+    });
+  },
+
+  toggleIssuingInvoiceStatus: function(rowId, isChecked) {
+    var newStatus = isChecked ? 'Yes' : 'No';
+    
+    $.ajax({
+      url: "ajax/ajaxHandler.php",
+      type: "POST",
+      data: {
+        rtype: "updateIssuingInvoiceStatus",
+        id: rowId,
+        issuing_invoice: newStatus
+      },
+      dataType: "json",
+      beforeSend: function() {
+        // Optional: show loading indicator
+      },
+      success: function(response) {
+        if (response.status == 0) {
+          Utils.notify("error", response.statusDescription);
+          // Revert the toggle if there was an error
+          $("#activityGrid").jqGrid().trigger("reloadGrid");
+          return;
+        }
+        Utils.notify("success", "Issuing Invoice status updated to " + newStatus);
+      },
+      error: function(xhr, status, error) {
+        Utils.notify("error", "Error updating issuing invoice status: " + error);
+        // Revert the toggle on error
+        $("#activityGrid").jqGrid().trigger("reloadGrid");
+      }
+    });
+  },
+
   formatDoclink: function(cellvalue, options, rowObject) {
 
     if (!cellvalue) return "";
@@ -681,11 +911,19 @@ clearForm: function() {
     $("#ulattendance_list").empty();
     $("#ulcustomer_feedback_form").empty();
     $("#ulattendance_certificates").empty();
-    $("#ulinvoice_inbound").empty(); // Added this line
-    $("#ultravel_invoices").empty(); // Added this line
+    $("#ulinvoice_inbound").empty();
+    $("#ultravel_invoices").empty();
     $("#activity-form input").val("");
     $("#activity-form .ace-switch").prop("checked", false);
-    $("#activity-form select").val(null).trigger("change");
+    $("#activity-form #service-type").val("").trigger("change");
+    $("#activity-form #auditor-type").val("").trigger("change");
+    $("#activity-form #paid-status").val("").trigger("change");
+    $("#activity-form #issuing-invoice-status").val("").trigger("change");
+    $("#activity-form #audit-type").val("").trigger("change");
+    $("#activity-form #standards").val("");
+    $("#activity-form #audit-category").val("");
+    $("#activity-form #service-type-other").val("");
+    $("#service-type-other-container").hide();
     $("#activityModal .form-warning").hide();
 },
 
@@ -773,19 +1011,51 @@ editActivity: function() {
         )
     );
 
-    $("#activity-form #service-type").val(
-        jQuery("#activityGrid").jqGrid(
-            "getCell",
-            jQuery("#activityGrid").jqGrid("getGridParam", "selrow"),
-            "service_type"
-        )
+    var serviceTypeValue = jQuery("#activityGrid").jqGrid(
+        "getCell",
+        jQuery("#activityGrid").jqGrid("getGridParam", "selrow"),
+        "service_type"
     );
+    
+    // Check if it's a predefined service type or "Others"
+    var predefinedTypes = ["On-Site Audit", "Remote Audit", "In-House Training", "Online Training"];
+    if (predefinedTypes.indexOf(serviceTypeValue) === -1 && serviceTypeValue !== "") {
+        // It's a custom "Others" value
+        $("#activity-form #service-type").val("Others").trigger("change");
+        $("#activity-form #service-type-other").val(serviceTypeValue);
+    } else {
+        $("#activity-form #service-type").val(serviceTypeValue);
+    }
 
-    $("#activity-form #auditor-type").val( // Added this block
+    $("#activity-form #auditor-type").val(
         jQuery("#activityGrid").jqGrid(
             "getCell",
             jQuery("#activityGrid").jqGrid("getGridParam", "selrow"),
             "auditor_type"
+        )
+    );
+
+    $("#activity-form #standards").val(
+        jQuery("#activityGrid").jqGrid(
+            "getCell",
+            jQuery("#activityGrid").jqGrid("getGridParam", "selrow"),
+            "standards"
+        )
+    );
+
+    $("#activity-form #audit-type").val(
+        jQuery("#activityGrid").jqGrid(
+            "getCell",
+            jQuery("#activityGrid").jqGrid("getGridParam", "selrow"),
+            "audit_type"
+        )
+    );
+
+    $("#activity-form #audit-category").val(
+        jQuery("#activityGrid").jqGrid(
+            "getCell",
+            jQuery("#activityGrid").jqGrid("getGridParam", "selrow"),
+            "audit_category"
         )
     );
 
@@ -829,40 +1099,49 @@ editActivity: function() {
         )
     );
     
-    var paidValue = jQuery("#activityGrid").jqGrid(
+    var paidCell = jQuery("#activityGrid").jqGrid(
         "getCell",
         jQuery("#activityGrid").jqGrid("getGridParam", "selrow"),
         "paid"
     );
-    $("#activity-form #paid-status").val(
-        $(document.createElement('div')).html(paidValue).text()
-    );
+    // Extract value from toggle - check if input is checked
+    var paidValue = $(paidCell).find('input').is(':checked') ? 'Yes' : 'No';
+    $("#activity-form #paid-status").val(paidValue);
 
-    // Load uploaded files
+    var issuingInvoiceCell = jQuery("#activityGrid").jqGrid(
+        "getCell",
+        jQuery("#activityGrid").jqGrid("getGridParam", "selrow"),
+        "issuing_invoice"
+    );
+    // Extract value from toggle - check if input is checked
+    var issuingInvoiceValue = $(issuingInvoiceCell).find('input').is(':checked') ? 'Yes' : 'No';
+    $("#activity-form #issuing-invoice-status").val(issuingInvoiceValue);
+
     Utils.filesToList("ultraining_request_form", "activityGrid", "training_request_form");
     Utils.filesToList("ulattendance_list", "activityGrid", "attendance_list");
     Utils.filesToList("ulcustomer_feedback_form", "activityGrid", "customer_feedback_form");
     Utils.filesToList("ulattendance_certificates", "activityGrid", "attendance_certificates");
-    Utils.filesToList("ulinvoice_inbound", "activityGrid", "invoice_inbound"); // Added this line
-    Utils.filesToList("ultravel_invoices", "activityGrid", "travel_invoices"); // Added this line
+    Utils.filesToList("ulinvoice_inbound", "activityGrid", "invoice_inbound");
+    Utils.filesToList("ultravel_invoices", "activityGrid", "travel_invoices");
 
-    $("#activityModal").prop("submit", 1); // edit
+    $("#activityModal").prop("submit", 1);
     TP.filesUploaded = [];
     $("#activityModal").modal("show");
 },
+
 toggleFieldEditability: function() {
     if (!TP.isAdmin) {
-        // Disable fields for auditors
         $("#paid-on").prop('disabled', true).addClass('disabled-field');
-        $("#invoice-number-outbound").prop('disabled', true).addClass('disabled-field');
+        //$("#invoice-number-outbound").prop('disabled', true).addClass('disabled-field');
         $("#paid-status").prop('disabled', true).addClass('disabled-field');
+        $(".admin-only").removeClass('mandatory-field');
     } else {
-        // Enable fields for admins
         $("#paid-on").prop('disabled', false).removeClass('disabled-field');
-        $("#invoice-number-outbound").prop('disabled', false).removeClass('disabled-field');
+        //$("#invoice-number-outbound").prop('disabled', false).removeClass('disabled-field');
         $("#paid-status").prop('disabled', false).removeClass('disabled-field');
     }
 },
+
 deleteActivity: function() {
     if (jQuery("#activityGrid").jqGrid("getGridParam", "selrow") == null) {
         alert("Please select activity");
@@ -879,22 +1158,36 @@ createDocFromInputData: function() {
     doc.idauditor = $("#activity-auditorid").val();
     doc.company_name = $("#activity-form #company-name").val().trim();
     doc.date_of_service = $("#activity-form #service-date").val().trim();
+    
+    // Handle service type - if "Others" is selected, use the custom description
     let serviceTypeVal = $("#activity-form #service-type").val();
+    if (serviceTypeVal === "Others") {
+        doc.service_type = $("#activity-form #service-type-other").val().trim();
+    } else {
+        doc.service_type = serviceTypeVal ? serviceTypeVal.trim() : "";
+    }
+    
     let auditorTypeVal = $("#activity-form #auditor-type").val();
-    doc.service_type = serviceTypeVal ? serviceTypeVal.trim() : "";
     doc.auditor_type = auditorTypeVal ? auditorTypeVal.trim() : "";
+    
+    // New fields: Standards, Audit Type, Audit Category
+    doc.standards = $("#activity-form #standards").val().trim();
+    let auditTypeVal = $("#activity-form #audit-type").val();
+    doc.audit_type = auditTypeVal ? auditTypeVal.trim() : "";
+    doc.audit_category = $("#activity-form #audit-category").val().trim();
+    
     doc.invoice_number_inbound = $("#activity-form #invoice-number-inbound").val().trim();
     doc.invoice_date_inbound = $("#activity-form #invoice-date-inbound").val().trim();
     doc.travel_expenses = $("#activity-form #travel-expenses").val().trim();
-    
+    doc.invoice_number_outbound = $("#activity-form #invoice-number-outbound").val().trim();
+
     if (TP.isAdmin) {
         doc.paid_on = $("#activity-form #paid-on").val().trim();
-        doc.invoice_number_outbound = $("#activity-form #invoice-number-outbound").val().trim();
         doc.paid = $("#activity-form #paid-status").val().trim();
+        doc.issuing_invoice = $("#activity-form #issuing-invoice-status").val().trim();
     } else {
-        // For non-admin users, get these values from the original record if editing
         var originalRow = null;
-        if (doc.id) { // Only if editing existing record
+        if (doc.id) {
             originalRow = jQuery("#activityGrid").jqGrid(
                 "getRowData",
                 jQuery("#activityGrid").jqGrid("getGridParam", "selrow")
@@ -902,16 +1195,17 @@ createDocFromInputData: function() {
         }
         
         doc.paid_on = originalRow ? originalRow.paid_on : "";
-        doc.invoice_number_outbound = originalRow ? originalRow.invoice_number_outbound : "";
+        //doc.invoice_number_outbound = originalRow ? originalRow.invoice_number_outbound : "";
         doc.paid = originalRow ? originalRow.paid : "No";
+        doc.issuing_invoice = $("#activity-form #issuing-invoice-status").val().trim();
     }
 
     doc.training_request_form = Utils.filesToJSON("ultraining_request_form");
     doc.attendance_list = Utils.filesToJSON("ulattendance_list");
     doc.customer_feedback_form = Utils.filesToJSON("ulcustomer_feedback_form");
     doc.attendance_certificates = Utils.filesToJSON("ulattendance_certificates");
-    doc.invoice_inbound = Utils.filesToJSON("ulinvoice_inbound"); // Added this line
-    doc.travel_invoices = Utils.filesToJSON("ultravel_invoices"); // Added this line
+    doc.invoice_inbound = Utils.filesToJSON("ulinvoice_inbound");
+    doc.travel_invoices = Utils.filesToJSON("ultravel_invoices");
     
     return doc;
 },
@@ -935,60 +1229,44 @@ validateForm: function() {
     }
     
     let serviceTypeVal = $("#activity-form #service-type").val();
-
-if (!serviceTypeVal || serviceTypeVal.trim() === "") {
-    Utils.notifyInput($("#activity-form #service-type"), "Service type is required");
-    $("#activityModal .form-warning").show();
-    return false;
-}
-
-/*
-    if ($("#activity-form #invoice-number-inbound").val().trim() == "") {
-        Utils.notifyInput($("#activity-form #invoice-number-inbound"), "Invoice number is required");
+    if (!serviceTypeVal || serviceTypeVal.trim() === "") {
+        Utils.notifyInput($("#activity-form #service-type"), "Service type is required");
         $("#activityModal .form-warning").show();
         return false;
     }
     
-    if ($("#activity-form #invoice-date-inbound").val().trim() == "") {
-        Utils.notifyInput($("#activity-form #invoice-date-inbound"), "Invoice date is required");
-        $("#activityModal .form-warning").show();
-        return false;
+    // Validate "Others" description if "Others" is selected
+    if (serviceTypeVal === "Others") {
+        let otherDescription = $("#activity-form #service-type-other").val();
+        if (!otherDescription || otherDescription.trim() === "") {
+            Utils.notifyInput($("#activity-form #service-type-other"), "Please specify the service type");
+            $("#activityModal .form-warning").show();
+            return false;
+        }
     }
-  */  
-    // Validate at least one document is uploaded
-    /*
-    if ($("#ultraining-request li").length == 0 && 
-        $("#ulattendance li").length == 0 && 
-        $("#ulfeedback li").length == 0 && 
-        $("#ulcertificates li").length == 0) {
-        Utils.notifyInput($("#activity-form .upload-area"), "At least one document must be uploaded");
-        $("#activityModal .form-warning").show();
-        return false;
-    }
-        */
 
-   // Only validate payment fields if user is admin
+    let auditorTypeVal = $("#activity-form #auditor-type").val();
+    if (!auditorTypeVal || auditorTypeVal.trim() === "") {
+        Utils.notifyInput($("#activity-form #auditor-type"), "Auditor type is required");
+        $("#activityModal .form-warning").show();
+        return false;
+    }
+
     if (TP.isAdmin) {
         if ($("#activity-form #invoice-number-outbound").val().trim() == "") {
-            Utils.notifyInput($("#activity-form #invoice-number-outbound"), "Outbound invoice number is required");
-            $("#activityModal .form-warning").show();
-            return false;
+            //Utils.notifyInput($("#activity-form #invoice-number-outbound"), "Outbound invoice number is required");
+            //$("#activityModal .form-warning").show();
+            //return false;
         }
         
-        if ($("#activity-form #paid-status").val().trim() == "") {
-            Utils.notifyInput($("#activity-form #paid-status"), "Paid status is required");
-            $("#activityModal .form-warning").show();
-            return false;
-        }
-        
-        // Only require paid_on date if payment status is "Yes"
-        var paidStatus = $("#activity-form #paid-status").val().trim();
-        if (paidStatus === "Yes" && $("#activity-form #paid-on").val().trim() == "") {
-            Utils.notifyInput($("#activity-form #paid-on"), "Paid on date is required when payment status is 'Yes'");
-            $("#activityModal .form-warning").show();
-            return false;
+        let paidStatusVal = $("#activity-form #paid-status").val();
+        if (!paidStatusVal || paidStatusVal.trim() === "") {
+            //Utils.notifyInput($("#activity-form #paid-status"), "Paid status is required");
+            //$("#activityModal .form-warning").show();
+            //return false;
         }
     }
+
     return true;
 },
 
@@ -1013,7 +1291,6 @@ if (!serviceTypeVal || serviceTypeVal.trim() === "") {
             }
             Utils.notify("success", "Activity saved successfully");
 
-            // Track activity changes
             var d = {};
             d.itemid = doc.id;
             d.idclient = doc.idclient;
@@ -1025,7 +1302,6 @@ if (!serviceTypeVal || serviceTypeVal.trim() === "") {
             if (TP.filesUploaded.length > 0) {
                 d.action = "Activity documents updated";
                 d.documents = JSON.stringify(TP.filesUploaded);
-                //Common.sendAddActionRequest(d);
             }
 
             $("#activityModal").prop("submit", 1);
@@ -1083,30 +1359,26 @@ onSave: function() {
     }
     var doc = TP.createDocFromInputData();
     
-        // If user is not admin, handle restricted fields
     if (!TP.isAdmin) {
         var activityId = $("#activity-form #activity-id").val();
         
-        // For existing records (editing)
         if (activityId && activityId !== "") {
             var originalRow = jQuery("#activityGrid").jqGrid(
                 "getRowData",
                 jQuery("#activityGrid").jqGrid("getGridParam", "selrow")
             );
             doc.paid_on = originalRow.paid_on;
-            doc.invoice_number_outbound = originalRow.invoice_number_outbound;
+            //doc.invoice_number_outbound = originalRow.invoice_number_outbound;
             doc.paid = originalRow.paid;
         } 
-        // For new records
         else {
-            // Set default values for restricted fields
             doc.paid_on = "";
-            doc.invoice_number_outbound = "";
-            doc.paid = "No"; // Default value for new records
+            //doc.invoice_number_outbound = "";
+            doc.paid = "No";
         }
     }
 
-     
+     console.log("DOC:", doc)
     TP.sendModifyActivityRequest(doc);
 },
 
@@ -1126,7 +1398,6 @@ onSave: function() {
     $("#activity-auditorid").trigger("change");
   },
 
-  // Initialize when document is ready
   init: function() {
     $(document).ready(function() {
       TP.onDocumentReady();
@@ -1134,7 +1405,6 @@ onSave: function() {
   }
 };
 
-// Initialize the TP object
 TP.init();
 </script>
 

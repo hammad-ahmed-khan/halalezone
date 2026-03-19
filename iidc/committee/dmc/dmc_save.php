@@ -2,8 +2,29 @@
 if (!isset($_POST['act'])) {
     exit();
 }
-include "../../check_user.inc.php";
-include "$prog_path/config/connect.inc.php";
+
+//error_reporting(E_ALL);
+//ini_set('display_errors', 1);
+
+if (!session_id()) 
+	session_start();
+header('Content-Type: text/html; charset=utf-8');
+if (!defined('_HQC_'))
+	define("_HQC_", 1);
+
+
+include dirname(__FILE__) . "/../../config/paths.inc.php";
+include "$prog_path/config/date_conv.inc.php";
+if ($amdb->get_row("SELECT * FROM users where ip='$_SERVER[REMOTE_ADDR]' and active='b'")) {
+	echo "You are not allowed to use this site";
+	return;
+}
+include_once dirname(__FILE__) .'/../../../config/config.php';
+include_once dirname(__FILE__) .'/../../../classes/users.php';
+include_once dirname(__FILE__) .'/../../../includes/func.php';
+
+//include "../../check_user.inc.php";
+//include "$prog_path/config/connect.inc.php";
 
 if ($_POST['act'] == 'save') {
     $decision['decision'] = serialize($_POST);
@@ -25,30 +46,41 @@ if ($_POST['act'] == 'save') {
 
     if (isset($decid)) {
         //   include "dmc.mail.php";
-        $dmc_file = $root_path . '/data/DMC/reports/dmc-' . $decid . '.pdf';
+        $dmc_file = $root_path . '/iidc/data/DMC/reports/dmc-' . $decid . '.pdf';
         // $dmc_file = '';
         include "dmc.pdf.php";
+ 
+        $amdb->update('acms_halal_certificates', array('status' => 'printed', "printed_on" => time(), 'approved_by_dmc' => 'yes', 'decid' => $decid), "crtNr = '$_POST[crtNr]' AND clid = '$_POST[clid]'");
 
         if (file_exists($dmc_file)) {
             //update certificate status
             if ($_REQUEST['ref'] == 'reprint') {
-                echo '<script>parent.location = "/data/DMC/reports/dmc-' . $decid . '.pdf";</script>';
-                exit();
-            }
-            $amdb->update('acms_halal_certificates', array('approved_by_dmc' => 'yes', 'decid' => $decid), "crtNr = '$_POST[crtNr]' AND clid = '$_POST[clid]'");
-            if ($_REQUEST['ref'] == 'list') {
+                $dmcPdfUrl = '/iidc/data/DMC/reports/dmc-' . $decid . '.pdf';
                 echo '<script>
-    top.location = "/certificates/annual/?inc=certificates";
-</script>';
-            } else {
-                echo "<script>
-    window.parent.document.addEditForm.action = 'certificate.pdf.php';
-    window.parent.document.addEditForm.target = '_blank';
-    window.parent.document.addEditForm.submit();
-    window.parent.location = '/certificates/annual/index.php?inc=certificates&offid=" . $_POST['
-    offid '] . "';
-</script>";
-            }
+                    var xhr = new XMLHttpRequest();
+                    xhr.open("GET", "' . $dmcPdfUrl . '", true);
+                    xhr.onreadystatechange = function() {
+                        if (xhr.readyState === 4) {
+                            parent.location = "/iidc/certificates/annual/?inc=certificates";
+                        }
+                    };
+                    xhr.send();
+                </script>';
+                exit();
+            }            
+
+            // Generate certificate PDF via AJAX, then redirect to certificates list
+            $certPrintUrl = '/iidc/certificates/annual/certificate.pdf.php?crtnr=' . $_POST['crtNr'] . '&crtDo=print';
+            echo '<script>
+                var xhr = new XMLHttpRequest();
+                xhr.open("GET", "' . htmlspecialchars($certPrintUrl) . '", true);
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState === 4) {
+                        window.location = "/iidc/certificates/annual/?inc=certificates";
+                    }
+                };
+                xhr.send();
+            </script>';
             // header('location: /certificates/annual/?inc=certificates');
             exit();
         } else {

@@ -1,5 +1,4 @@
 <?php if ($is_login_page == false): ?>
-<!-- Fixed Action Buttons Container -->
 <div class="action-buttons-container">
     <!-- FAQ Button -->
     <a href="/support" class="action-button faq-button" title="Browse our comprehensive FAQ section to find answers to common questions about raw materials, certification, and system usage.">
@@ -21,13 +20,12 @@
     <div class="modal-content">
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-        <h4 class="modal-title" id="customerServiceModalLabel">Submit a request <span class="text-primary tclientName"></span></h4>
+        <h4 class="modal-title" id="customerServiceModalLabel">Submit a request</h4>
       </div>
       <div class="modal-body">
         <input type="hidden" name="clientname" id="clientname" value="<?php echo $myuser->userdata['name']," (",$myuser->userdata['id'],")"; ?>" />
         <div class="alert alert-danger" id="customerServiceErrors" style="display: none;"></div>
         <form id="customerServiceForm">
-
           <div class="form-group">
             <label for="requestType">Request Type</label>
             <select class="form-control" id="requestType">
@@ -39,6 +37,11 @@
               <option value="Other">Other</option>
             </select>
           </div>
+          <div class="form-group">
+            <label for="requestSubject">Subject</label>
+            <input type="text" class="form-control" id="requestSubject" value="" placeholder="Enter a brief subject for the request">
+          </div>
+
           <div class="form-group">
             <label for="requestDescription">Description</label>
             <textarea class="form-control" id="requestDescription" rows="5" placeholder="Describe the request in detail."></textarea>
@@ -87,6 +90,10 @@
               <option value="Other">Other</option>
             </select>
           </div>
+ <div class="form-group">
+            <label for="issueSubject">Subject</label>
+            <input type="text" class="form-control" id="issueSubject" value="" placeholder="Enter a brief subject for the issue">
+          </div>          
           <div class="form-group">
             <label for="issueDescription">Issue Description</label>
             <textarea class="form-control" id="issueDescription" rows="5" placeholder="Describe the issue in detail, including any error messages."></textarea>
@@ -120,12 +127,14 @@
     <div class="footer-inner">
         <div class="footer-content">
 						<span class="bigger-120">
-							&copy;&nbsp;<span class="light-green bolder">Halal e-Zone</span>&nbsp;<?php echo date('Y'); ?> 
+							&copy;&nbsp;<span class="light-green bolder">Halal Digital</span>&nbsp;<?php echo date('Y'); ?> 
 						</span>
             &nbsp; &nbsp;<span class="smaller-75 light-grey"><?php echo "ver. 2.".$GLOBALS['appVersion'];?></span>
         </div>
     </div>
 </div>
-<script src="js/jquery-2.1.4.min.js"></script>
-<script src="js/bootstrap.min.js"></script>
+<?php if (!defined("_HQC_")): ?>
+<script src="/js/jquery-2.1.4.min.js"></script>
+<?php endif; ?>
+<script src="/js/bootstrap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tooltipster/4.2.8/js/tooltipster.bundle.min.js" integrity="sha512-ZKNW/Nk1v5trnyKMNuZ6kjL5aCM0kUATbpnWJLPSHFk/5FxnvF9XmpmjGbag6BEgmXiz7rL6o6uJF6InthyTSg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>

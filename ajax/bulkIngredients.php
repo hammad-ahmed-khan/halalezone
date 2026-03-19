@@ -343,6 +343,28 @@ class Importer
         if (!$insertStmt->execute($data)) {
             throw new Exception($insertStmt->errorInfo()[2]);
         }
+
+        // Get the newly inserted ingredient ID
+        $ingredientId = $this->dbo->lastInsertId();
+        $clientId = $request->get('client_id');
+
+        // Insert into tingredient_facilities table to maintain multi-facility relationship
+        $facilityInsertQuery = "INSERT INTO tingredient_facilities (ingredient_id, facility_id, assigned_by, assigned_at, status) 
+                            VALUES (:ingredient_id, :facility_id, :assigned_by, NOW(), 1)";
+        $facilityStmt = $this->dbo->prepare($facilityInsertQuery);
+        
+        // Use client_id as the facility_id and assume system user (ID 1) as assigned_by
+        $systemUserId = 1; // You may want to use actual logged-in user ID if available
+        
+        $facilityData = [
+            'ingredient_id' => $ingredientId,
+            'facility_id' => $clientId,
+            'assigned_by' => $systemUserId
+        ];
+
+        if (!$facilityStmt->execute($facilityData)) {
+            throw new Exception("Failed to create facility assignment: " . $facilityStmt->errorInfo()[2]);
+        }
     }
 
     protected function prepareInsertData(array $row, Request $request): array
@@ -364,7 +386,7 @@ class Importer
         if ($row['Supplier name'] != false) {
             $data['supplier'] = $row['Supplier name'];
         } else {
-          $data['supplier'] = $row['Producer name'];
+        $data['supplier'] = $row['Producer name'];
         }
 
         if ($request->get('document_type') === 'certificate') {
@@ -377,7 +399,7 @@ class Importer
 
         return $data;
     }
-
+    
     protected function attachCertificate(array &$data, array $row, Request $request): void
     {
         $data['cert']     = json_encode($request->getDocumentFileData());

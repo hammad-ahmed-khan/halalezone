@@ -18,7 +18,6 @@ function upload_signature($comemid)
         $name = $_FILES['signature']['name'];
         $uploads = $_FILES['signature']['tmp_name'];
         if (in_array(strtolower(pathinfo($name, PATHINFO_EXTENSION)), $exTypes)) {
-            echo $filesDir . '/' . $comemid . '_signature' . '.' . pathinfo($name, PATHINFO_EXTENSION);
             move_uploaded_file($uploads, $filesDir . '/' . $comemid . '_signature' . '.' . pathinfo($name, PATHINFO_EXTENSION));
         }
     }
@@ -55,7 +54,7 @@ if (isset($_POST['member_office']) && is_array($_POST['member_office'])) {
 if ($_POST['act'] == 'add_committee_member') {
     $comemid = $amdb->insert('hqc_committee_members', $_POST);
     upload_signature($comemid);
-    $amdb->post_results('/admin/committee/', 'url');
+    echo "url:/iidc/admin/committee/";
     exit();
 }
 
@@ -68,9 +67,9 @@ if ($_POST['act'] == 'update_committee_member' && isset($_POST['comemid'])) {
     $amdb->update('hqc_committee_members', $_POST, "comemid = $_POST[comemid]");
     upload_signature($_POST['comemid']);
     if (isset($_POST['comDir']) && $_POST['comDir'] == 'committee')
-        $amdb->post_results('/committee/?inc=account', 'url');
+        echo "url:/iidc/committee/?inc=account";
     else
-        $amdb->post_results('/admin/committee/', 'url');
+        echo "url:/iidc/admin/committee/";
     exit();
 }
 

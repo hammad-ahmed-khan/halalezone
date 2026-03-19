@@ -42,13 +42,26 @@ if ($defauls = json_decode(get_option('invoice_defaults'), true)) {
 	$service_types['recurring'] = 'Monthly';
 }
 
+// Invoice Category definitions
+$invoice_categories = array(
+	'invoice' => 'Applications - Invoice for certification fees',
+	'invoicete' => 'Applications - Invoice for travel expenses',
+	'invoiceai' => 'Applications - Invoice for additional items',
+	'sfda_first_app_invoice' => 'SFDA - First Application',
+	'sfda_shipment_cert_invoice' => 'SFDA - Shipment Certificate',
+	'halal_slaughtering_invoice' => 'HBC - Halal Slaughtering',
+	'halal_batch_cert_invoice' => 'HBC - Halal Batch Certificate',
+	'activity_inbound_invoice' => 'Activity Records - Inbound Invoice',
+	'activity_travel_invoice' => 'Activity Records - Travel Expenses Invoice'
+);
+
 //make an list of 50 default background dark colors using color names
 $colors = array('gray', 'red', 'green', 'blue', 'darkorange', 'brown', 'cyan', 'magenta', 'lime', 'indigo', 'teal', 'violet', 'fuchsia', 'aqua', 'maroon', 'navy', 'olive', 'silver', 'gray', 'black', 'white', 'red', 'green', 'blue', 'yellow', 'purple', 'orange', 'pink', 'brown', 'cyan', 'magenta', 'lime', 'indigo', 'teal', 'violet', 'fuchsia', 'aqua', 'maroon', 'navy', 'olive', 'black', 'green', 'brown');
 
 $admin_users = array();
-if ($users = $amdb->get_results("SELECT hqc_admin_users.username_owner,hqc_admin_users.uid FROM hqc_admin_users JOIN invoices ON invoices.uid = hqc_admin_users.uid GROUP BY invoices.uid")) {
+if ($users = $amdb->get_results("SELECT tusers.name, tusers.id FROM tusers JOIN invoices ON invoices.uid = tusers.id WHERE tusers.isclient = 0 GROUP BY tusers.id")) {
 	foreach ($users as $user) {
-		$admin_users[$user['uid']] = $user['username_owner'];
+		$admin_users[$user['id']] = $user['name'];
 	}
 }
 
@@ -74,7 +87,7 @@ elseif ($_POST['show'] == 'scheduled')
 	$whr = "AND invoices.invoice_nr = 'scheduled'";
 elseif ($_POST['show'] == 'transferpricing')
 	$whr = "AND invoices.service_type LIKE '%transferpricing%'";
-if ($_POST['show'] != 'draft' && $_POST['show'] != 'scheduled')
+if ($_POST['show'] != 'draft' && $_POST['show'] != 'scheduled' && $_POST['show'] != 'all')
 	$whr .= "AND invoices.invoice_nr != 'draft' AND invoices.invoice_nr != 'scheduled'";
 if (isset($_POST['clid']) and trim($_POST['clid']) != '')
 	$whr .= "AND invoices.clid = '$_POST[clid]'";
@@ -100,6 +113,8 @@ if ($_POST['searchFor'] == 'invoice_number') {
 }
 if (isset($_POST['invoice_type']) && $_POST['invoice_type'] != 'all')
 	$whr .= " AND invoices.invoice_type = '$_POST[invoice_type]'";
+if (isset($_POST['invoice_category']) && $_POST['invoice_category'] != '' && $_POST['invoice_category'] != 'all')
+	$whr .= " AND invoices.invoice_category = '$_POST[invoice_category]'";
 $whr .= " AND invoices.status != 'hidden'";
 if (isset($_POST['item_code']) and trim($_POST['item_code']) != '') {
 	$whr .= " AND json_valid(invoice_items)=1 AND `invoice_items` LIKE '%$_POST[item_code]%'";
@@ -118,7 +133,7 @@ if ($offices = $amdb->get_results("SELECT clients,reference_prefix,certificate_p
 		}
 	}
 };
-$sql = "SELECT nr,invoices.sbsid,invoices.clid,bclid,invoice_nr,invoice_type,service_type,invoice_items,invoices.invoice_data,subtotal,vat,total,paid_on,inserted_on,seen_at,reminded_on,resent_on,credit_invnr,invoices.invoice_options,invoices.status,invoices.internal,invoices.intID,invoices.uid,invoices.memo,companies.company_name,companies.active,companies.offid,invoices.offid AS off_id,invoices.sys_error,invoices.mail_error,invoices.exacted FROM `invoices`
+echo $sql = "SELECT nr,invoices.sbsid,invoices.clid,bclid,invoice_nr,invoice_type,invoice_category,service_type,invoice_items,invoices.invoice_data,subtotal,vat,total,paid_on,inserted_on,seen_at,reminded_on,resent_on,credit_invnr,invoices.invoice_options,invoices.status,invoices.internal,invoices.intID,invoices.uid,invoices.memo,companies.company_name,companies.active,companies.offid,invoices.offid AS off_id,invoices.sys_error,invoices.mail_error,invoices.exacted FROM `invoices`
 				JOIN companies ON companies.clid = invoices.clid
 				WHERE 1 AND invoices.template='nl' $whr ORDER BY TRIM(invoices.{$_REQUEST['orderBy']}) {$_REQUEST['ascDsc']}";
 
@@ -213,7 +228,7 @@ foreach ($invoices as $row) {
 	} else {
 		$term = 21;
 	}
-	if (($invoice['invoice_type'] == 'credit_note' && in_array($row['nr'], $creditedYear)) or ($invoice['invoice_type'] != 'credit_note' and ($row['status'] == 'active' or $row['status'] == 'credited'))) {
+	if (($row['invoice_type'] == 'credit_note' and isset($creditedYear)) or ($row['invoice_nr'] == 'draft' or $row['invoice_nr'] == 'scheduled') or ($invoice['invoice_type'] != 'credit_note' and ($row['status'] == 'active' or $row['status'] == 'credited'))) {
 		$nr++;
 		$invoices_count++;
 		if ($row['invoice_type'] == "credit_note") {
@@ -313,12 +328,10 @@ foreach ($invoices as $row) {
 				echo "&euro;" . number_format($row['total'], 2, ',', '.');
 			?>
 			</td>
-			<td style="min-width:190px">
-				<?php
-				if ($row['sbsid'] == '8' && $row['invoice_type'] != 'credit_note')
-					echo 'Halal Training Service';
-				else
-					echo str_replace('[other]', '', $row['service_type']); ?>
+			<td style="min-width:190px">				
+				<?php if (isset($row['invoice_category']) && trim($row['invoice_category']) != '' && isset($invoice_categories[$row['invoice_category']])) { ?>
+					<span style="font-size:14px;color:#6366f1;background:#eef2ff;padding:2px 8px;border-radius:10px;display:inline-block;"><?php echo htmlspecialchars($invoice_categories[$row['invoice_category']]); ?></span>
+				<?php }; ?>
 				<?php if ($row['invoice_type'] == 'credit_note' && trim($row['credit_invnr']) != '') {
 					//TODO: update the new system
 					$invoice_files = explode(',', $row['credit_invnr']);
@@ -337,70 +350,49 @@ foreach ($invoices as $row) {
 			</td>
 			<?php if (isset($invoice_actions)  or $_SESSION['offid'] == 0) { ?>
 				<?php if ($_POST['show'] != 'credit') { ?>
-					<td style="min-width:160px" id="status_<?php echo $row['nr']; ?>" class="noCursor<?php echo ($row['status'] != 'credited') ? ' status' : '' ?>">
-						<?php
-						if ($row['invoice_nr'] != 'draft' && $row['invoice_nr'] != 'scheduled') {
-							if ($row['seen_at'] != '0000-00-00 00:00:00' or $row['paid_on'] != '')
-								echo '<i class="far fa-envelope-open" style="color:#05b505" title="Seen by client"></i>';
-							else
-								echo '<i class="far fa-envelope" style="color:#bbb" title="Not seen yet"></i>';
-						?>
-						<?php
-						}; ?>
+					<td style="min-width:120px" id="status_<?php echo $row['nr']; ?>" class="noCursor<?php echo ($row['status'] != 'credited') ? ' status' : '' ?>">
 						<?php if ($row['status'] == 'credited') { ?>
-							<span style="color:#bbb">Credited</span><br />
-							<?php
-							$invFile = "/client_data/invoices/{$row['credit_invnr']}.pdf";
-							if (file_exists($prog_path . $invFile)) { ?>
-								<a href="<?php echo $prog_www; ?>/client_data/invoices/<?php echo $row['credit_invnr']; ?>.pdf" target="_blank"><?php echo $row['credit_invnr']; ?></a>
-							<?php }; ?><span style="display:block;height:5px;"></span>
-							<?php } else {
-							if ($row['invoice_nr'] == 'draft') { ?>
-								<i class="far fa-hourglass" style="color:grey"></i> <span style="color: grey;">Pending</span>
-							<?php } elseif ($row['invoice_nr'] == 'scheduled') { ?>
-								<i class="far fa-clock"></i> <span style="color: grey;">scheduled</span>
-							<?php } elseif (trim($row['invoice_type']) == 'credit_note') {
-								echo '<span style="color:#bbb">Credit note</span>';
-							} elseif (trim($row['paid_on']) != '') { ?>
-								<i class="far fa-calendar-times" style="color:#800;cursor:pointer" onclick="undoPayment('<?php echo $row['nr']; ?>','<?php echo $row['invoice_nr']; ?>')" title="Undo-payment"></i>
-								<i class="far fa-calendar-check" title="paid" style="color:green"></i><span style="color:green"><?php echo $row['paid_on']; ?></span>
-							<?php
-							} else { ?>
-								<i class="fas fa-paperclip load_popup" id="qr_<?php echo $row['nr']; ?>" data-url="/invoices/memo_save.php?nr=<?php echo $row['nr']; ?>&act=internalMemo" title="Internal memo" style="color:orange"></i>
-								<?php
-								$diff = time() - strtotime($row['inserted_on']);
-								$invoice_due_date = $term - (round($diff / 86400));
-								if ($invoice_due_date < 0) {
-									echo '<span style="color:#900"><i class="far fa-calendar-minus" style="color:#900" title="Over Due"></i>' . $invoice_due_date . ' Days</span>';
-									if (count($row['reminded_on']) > 0) {
-										echo '<br/><span><i class="far fa-bell" title="First reminder"></i>' . $row['reminded_on'][0] . '</span>';
-									}
-									if (count($row['reminded_on']) > 1) {
-										$reminder_count = count($row['reminded_on']) + 1;
-										echo '<br/><span><i class="far fa-bell" style="color:orange" title="Reminder (' . $reminder_count . ')"></i>' . $row['reminded_on'][1] . '</span>';
-									}
-								} elseif ($invoice_due_date <= $term) {
-									echo '<i class="far fa-calendar-check" title="Due in" style="color:grey"></i><span style="color:grey">' . $invoice_due_date . ' Days</span>';
-								}
-								?>
-								<?php if (trim($row['memo']) != '') { ?>
-									<div class="remarks" id="memo_<?php echo $row['nr']; ?>">
-										<i class="fa fa-trash-alt" onclick="deleteMemo(<?php echo $row['nr']; ?>)"></i> <span id="memo_<?php echo $row['nr']; ?>"><?php echo str_replace("\n", "<br/>", $row['memo']); ?></span>
-									</div>
-								<?php }; ?>
+							<span style="color:#9ca3af;font-weight:600;">Credited</span>
+						<?php } elseif ($row['invoice_nr'] == 'draft') { ?>
+							<span style="color:#6366f1;font-weight:600;">Draft</span>
+						<?php } elseif ($row['invoice_nr'] == 'scheduled') { ?>
+							<span style="color:#0369a1;font-weight:600;">Scheduled</span>
+						<?php } elseif (trim($row['invoice_type']) == 'credit_note') { ?>
+							<span style="color:#9ca3af;font-weight:600;">Credit note</span>
+						<?php } elseif (trim($row['paid_on']) != '') { ?>
+							<span style="color:#16a34a;font-weight:600;">Paid</span>
+							<div style="color:#16a34a;font-size:11px;"><?php echo $row['paid_on']; ?></div>
+						<?php } else {
+							$diff = time() - strtotime($row['inserted_on']);
+							$invoice_due_date = $term - (round($diff / 86400));
+							if ($invoice_due_date < 0) { ?>
+								<span style="color:#dc2626;font-weight:600;">Overdue</span>
+							<?php } else { ?>
+								<span style="color:#f59e0b;font-weight:600;">Unpaid</span>
+							<?php } ?>
+						<?php } ?>
 
-						<?php }
-						}
-						?>
+						<?php if ($row['invoice_nr'] != 'draft' && $row['invoice_nr'] != 'scheduled' && trim($row['invoice_type']) != 'credit_note' && $row['status'] != 'credited' && trim($row['paid_on']) == '') { ?>
+							<div style="margin-top:4px;">
+								<i class="fas fa-paperclip load_popup" id="qr_<?php echo $row['nr']; ?>" data-url="/invoices/memo_save.php?nr=<?php echo $row['nr']; ?>&act=internalMemo" title="Internal memo" style="color:orange"></i>
+							</div>
+						<?php } ?>
+
+						<?php if (trim($row['memo']) != '') { ?>
+							<div class="remarks" id="memo_<?php echo $row['nr']; ?>">
+								<i class="fa fa-trash-alt" onclick="deleteMemo(<?php echo $row['nr']; ?>)"></i> <span id="memo_<?php echo $row['nr']; ?>"><?php echo str_replace("\n", "<br/>", $row['memo']); ?></span>
+							</div>
+						<?php } ?>
 					</td>
 					<?php /*<td><?php echo ($row['exacted'] == 'y') ? '<img src="/images/exact.svg" width=30/>' : ''; ?></td>*/ ?>
 					<?php if (isset($invoice_actions)) { ?>
 						<td align="left" style="padding-left:5px;white-space:nowrap;position:relative" class="action" data-id="<?php echo $row['nr']; ?>">
-							<?php if ($row['invoice_nr'] == 'draft' or $row['invoice_nr'] == 'scheduled') { ?>
-								<a href="index.php?inc=create_invoice&act=<?php echo $row['invoice_nr']; ?>&nr=<?php echo $row['nr']; ?>&goback=invoices&show=all" title="Create invoice">
-									<i class="<?php echo $row['invoice_nr'] == 'scheduled' ? 'far fa-edit' : 'fas fa-file-invoice'; ?>"></i></a>
-								<i class="fa fa-trash-alt" title="Delete <?php echo $row['invoice_nr']; ?> invoice" data-id="<?php echo $row['nr']; ?>" data-act="<?php echo $row['invoice_nr'] == 'draft' ? 'deleteDraft' : 'deleteScheduled'; ?>" data-save="invoice_save.php"></i>
-							<?php } else { ?>
+								<?php if ($row['invoice_nr'] == 'draft' or $row['invoice_nr'] == 'scheduled') { ?>
+									<a href="index.php?inc=create_invoice&act=<?php echo $row['invoice_nr']; ?>&nr=<?php echo $row['nr']; ?>&goback=invoices&show=all" title="Edit <?php echo $row['invoice_nr']; ?> invoice">
+										<i class="far fa-edit" style="color:#0369a1"></i></a>
+									<a href="index.php?inc=create_invoice&act=<?php echo $row['invoice_nr']; ?>&nr=<?php echo $row['nr']; ?>&goback=invoices&show=all" title="Create invoice">
+										<i class="fas fa-file-invoice"></i></a>
+									<i class="fa fa-trash-alt" title="Delete <?php echo $row['invoice_nr']; ?> invoice" data-id="<?php echo $row['nr']; ?>" data-act="<?php echo $row['invoice_nr'] == 'draft' ? 'deleteDraft' : 'deleteScheduled'; ?>" data-save="invoice_save.php"></i>							<?php } else { ?>
 								<a href="index.php?inc=resend_invoice&nr=<?php echo $row['nr']; ?>&act=rem" target="iframe" data-width="890" data-height="580" id="resend_<?php echo $row['nr']; ?>" title="Resend the INVOICE: (<?php echo $row['invoice_nr']; ?>)"><i class="far fa-paper-plane" <?php echo trim($row['resent_on']) != '' ? 'style="color:#05b505"' : "" ?>></i></a>
 								<?php
 								if ($_POST['show'] != 'paid' and !isset($credited[$row['invoice_nr']])) {
@@ -430,7 +422,7 @@ foreach ($invoices as $row) {
 								}
 								?>
 								<?php if (trim($row['invoice_type']) != 'credit_note') { ?>
-									<a href="/invoices/index.php?inc=create_invoice&type=credit_note&clid=<?php echo $row['clid']; ?>&invnr=<?php echo $row['nr']; ?>&goback=invoices&show=<?php echo $_POST['show']; ?>" title="Credit note"><i class="fas fa-file-invoice-dollar"></i></a>
+									<a href="/iidc/invoices/index.php?inc=create_invoice&type=credit_note&clid=<?php echo $row['clid']; ?>&invnr=<?php echo $row['nr']; ?>&goback=invoices&show=<?php echo $_POST['show']; ?>" title="Credit note"><i class="fas fa-file-invoice-dollar"></i></a>
 									<i class="fas fa-file-invoice-dollar load_popup" data-url="invoice_save.php?act=credit_noted&nr=<?php echo $row['nr']; ?>&invnr=<?php echo $row['invoice_nr']; ?>" title="Add to already credited invoice."></i>
 									<a href="index.php?inc=create_invoice&act=clone&nr=<?php echo $row['nr']; ?>&goback=draft" title="Clone invoice"><i class="far fa-copy"></i></a>
 								<?php } ?>
@@ -452,7 +444,7 @@ foreach ($invoices as $row) {
 						<td class="adminUser">
 							<?php
 							if (isset($admin_users[$row['uid']])) {
-								echo '<span title="' . $admin_users[$row['uid']] . '" style="background:' . $colors[$row['uid']] . ' !important;">' . substr($admin_users[$row['uid']], 0, 1) . '</span>';
+								echo '<span title="' . $admin_users[$row['uid']] . '" style="color:#000;">' . substr($admin_users[$row['uid']], 0, 1) . '</span>';
 							} elseif (isset($office_users[$row['off_id']]) && $row['off_id'] != 0) {
 								echo '<span class="office" title="' . $office_users[$row['off_id']] . '" style="background:black !important;">' . substr($office_users[$row['off_id']], 0, 1) . '</span>';
 							} else {

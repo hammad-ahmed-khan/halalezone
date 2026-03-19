@@ -35,8 +35,74 @@ function cors() {
     }
 }
 
+
+/**
+ * Send email notification to admin when SFDA application is completed
+ */
+function sendSfdaCompletionNotificationToAdmin($applicationData, $clientData) {
+    try {
+         
+        $mail = new PHPMailer\PHPMailer\PHPMailer(true);
+        
+        $fromEmailAddress = "noreply@halal-e.zone";
+        $adminEmailAddress = "communication@hqc.at";
+        $ownerEmailAddress = "halal.ezone@gmail.com";
+        
+        $mail->setFrom($fromEmailAddress, 'HALAL eZone');
+        $mail->addAddress($adminEmailAddress);
+        $mail->addBCC($ownerEmailAddress);
+        $mail->addReplyTo($fromEmailAddress, 'HALAL eZone');
+        
+        $mail->isHTML(true);
+        
+        $logoPath = dirname(__FILE__).'/../img/logo_email.png';
+        if (file_exists($logoPath)) {
+            $mail->addEmbeddedImage($logoPath, 'logo');
+        }
+        
+        $mail->Subject = "SFDA Application Completed - " . $applicationData['company_name'];
+        
+        // Build email body
+        $body = '<html><body>';
+        $body .= '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">';
+        $body .= '<div style="background-color: #2e7d32; color: white; padding: 20px; text-align: center;">';
+        $body .= '<img src="cid:logo" alt="HALAL eZone" style="max-height: 60px;"><br>';
+        $body .= '<h2>SFDA Application Completed</h2>';
+        $body .= '</div>';
+        $body .= '<div style="padding: 20px; background-color: #f9f9f9;">';
+        $body .= '<p>Dear Admin,</p>';
+        $body .= '<p>A client has completed all required fields for their SFDA Application.</p>';
+        $body .= '<h3 style="color: #2e7d32;">Client Information</h3>';
+        $body .= '<p><strong>Client Name:</strong> ' . htmlspecialchars($clientData['name'] ?? 'N/A') . '</p>';
+        $body .= '<p><strong>Client Email:</strong> ' . htmlspecialchars($clientData['email'] ?? 'N/A') . '</p>';
+        $body .= '<h3 style="color: #2e7d32;">Application Details</h3>';
+        $body .= '<p><strong>Application ID:</strong> ' . htmlspecialchars($applicationData['id'] ?? 'N/A') . '</p>';
+        $body .= '<p><strong>Company Name:</strong> ' . htmlspecialchars($applicationData['company_name'] ?? 'N/A') . '</p>';
+        $body .= '<p><strong>Address:</strong> ' . htmlspecialchars($applicationData['address'] ?? 'N/A') . '</p>';
+        $body .= '<p><strong>Validity Period:</strong> ' . htmlspecialchars($applicationData['validity_of_certificate_period'] ?? 'N/A') . '</p>';
+        $body .= '<p><strong>Submitted at:</strong> ' . date('Y-m-d H:i:s') . '</p>';
+        $body .= '<p>Please log in to the HALAL eZone system to review and process this application.</p>';
+        $body .= '</div>';
+        $body .= '<div style="padding: 20px; text-align: center; font-size: 12px; color: #666;">';
+        $body .= '<p>This is an automated notification from HALAL eZone system.</p>';
+        $body .= '</div>';
+        $body .= '</div></body></html>';
+        
+        $mail->Body = $body;
+        $mail->AltBody = strip_tags(str_replace(['<br>', '<br/>', '<br />'], "\n", $body));
+        
+        return $mail->send();
+        
+    } catch (Exception $e) {
+        error_log('SFDA Notification Email Error: ' . $e->getMessage());
+        return false;
+    }
+}
+
 function updateAppState($data) {
+
 	global $statusOptions;
+
 	$dbo = &$GLOBALS['dbo'];
 	$myuser = cuser::singleton();
 	$myuser->getUserData();
@@ -118,7 +184,7 @@ function updateAppState($data) {
 				}
 			}	
 			
-			if ($state == "audit") {
+			if ($state == "audit" || $state == "checklist") {
 				$query = "SELECT id
 				FROM tevents WHERE status=1 AND idclient=:idclient AND idapp=:idapp
 				LIMIT 0, 1";
@@ -143,26 +209,26 @@ function updateAppState($data) {
 					$errors .= 'The client has not signed and submitted the application form.';
 				}
 				else {
-					$ownerEmailAddress = "halal.ezone@gmail.com";
-					$fromEmailAddress = "noreply@halal-e.zone";
+					$ownerEmailAddress = "mona.sherif@iidc.at";
+					$fromEmailAddress = "noreply@halal-digital.net";
 					$body = [];
-					$body['name'] = 'Halal e-Zone';
+					$body['name'] = 'Halal Digital';
 					$body['email'] =  $fromEmailAddress;
 					$body['to'] = $user["email"];
 					$body['header'] = "";
 					// sending notification
-					$body['subject'] = "Halal e-Zone - Audit Date Proposals - ".$user["name"];
+					$body['subject'] = "Halal Digital - Audit Date Proposals - ".$user["name"];
 					$body['header'] = "";
 					$body['body'] = "Dear ".$user["name"].",<br /><br />";
-					$body['body'] .= "Please go to Halal eZone portal/ application tab and select 3 audit date proposals for the on-site audit for your facility.<br /><br />";
+					$body['body'] .= "Please go to Halal Digital portal/ application tab and select 3 audit date proposals for the on-site audit for your facility.<br /><br />";
 					$body['body'] .= "Our team will confirm one of the proposed dates as soon as possible.<br /><br />";
-					$body['body'] .= "Once date is confirmed you�ll receive your audit plan, and we stay at your disposal for any assistance or clarification.<br /><br />";
+					$body['body'] .= "Once date is confirmed you'll receive your audit plan, and we stay at your disposal for any assistance or clarification.<br /><br />";
 					$body['body'] .= "Kind Regards<br/>";
-					$body['body'] .= "Your HQC Team";
+					$body['body'] .= "Your IIDC Team";
  					sendEmail($body);
 				}
 			}			
-			if ($state == "audit") {
+			if ($state == "audit" || $state == "checklist") {
 				$query = "SELECT id
 				FROM tdocs WHERE category='declarations' AND title='Client Questionnaire' AND idparent IS NOT NULL AND idclient=:idclient AND idapp=:idapp AND deleted=0
 				LIMIT 0, 1";
@@ -210,22 +276,22 @@ function updateAppState($data) {
 				}
 				else {
 					/*
-					$ownerEmailAddress = "halal.ezone@gmail.com";
-					$fromEmailAddress = "noreply@halal-e.zone";
+					$ownerEmailAddress = "mona.sherif@iidc.at";
+					$fromEmailAddress = "noreply@halal-digital.net";
 					$body = [];
-					$body['name'] = 'Halal e-Zone';
+					$body['name'] = 'Halal Digital';
 					$body['email'] =  $fromEmailAddress;
 					$body['to'] = $user["email"];
 					$body['header'] = "";
 					// sending notification
-					$body['subject'] = "Halal e-Zone - Audit Date Proposals - ".$user["name"];
+					$body['subject'] = "Halal Digital - Audit Date Proposals - ".$user["name"];
 					$body['header'] = "";
 					$body['body'] = "Dear ".$user["name"].",<br /><br />";
-					$body['body'] .= "Please go to Halal eZone portal/ application tab and select 3 audit date proposals for the on-site audit for your facility.<br /><br />";
+					$body['body'] .= "Please go to Halal Digital portal/ application tab and select 3 audit date proposals for the on-site audit for your facility.<br /><br />";
 					$body['body'] .= "Our team will confirm one of the proposed dates as soon as possible.<br /><br />";
 					$body['body'] .= "Once date is confirmed you�ll receive your audit plan, and we stay at your disposal for any assistance or clarification.<br /><br />";
 					$body['body'] .= "Kind Regards<br/>";
-					$body['body'] .= "Your HQC Team";
+					$body['body'] .= "Your IIDC Team";
  					sendEmail($body);
 					*/
  				}
@@ -268,7 +334,12 @@ function updateAppState($data) {
 
 					$industry = $userData['user']["industry"];
 
-					$filetoattach = "";
+					$filetoattach = "Checklist_Auditor_EN.pdf";
+			if ($industry == "Slaughter Houses") {
+					$filetoattach = "checklist_slaughtering_plants_EN.pdf";
+				}
+
+					/*
 					if ($industry == "Meat Processing") {
 						$filetoattach = "auditor_checklist_meat_processing.pdf";
 					}
@@ -277,12 +348,13 @@ function updateAppState($data) {
 					}
 					else  {
 						$filetoattach = "auditor_checklist_manufacturing.pdf";
-					}					
+					}
+					*/					
 
 					$attach = '../files/docs/'.$filetoattach;
 					//$attach = $filetoattach;
 					$ext = "pdf";
-					$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".str_replace('"', '', $user['name'])." (".$idclient.")/application/checklist/";
+					$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".getClientInfo($idclient)."/application/checklist/";
 					$absolutePath = __DIR__ ."/../".$hostPath;
 					if (!file_exists($absolutePath)) {
 						mkdir($absolutePath, 0777, true);
@@ -330,11 +402,11 @@ function updateAppState($data) {
 					$stmt->bindParam(':id', $iddoc, PDO::PARAM_STR);
 					$stmt->execute();
 
-					$ownerEmailAddress = "halal.ezone@gmail.com";
-					$fromEmailAddress = "noreply@halal-e.zone";
+					$ownerEmailAddress = "mona.sherif@iidc.at";
+					$fromEmailAddress = "noreply@halal-digital.net";
 
 					//sendEmailWithAttach
-					$body['name'] = 'Halal e-Zone';
+					$body['name'] = 'Halal Digital';
 					$body['email'] =  $fromEmailAddress;
 					$body['to'] = $user['email'];
 
@@ -342,14 +414,14 @@ function updateAppState($data) {
 					$body['attach'] = $filename;
 
 					// sending notification
-					$body['subject'] = "Halal e-Zone - ".$title . ' - '.$user["name"];
+					$body['subject'] = "Halal Digital - ".$title . ' - '.$user["name"];
 					$body['header'] = "";
 					$body['message'] = "Dear Ms./ Mr. ".$user["contact_person"]."!<br /><br />";
-					$body['message'] .= "Attached is the Auditor Checklist for your reference. It is also available on the Halal eZone portal.<br/><br/>";
+					$body['message'] .= "Attached is the Auditor Checklist for your reference. It is also available on the Halal Digital portal.<br/><br/>";
 					$body['message'] .= "Kind Regards<br/>";
-					$body['message'] .= "Your HQC Team";
+					$body['message'] .= "Your IIDC Team";
 					//sendEmailWithAttach($body);
-					
+
 					// get cycle name
 					$sql = "SELECT * FROM tcycles WHERE idclient=:idclient AND state = '1' ORDER BY id ASC LIMIT 1";
 					$stmt = $dbo->prepare($sql);
@@ -482,7 +554,7 @@ function updateAppState($data) {
 
 					$attach = '../files/docs/'.$filetoattach;
 					$ext = "pdf";
-					$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".str_replace('"', '', $user['name'])." (".$idclient.")/application/review/";
+					$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".getClientInfo($idclient)."/application/review/";
 					$absolutePath = __DIR__ ."/../".$hostPath;
 					mkdir($absolutePath, 0777, true);
 
@@ -585,23 +657,23 @@ function updateAppState($data) {
 					$stmt->execute();
 					$user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-					$ownerEmailAddress = "halal.ezone@gmail.com";
-					$fromEmailAddress = "noreply@halal-e.zone";
+					$ownerEmailAddress = "mona.sherif@iidc.at";
+					$fromEmailAddress = "noreply@halal-digital.net";
 
-					$body['name'] = 'Halal e-Zone';
+					$body['name'] = 'Halal Digital';
 					$body['email'] =  $fromEmailAddress;
 					$body['to'] = $user["email"];
 
 					// sending notification
-					$body['subject'] = "Halal e-Zone - Upload Proof of Payment - ".$user["name"];
+					$body['subject'] = "Halal Digital - Upload Proof of Payment - ".$user["name"];
 					$body['header'] = "";
 					$body['body'] = "Dear ".$user["name"].",";
 					$body['body'] .= "<br /><br />";
-					$body['body'] .= "kindly upload your proof of payment on the Halal eZone portal so that we can proceed to issue your certificate.";
+					$body['body'] .= "kindly upload your proof of payment on the Halal Digital portal so that we can proceed to issue your certificate.";
 					$body['body'] .= "<br /><br />";
 					$body['body'] .= "Kind Regards,";
 					$body['body'] .= "<br/>";
-					$body['body'] .= "Your HQC supporting Team";
+					$body['body'] .= "Your IIDC supporting Team";
 					sendEmail($body);
 
 					if (file_exists($absolutePath.'/'. $filename)) {
@@ -670,7 +742,7 @@ function updateAppState($data) {
 
 		if ($skip == '1') {
 
-			if ($state == "audit") { 
+			if ($state == "audit" || $state == "checklist") { 
 
 				$data = [];
 				$data["user"] = $user;
@@ -691,14 +763,14 @@ function updateAppState($data) {
 				$category = "audit";
 				$decode = file_get_contents( __DIR__ ."/../config.json");
 				$config=json_decode($decode, TRUE);
-				$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".str_replace('"', '', $user['name'])." (".$idclient.")/application/audit/";
-				$absolutePath = __DIR__ ."/../".$hostPath;
+				$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".getClientInfo($idclient)."/application/audit/";
+				$absolutePath = $config['basePath'].$hostPath;
 
 				if (!file_exists($absolutePath)) {
 					mkdir($absolutePath, 0777, true);
 				}
 
-				$attach = '../files/docs/F0401 Audit Plan Form 2021.pdf';
+				$attach = $config["basePath"].'files/docs/Audit_Plan_EN.pdf';
 				$ext = "pdf";
 
 				$query = "DELETE FROM tdocs WHERE idapp=:idapp AND idclient=:idclient AND title=:title AND category=:category";
@@ -739,7 +811,13 @@ function updateAppState($data) {
 	
 				$industry = $data['user']["industry"];
 
-				$filetoattach = "";
+				$filetoattach = "Checklist_Auditor_EN.pdf";
+
+			if ($industry == "Slaughter Houses") {
+					$filetoattach = "checklist_slaughtering_plants_EN.pdf";
+				}
+
+				/*
 				if ($industry == "Meat Processing") {
 					$filetoattach = "auditor_checklist_meat_processing.pdf";
 				}
@@ -749,16 +827,17 @@ function updateAppState($data) {
 				else  {
 					$filetoattach = "auditor_checklist_manufacturing.pdf";
 				}
+				*/
 
 				$myuser = cuser::singleton();
 				$myuser->getUserData();
 				$iduser = $myuser->userdata['id'];
 
-				$attach = '../files/docs/'.$filetoattach;
+				$attach = $config["basePath"].'/files/docs/'.$filetoattach;
 				//$attach = $filetoattach;
 				$ext = "pdf";
-				$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".str_replace('"', '', $user['name'])." (".$idclient.")/application/checklist/";
-				$absolutePath = __DIR__ ."/../".$hostPath;
+				$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".getClientInfo($idclient)."/application/checklist/";
+				$absolutePath = $config["basePath"].$hostPath;
 				if (!file_exists($absolutePath)) {
 					mkdir($absolutePath, 0777, true);
 				}
@@ -812,7 +891,7 @@ function updateAppState($data) {
 
 				$attach = '../files/docs/'.$filetoattach;
 				$ext = "pdf";
-				$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".str_replace('"', '', $user['name'])." (".$idclient.")/application/review/";
+				$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".getClientInfo($idclient)."/application/review/";
 				$absolutePath = __DIR__ ."/../".$hostPath;
 				mkdir($absolutePath, 0777, true);
 
@@ -871,7 +950,7 @@ function updateAppState($data) {
 
 				$attach = '../files/docs/'.$filetoattach;
 				$ext = "pdf";
-				$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".str_replace('"', '', $user['name'])." (".$idclient.")/application/review/";
+				$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".getClientInfo($idclient)."/application/review/";
 				$absolutePath = __DIR__ ."/../".$hostPath;
 				mkdir($absolutePath, 0777, true);
 
@@ -928,7 +1007,13 @@ function updateAppState($data) {
 				$stmt->execute();
 
 				if (!$stmt->fetchColumn()) {
-					$filetoattach = "";
+					$filetoattach = "Questionnaire_Customer_EN.pdf";
+
+					if ($industry == "Slaughter Houses") {
+						$filetoattach = "Customer_questionnaire_for_Slaughtering_EN.pdf";
+					}
+
+					/*
 					if ($industry == "Meat Processing") {
 						$filetoattach = "customer_questionnaire_meat_processing.pdf";
 					}
@@ -938,13 +1023,14 @@ function updateAppState($data) {
 					else  {
 						$filetoattach = "customer_questionnaire_manufacturing.pdf";
 					}
-					$attach = '../files/docs/'.$filetoattach;
+						*/
 					$ext = "pdf";
-					$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".str_replace('"', '', $user['name'])." (".$idclient.")/application/questionnaire/";
-					$absolutePath = __DIR__ ."/../".$hostPath;
+					$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".getClientInfo($idclient)."/application/questionnaire/";
+					$absolutePath = $config['basePath'].$hostPath;
 					if (!file_exists($absolutePath)) {
 						mkdir($absolutePath, 0777, true);
 					}
+					$attach = $config['basePath'].'files/docs/'.$filetoattach;
 
 					$query = "INSERT INTO tdocs (idapp, idclient, iduser, title, category, hostpath, signature) 
 										VALUES (:idapp, :idclient, :iduser, :title, :category, :hostpath, 1)";
@@ -956,6 +1042,7 @@ function updateAppState($data) {
 					$stmt->bindParam(':title', $title, PDO::PARAM_STR);
 					$stmt->bindParam(':category', $category, PDO::PARAM_STR);
 					$stmt->bindParam(':hostpath', $hostPath, PDO::PARAM_STR);
+					
 					/*
 					echo $idapp . "<br/>";
 					echo $idclient . "<br/>";
@@ -964,6 +1051,7 @@ function updateAppState($data) {
 					echo $category . "<br/>";
 					echo $hostPath . "<br/>";
 					*/
+
 					$stmt->execute();
 					$iddoc = $dbo->lastInsertId();
 
@@ -978,11 +1066,11 @@ function updateAppState($data) {
 					$stmt->bindParam(':id', $iddoc, PDO::PARAM_STR);
 					$stmt->execute();
 
-					$ownerEmailAddress = "halal.ezone@gmail.com";
-					$fromEmailAddress = "noreply@halal-e.zone";
+					$ownerEmailAddress = "mona.sherif@iidc.at";
+					$fromEmailAddress = "noreply@halal-digital.net";
 
 					//sendEmailWithAttach
-					$body['name'] = 'Halal e-Zone';
+					$body['name'] = 'Halal Digital';
 					$body['email'] =  $fromEmailAddress;
 					$body['to'] = $user['email'];
 
@@ -990,13 +1078,13 @@ function updateAppState($data) {
 					$body['attach'] = $filename;
 
 					// sending notification
-					$body['subject'] = "Halal e-Zone - ".$title.' - '.$user["name"];
+					$body['subject'] = "Halal Digital - ".$title.' - '.$user["name"];
 					$body['header'] = "";
 					$body['message'] = "<p>Dear Ms./ Mr. ".$user["contact_person"]."!</p>";
-					$body['message'] .= '<p>Please find attached to this email our Client Questionnaire. You are kindly requested to download, fill and upload the filled documents on your eZone account/Applications/client questionnaire-free form declarations.</p>
+					$body['message'] .= '<p>Please find attached to this email our Client Questionnaire. You are kindly requested to download, fill and upload the filled documents on your Halal Digital account/Applications/client questionnaire-free form declarations.</p>
 					<p>Feel free to contact us for any assistance or clarification.</p>
 					<p>Regards</p>
-					<p>Halal e-Zone</p>
+					<p>Halal Digital</p>
 					';
 
 					if ($skip != "1") {
@@ -1017,11 +1105,11 @@ function updateAppState($data) {
 				$stmt->execute();
 
 				if (!$stmt->fetchColumn()) {
-					$filetoattach = "F0451 Pork-Free Declaration.pdf";
-					$attach = '../files/docs/'.$filetoattach;
+					$filetoattach = "Pork-Free-Declaration.pdf";
+					$attach = $config['basePath'].'files/docs/'.$filetoattach;
 					$ext = "pdf";
-					$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".str_replace('"', '', $user['name'])." (".$idclient.")/application/declarations/";
-					$absolutePath = __DIR__ ."/../".$hostPath;
+					$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".getClientInfo($idclient)."/application/declarations/";
+					$absolutePath = $config['basePath'].$hostPath;
 
 					if (!file_exists($absolutePath)) {
 						mkdir($absolutePath, 0777, true);
@@ -1053,11 +1141,11 @@ function updateAppState($data) {
 					$stmt->bindParam(':id', $iddoc, PDO::PARAM_STR);
 					$stmt->execute();
 
-					$ownerEmailAddress = "halal.ezone@gmail.com";
-					$fromEmailAddress = "noreply@halal-e.zone";
+					$ownerEmailAddress = "mona.sherif@iidc.at";
+					$fromEmailAddress = "noreply@halal-digital.net";
 
 					//sendEmailWithAttach
-					$body['name'] = 'Halal e-Zone';
+					$body['name'] = 'Halal Digital';
 					$body['email'] =  $fromEmailAddress;
 					$body['to'] = $user['email'];
 
@@ -1065,13 +1153,13 @@ function updateAppState($data) {
 					$body['attach'] = $filename;
 
 					// sending notification
-					$body['subject'] = "Halal e-Zone - ".$title. ' - '.$user["name"];
+					$body['subject'] = "Halal Digital - ".$title. ' - '.$user["name"];
 					$body['header'] = "";
 					$body['message'] = "<p>Dear Ms./ Mr. ".$user["contact_person"]."!</p>";
-					$body['message'] .= '<p>Please find attached to this email our '.$title.'. You are kindly requested to download, fill and upload the filled documents on your eZone account/Applications/client questionnaire-free form declarations.</p>
+					$body['message'] .= '<p>Please find attached to this email our '.$title.'. You are kindly requested to download, fill and upload the filled documents on your Halal Digital account/Applications/client questionnaire-free form declarations.</p>
 					<p>Feel free to contact us for any assistance or clarification.</p>
 					<p>Regards</p>
-					<p>Halal e-Zone</p>
+					<p>Halal Digital</p>
 					';
 
 					if ($skip != "1") {
@@ -1091,12 +1179,12 @@ function updateAppState($data) {
 				$stmt->bindParam(':idapp', $idapp, PDO::PARAM_STR);
 				$stmt->execute();
 
-				if (!$stmt->fetchColumn()) {
-					$filetoattach = "F0453 Alcohol Free Production Line Declaration.pdf";
-					$attach = '../files/docs/'.$filetoattach;
+				if (!$stmt->fetchColumn()) { 
+					$filetoattach = "Alcohol-Free-Declaration.pdf";
+					$attach = $config['basePath'].'files/docs/'.$filetoattach;
 					$ext = "pdf";
-					$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".str_replace('"', '', $user['name'])." (".$idclient.")/application/declarations/";
-					$absolutePath = __DIR__ ."/../".$hostPath;
+					$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".getClientInfo($idclient)."/application/declarations/";
+					$absolutePath = $config['basePath'].$hostPath;
 
 					if (!file_exists($absolutePath)) {
 						mkdir($absolutePath, 0777, true);
@@ -1128,11 +1216,11 @@ function updateAppState($data) {
 					$stmt->bindParam(':id', $iddoc, PDO::PARAM_STR);
 					$stmt->execute();
 
-					$ownerEmailAddress = "halal.ezone@gmail.com";
-					$fromEmailAddress = "noreply@halal-e.zone";
+					$ownerEmailAddress = "mona.sherif@iidc.at";
+					$fromEmailAddress = "noreply@halal-digital.net";
 
 					//sendEmailWithAttach
-					$body['name'] = 'Halal e-Zone';
+					$body['name'] = 'Halal Digital';
 					$body['email'] =  $fromEmailAddress;
 					$body['to'] = $user['email'];
 
@@ -1140,13 +1228,13 @@ function updateAppState($data) {
 					$body['attach'] = $filename;
 
 					// sending notification
-					$body['subject'] = "Halal e-Zone - ".$title . ' - '.$user["name"];
+					$body['subject'] = "Halal Digital - ".$title . ' - '.$user["name"];
 					$body['header'] = "";
 					$body['message'] = "<p>Dear Ms./ Mr. ".$user["contact_person"]."!</p>";
-					$body['message'] .= '<p>Please find attached to this email our '.$title.'. You are kindly requested to download, fill and upload the filled documents on your eZone account/Applications/client questionnaire-free form declarations.</p>
+					$body['message'] .= '<p>Please find attached to this email our '.$title.'. You are kindly requested to download, fill and upload the filled documents on your Halal Digital account/Applications/client questionnaire-free form declarations.</p>
 					<p>Feel free to contact us for any assistance or clarification.</p>
 					<p>Regards</p>
-					<p>Halal e-Zone</p>
+					<p>Halal Digital</p>
 					';
 
 					if ($skip != "1") {
@@ -1155,7 +1243,7 @@ function updateAppState($data) {
 				}
 
 				if ($industry == "Slaughter Houses") {
-					$body = [];
+ 					$body = [];
 					$title = "Animal Feedstuff Declaration";
 					$category = "declarations";
 
@@ -1170,10 +1258,10 @@ function updateAppState($data) {
 					if (!$stmt->fetchColumn()) {
 
 						$filetoattach = "F0460 Animal Feedstuff Declaration Form.pdf";
-						$attach = '../files/docs/'.$filetoattach;
+						$attach = $config['basePath'].'files/docs/'.$filetoattach;
 						$ext = "pdf";
-						$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".str_replace('"', '', $user['name'])." (".$idclient.")/application/declarations/";
-						$absolutePath = __DIR__ ."/../".$hostPath;
+						$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".getClientInfo($idclient)."/application/declarations/";
+						$absolutePath = $config['basePath'].$hostPath;
 
 						if (!file_exists($absolutePath)) {
 							mkdir($absolutePath, 0777, true);
@@ -1206,11 +1294,11 @@ function updateAppState($data) {
 						$stmt->bindParam(':id', $iddoc, PDO::PARAM_STR);
 						$stmt->execute();
 
-						$ownerEmailAddress = "halal.ezone@gmail.com";
-						$fromEmailAddress = "noreply@halal-e.zone";
+						$ownerEmailAddress = "mona.sherif@iidc.at";
+						$fromEmailAddress = "noreply@halal-digital.net";
 
 						//sendEmailWithAttach
-						$body['name'] = 'Halal e-Zone';
+						$body['name'] = 'Halal Digital';
 						$body['email'] =  $fromEmailAddress;
 						$body['to'] = $user['email'];
 
@@ -1218,13 +1306,13 @@ function updateAppState($data) {
 						$body['attach'] = $filename;
 
 						// sending notification
-						$body['subject'] = "Halal e-Zone - ".$title.' - '.$user["name"];
+						$body['subject'] = "Halal Digital - ".$title.' - '.$user["name"];
 						$body['header'] = "";
 						$body['message'] = "Dear Ms./ Mr. ".$user["contact_person"]."!<br /><br />";
-						$body['message'] .= '<p>Please find attached to this email our '.$title.'. You are kindly requested to download, fill and upload the filled documents on your eZone account/Applications/client questionnaire-free form declarations.</p>
+						$body['message'] .= '<p>Please find attached to this email our '.$title.'. You are kindly requested to download, fill and upload the filled documents on your Halal Digital account/Applications/client questionnaire-free form declarations.</p>
 						<p>Feel free to contact us for any assistance or clarification.</p>
 						<p>Regards</p>
-						<p>Halal e-Zone</p>	
+						<p>Halal Digital</p>	
 						';
 						if ($skip != "1") {
 							sendEmailWithAttach($body);
@@ -1287,7 +1375,7 @@ function sendClientLogin($data) {
 	$stmt->bindParam(':idapp', $idapp, PDO::PARAM_STR);
 	$stmt->execute();
 	if (!$stmt->fetchColumn()) {
-		//$errors .= '<li>No record found, signed offer has not been uploaded.</li>';
+		$errors .= '<li>No record found, signed offer has not been uploaded.</li>';
 	}
 
 	$sql = "SELECT * FROM tusers WHERE id=:idclient";
@@ -1310,7 +1398,7 @@ function sendClientLogin($data) {
 		$first_half = substr($name,0, $num);
 		$second_half = substr($name, $num);
 		$name = $first_half . ' '.$second_half;
-		*/
+		*/ 
 		$username =  random_username($name);
 		$password = getToken(10);
 		$encrypted = hash('sha512', $password);
@@ -1335,12 +1423,12 @@ function sendClientLogin($data) {
 		$stmt->bindValue(':idclient', $idclient);
 		$stmt->execute();
 
-		$ownerEmailAddress = "halal.ezone@gmail.com";
-		$fromEmailAddress = "noreply@halal-e.zone";
+		$ownerEmailAddress = "mona.sherif@iidc.at";
+		$fromEmailAddress = "noreply@halal-digital.net";
 
 		$decode = file_get_contents( __DIR__ ."/../config.json");
 		$config=json_decode($decode, TRUE);
-		$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".str_replace('"', '', $user['name'])." (".$idclient.")/application/";
+		$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".getClientInfo($idclient)."/application/";
 		$absolutePath = __DIR__ ."/../".$hostPath;
 
 		mkdir($absolutePath, 0777, true);
@@ -1349,13 +1437,17 @@ function sendClientLogin($data) {
 		if ( $offerOffice == "" ) {
 			$offerOffice = "AT";
 		}
-
+		/*
 		if ($offerOffice == "HU") {
 			$attach = '../files/docs/F0-01 new customer registration_HU.pdf';
 		}
 		else {
 			$attach = '../files/docs/F0-01 new customer registration.pdf';
 		}
+		*/
+
+		$attach = '../files/docs/New Customer Registration Form.pdf';
+
 		$ext = "pdf";
 		$filename = str_replace(".".$ext, '_'.$idapp.'.'.$ext, basename($attach));
 		$dest_path = $absolutePath . $filename;
@@ -1363,7 +1455,7 @@ function sendClientLogin($data) {
 
 		//sendEmailWithAttach
 		$body = [];
-		$body['name'] = 'Halal e-Zone';
+		$body['name'] = 'Halal Digital';
 		$body['email'] =  $fromEmailAddress;
 		$body['to'] = "mustafa@halaloffice.com";
 
@@ -1371,7 +1463,7 @@ function sendClientLogin($data) {
 		$body['attach'] = $filename;
 
 		// sending notification
-		$body['subject'] = "HQC_".$offerOffice." new customer registration - " . $user["name"];
+		$body['subject'] = "Hala Digital - New customer registration - ".$user["name"];
 		$body['header'] = "";
 		$body['message'] = "Salam Mustafa!<br /><br />";
 		$body['message'] .= "How are you doing?<br /><br />";
@@ -1379,9 +1471,10 @@ function sendClientLogin($data) {
 		$body['message'] .= "Wsalam,<br />";
 		$body['message'] .= "Mona";
 
-		sendEmailWithAttach($body);
+		//sendEmailWithAttach($body);
 
-		$body['to'] = "office@hqc.at";
+		$body['to'] = $adminEmailAddress;
+		//$body['to'] = $user["email"];
 		sendEmailWithAttach($body);
 		
 		///////////////////////////////////////////////////////////////
@@ -1391,7 +1484,7 @@ function sendClientLogin($data) {
 				 'password' => $password,
 				];
 
-		$attach = '../files/docs/05access data Halal eZone_'.$offerOffice.'.pdf';
+		$attach = '../files/docs/Access data Halal Digital.pdf';
 		$ext = "pdf";
 		$filename = str_replace(".".$ext, '_'.$idapp.'.'.$ext, basename($attach));
 		$dest_path = $absolutePath . $filename;
@@ -1399,7 +1492,7 @@ function sendClientLogin($data) {
 
 		//sendEmailWithAttach
 		$body = [];
-		$body['name'] = 'Halal e-Zone';
+		$body['name'] = 'Halal Digital';
 		$body['email'] =  $fromEmailAddress;
 		$body['to'] = $user["email"];
 
@@ -1407,29 +1500,17 @@ function sendClientLogin($data) {
 		$body['attach'] = $filename;
 
 		// sending notification
-		$body['subject'] = "Halal e-Zone - Access Data - ".$user["name"];
+		$body['subject'] = "Halal Digital - Access Data - ".$user["name"];
 		$body['header'] = "";
 		$message = "<p>Dear ".$user["contact_person"].",</p>
 
-<p>We are thrilled to welcome you to the HQC Halal Quality Control Community! We prioritize exceptional customer service and a smooth digital certification process to ensure a positive experience.</p>
+<p>We are thrilled to welcome you to the IIDC Community! We prioritize exceptional customer service and a smooth digital certification process to ensure a positive experience.</p>
 
-<p><strong>Your Access to the Halal eZone Portal</strong></p>
+<p><strong>Your Access to the Halal Digital Portal</strong></p>
 
-<p>With this email, you'll receive your access data to the Halal eZone, our unique online portal designed for a quick, digital, and hassle-free halal certification process. The eZone is user-friendly but we'd like to provide some additional resources to help you get started.</p>
+<p>With this email, you'll receive your access data to the Halal Digital, our unique online portal designed for a quick, digital, and hassle-free halal certification process.</p>
 
-<p><strong>Finding Your Way Around the eZone</strong></p>
-
-<p>In your eZone dashboard, you'll find the \"Files\" section at the bottom of your eZone account. Here, you'll find instructional videos in both German and English to help you master using the eZone platform. The videos are accessible through the provided Loom links. Click on the <strong>\"German Webinar\" Loom Link</strong> or <strong>\"English Webinar\" Loom Link</strong> to access the pre-recorded session.</p>
-
-<p><img src=\"https://halal-e.zone/img/welcome_email.jpg\" /></p>
-
-<p>The webinar platform includes a chapter list for your convenience, allowing you to jump directly to the section that interests you most. From our experience, these videos provide excellent guidance on utilizing the eZone's functionalities.</p>
-
-<p><strong>Want to go directly to the recorded webinar link?</strong></p>
-
-<p>Here the English version: <a href=\"https://www.loom.com/share/3def04eb6e604bab88978ead4ea740fb?sid=b109fd54-c11c-4308-bd5f-3b5dfebc7bec\">Link to the recorded webinar</a></p>
-
-<p>Here the German version: <a href=\"https://www.loom.com/share/3def04eb6e604bab88978ead4ea740fb?sid=b109fd54-c11c-4308-bd5f-3b5dfebc7bec\">Link to the recorded webinar</a></p>";
+";
 
 
 $body['message'] = $message;
@@ -1437,7 +1518,7 @@ $body['message'] = $message;
 sendEmailWithAttach($body);
 
 $body = [];
-		$body['name'] = 'Halal e-Zone';
+		$body['name'] = 'Halal Digital';
 		$body['email'] =  $fromEmailAddress;
 		$body['to'] = $adminEmailAddress;
 		//$body['to'] = 'alrahmahsolutions@gmail.com';
@@ -1446,7 +1527,7 @@ $body = [];
 		$body['attach'] = $filename;
 
 		// sending notification
-		$body['subject'] = "Halal e-Zone - Access Data - ".$user["name"];
+		$body['subject'] = "Halal Digital - Access Data - ".$user["name"];
 		$body['header'] = "";
 
 		$body['message'] = $message;
@@ -1579,7 +1660,7 @@ sendEmailWithAttach($body);
 			$category = "audit";
 			$decode = file_get_contents( __DIR__ ."/../config.json");
 			$config=json_decode($decode, TRUE);
-			$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".str_replace('"', '', $user['name'])." (".$idclient.")/application/audit/";
+			$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".getClientInfo($idclient)."/application/audit/";
 			$absolutePath = __DIR__ ."/../".$hostPath;
 
 			if (!file_exists($absolutePath)) {
@@ -1621,11 +1702,11 @@ sendEmailWithAttach($body);
 			$stmt->bindParam(':id', $iddoc, PDO::PARAM_STR);
 			$stmt->execute();
 
-				$ownerEmailAddress = "halal.ezone@gmail.com";
-			$fromEmailAddress = "noreply@halal-e.zone";
+				$ownerEmailAddress = "mona.sherif@iidc.at";
+			$fromEmailAddress = "noreply@halal-digital.net";
 
 			//sendEmailWithAttach
-			$body['name'] = 'Halal e-Zone';
+			$body['name'] = 'Halal Digital';
 			$body['email'] =  $fromEmailAddress;
 			$body['to'] = $data["user"]["email"];
 
@@ -1633,12 +1714,12 @@ sendEmailWithAttach($body);
 			$body['attach'] = $filename;
 
 			// sending notification
-			$body['subject'] = "Halal e-Zone - Audit Plan - ".$user["name"];
+			$body['subject'] = "Halal Digital - Audit Plan - ".$user["name"];
 			$body['header'] = "";
 			$body['message'] = "Dear ".$data["user"]["name"].",<br /><br />";
 			$body['message'] .= "Your Audit Plan has been created. Please find attached.";
 			$body['message'] .= "Kind Regards<br/>";
-			$body['message'] .= "Your HQC supporting Team";
+			$body['message'] .= "Your IIDC supporting Team";
 
 			sendEmailWithAttach($body);
 
@@ -1892,15 +1973,15 @@ function saveAuditReport($data){
 		$stmt->execute();
 		$user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-		$ownerEmailAddress = "halal.ezone@gmail.com";
-		$fromEmailAddress = "noreply@halal-e.zone";
+		$ownerEmailAddress = "mona.sherif@iidc.at";
+		$fromEmailAddress = "noreply@halal-digital.net";
 
-		$body['name'] = 'Halal e-Zone';
+		$body['name'] = 'Halal Digital';
 		$body['email'] =  $fromEmailAddress;
 		$body['to'] = $user["email"];
 
 		// sending notification
-		$body['subject'] = "Halal e-Zone - Audit Report update - ".$user["name"];
+		$body['subject'] = "Halal Digital - Audit Report update - ".$user["name"];
 		$body['header'] = "";
 		$body['body'] = "Dear ".$user["name"].",";
 		$body['body'] .= "<br /><br />";
@@ -1914,10 +1995,10 @@ function saveAuditReport($data){
 		$body['body'] .= "<br />";
 		$body['body'] .= "Reference to Checklist: ".$Reference;
 		$body['body'] .= "<br /><br />";
-		$body['body'] .= "Please log in to your eZone account / application tab to input your root cause analysis and corrective action, as well as to download your audit report.";
+		$body['body'] .= "Please log in to your Halal Digital account / application tab to input your root cause analysis and corrective action, as well as to download your audit report.";
 		$body['body'] .= "<br /><br />";
 		$body['body'] .= "Kind Regards<br/>";
-		$body['body'] .= "Your HQC Team";
+		$body['body'] .= "Your IIDC Team";
 
 		insertActivityLog($idclient, $idapp, $myuser->userdata['id'], $myuser->userdata['name'], 'Corrective actions added to the audit report');			
 
@@ -1959,22 +2040,22 @@ function sendAuditReport($data) {
 			$contents .= "Reference to Checklist: ".$deviation["Reference"];
 		}
 		$contents .= "<br /><br />";
-		$contents .= "Please log in to your eZone account / application tab to input your root cause analysis and corrective action, as well as to download your audit report.";
+		$contents .= "Please log in to your Halal Digital account / application tab to input your root cause analysis and corrective action, as well as to download your audit report.";
 		$contents .= "<br /><br />";
 		$contents .= "Kind Regards,";
 		$contents .= "<br/>";
-		$contents .= "Your HQC supporting Team";
+		$contents .= "Your IIDC supporting Team";
 
 
-		$ownerEmailAddress = "halal.ezone@gmail.com";
-		$fromEmailAddress = "noreply@halal-e.zone";
+		$ownerEmailAddress = "mona.sherif@iidc.at";
+		$fromEmailAddress = "noreply@halal-digital.net";
 
-		$body['name'] = 'Halal e-Zone';
+		$body['name'] = 'Halal Digital';
 		$body['email'] =  $fromEmailAddress;
 		$body['to'] = $user["email"];
 
 		// sending notification
-		$body['subject'] = "Halal e-Zone - Audit Report update - ".$user["name"];
+		$body['subject'] = "Halal Digital - Audit Report update - ".$user["name"];
 		$body['header'] = "";
 		$body['body'] = $contents;
 	 	sendEmail($body);
@@ -2256,6 +2337,7 @@ function updateDeviationStatus($data) {
 	$dbo = &$GLOBALS['dbo'];
 	$myuser = cuser::singleton();
 	$myuser->getUserData();
+	$iduser = $myuser->userdata['id'];
 	$errors = "";
 	$id = $data["id"];
 	$Status = $data["Status"];
@@ -2285,15 +2367,15 @@ function updateDeviationStatus($data) {
 	$stmt->execute();
 	$user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-	$ownerEmailAddress = "halal.ezone@gmail.com";
-	$fromEmailAddress = "noreply@halal-e.zone";
+	$ownerEmailAddress = "mona.sherif@iidc.at";
+	$fromEmailAddress = "noreply@halal-digital.net";
 
-	$body['name'] = 'Halal e-Zone';
+	$body['name'] = 'Halal Digital';
 	$body['email'] =  $fromEmailAddress;
 	$body['to'] = $user["email"];
 
 	// sending notification
-	$body['subject'] = "Halal e-Zone - Audit Report update - ".$user["name"];
+	$body['subject'] = "Halal Digital - Audit Report update - ".$user["name"];
 	$body['header'] = "";
 	$body['body'] = "Dear ".$user["name"].",";
 	$body['body'] .= "<br /><br />";
@@ -2315,7 +2397,7 @@ function updateDeviationStatus($data) {
 	$body['body'] .= "<br /><br />";
 	$body['body'] .= "Kind Regards,";
 	$body['body'] .= "<br/>";
-	$body['body'] .= "Your HQC supporting Team";
+	$body['body'] .= "Your IIDC supporting Team";
 
 	sendEmail($body);
 
@@ -2342,7 +2424,7 @@ function updateDeviationStatus($data) {
 	if (!$stmt->fetchColumn()) {
 		$all = 1;
 		$state = "pop";
-
+		
 		
 		$newIndex = array_search($state, $statusOptions);
 
@@ -2361,20 +2443,199 @@ function updateDeviationStatus($data) {
 			$stmt->bindParam(':state', $state, PDO::PARAM_STR);
 			$stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);
 			$stmt->bindParam(':idapp', $idapp, PDO::PARAM_STR);
-			$stmt->execute();				
+			$stmt->execute();	
+			
+
+				$query = "SELECT *
+					FROM tapplications	
+					WHERE id='".$idapp."' AND idclient='".$idclient."'";
+					$stmt = $dbo->prepare($query);
+					$stmt->execute();
+					$data['app'] = $stmt->fetch(PDO::FETCH_ASSOC);
+				
+					$query = "SELECT *
+					FROM tusers	
+					WHERE id='".$idclient."'";
+					$stmt = $dbo->prepare($query);
+					$stmt->execute();
+					$data['user'] = $stmt->fetch(PDO::FETCH_ASSOC);
+ 				
+					$audit_report_settings = $data['app']['audit_report_settings'];
+					if ($audit_report_settings == "") $audit_report_settings = "[]";
+				
+					$decode = file_get_contents( __DIR__ ."/../config.json");
+					$config=json_decode($decode, TRUE);
+					$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".getClientInfo($idclient)."/application/report/";
+					$absolutePath = $config["basePath"].$hostPath;
+			
+					if (!file_exists($absolutePath)) {
+						mkdir($absolutePath, 0777, true);
+					}
+			
+					$attach = '../files/docs/F0436 Audit Report (NCR).pdf';
+					$ext = "pdf";
+			
+					$filename = basename($attach);
+					$dest_path = $absolutePath . $filename;
+			
+					saveAuditReportPDF($data, $attach, $dest_path, $audit_plan_settings, false);
+
+ 					// get cycle name
+					$sql = "SELECT * FROM tcycles WHERE idclient=:idclient AND state = '1' ORDER BY id ASC LIMIT 1";
+					$stmt = $dbo->prepare($sql);
+					$stmt->setFetchMode(PDO::FETCH_ASSOC);
+					$stmt->bindValue(':idclient', $idclient);
+					$stmt->execute();
+					$firstCycle = $stmt->fetch(PDO::FETCH_ASSOC);
+					$cycleName = $firstCycle["name"];
+					
+					if (file_exists($absolutePath.'/'. $filename)) {
+						/*
+						$uploadDir = DRIVE_FILE_DIR."/".$config['clientsfolder']."/".str_replace('/', '{slash}', getClientInfo($idclient))."/application/Audit Forms/3.1 NCR And Audit Report";
+						require_once('../fileupload/GoogleDriveFunctions.php');
+						$client = gfGetClient();
+						$service = new Google_Service_Drive($client);
+						gfUploadFile($client, $service, $absolutePath, $filename,  mime_content_type($absolutePath ."/". $filename), $uploadDir); 
+						*/
+					}
+
+					// Save review and decision making pdfs
+					$title = "Audit Review Report";
+					$category = "review";
+
+					$userData = [];
+					$query = "SELECT *
+								FROM tapplications	
+								WHERE id='".$idapp."' AND idclient='".$idclient."'";
+								$stmt = $dbo->prepare($query);
+								$stmt->execute();
+								$userData['app'] = $stmt->fetch(PDO::FETCH_ASSOC);
+
+								$query = "SELECT *
+								FROM tusers	
+								WHERE id='".$idclient."'";
+								$stmt = $dbo->prepare($query);
+								$stmt->execute();
+								$userData['user'] = $stmt->fetch(PDO::FETCH_ASSOC);
+
+					$filetoattach = "F0421 Audit Review Report.pdf";
+
+					$attach = '../files/docs/'.$filetoattach;
+					$ext = "pdf";
+					$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".getClientInfo($idclient)."/application/review/";
+					$absolutePath = $config["basePath"].$hostPath;
+					mkdir($absolutePath, 0777, true);
+ 
+					$query = "INSERT INTO tdocs (idapp, idclient, iduser, title, category, hostpath, signature) 
+										VALUES (:idapp, :idclient, :iduser, :title, :category, :hostpath, 0)";
+					$stmt = $dbo->prepare($query);
+
+					$stmt->bindParam(':idapp', $idapp, PDO::PARAM_STR);
+					$stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);
+					$stmt->bindParam(':iduser', $iduser, PDO::PARAM_STR);
+					$stmt->bindParam(':title', $title, PDO::PARAM_STR);
+					$stmt->bindParam(':category', $category, PDO::PARAM_STR);
+					$stmt->bindParam(':hostpath', $hostPath, PDO::PARAM_STR);
+					$stmt->execute();
+					$iddoc = $dbo->lastInsertId();
+
+					$filename = str_replace(".".$ext, '_'.$iddoc.'.'.$ext, basename($attach));
+					$dest_path = $absolutePath . $filename;
+
+					saveAuditReviewReportPDF($userData, $attach, $dest_path);
+
+					$query = "UPDATE tdocs SET filename = :filename WHERE id=:id";
+					$stmt = $dbo->prepare($query);
+					$stmt->bindParam(':filename', $filename, PDO::PARAM_STR);
+					$stmt->bindParam(':id', $iddoc, PDO::PARAM_STR);
+					$stmt->execute();
+
+					// Save review and decision making pdfs
+					$title = "Decision Making Report";
+					$category = "dm";
+ 
+
+					$filetoattach = "F0403 Decision Making Report.pdf";
+
+					$attach = '../files/docs/'.$filetoattach;
+					$ext = "pdf";
+					$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".$user['name']." (".$idclient.")/application/review/";
+					$absolutePath = __DIR__ ."/../".$hostPath;
+					mkdir($absolutePath, 0777, true);
+ 
+					$query = "INSERT INTO tdocs (idapp, idclient, iduser, title, category, hostpath, signature) 
+										VALUES (:idapp, :idclient, :iduser, :title, :category, :hostpath, 0)";
+					$stmt = $dbo->prepare($query);
+
+					$stmt->bindParam(':idapp', $idapp, PDO::PARAM_STR);
+					$stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);
+					$stmt->bindParam(':iduser', $iduser, PDO::PARAM_STR);
+					$stmt->bindParam(':title', $title, PDO::PARAM_STR);
+					$stmt->bindParam(':category', $category, PDO::PARAM_STR);
+					$stmt->bindParam(':hostpath', $hostPath, PDO::PARAM_STR);
+					$stmt->execute();
+					$iddoc = $dbo->lastInsertId();
+
+					$filename = str_replace(".".$ext, '_'.$iddoc.'.'.$ext, basename($attach));
+					$dest_path = $absolutePath . $filename;
+
+					saveDecisionMakingReportPDF($userData, $attach, $dest_path);
+
+					$query = "UPDATE tdocs SET filename = :filename WHERE id=:id";
+					$stmt = $dbo->prepare($query);
+					$stmt->bindParam(':filename', $filename, PDO::PARAM_STR);
+					$stmt->bindParam(':id', $iddoc, PDO::PARAM_STR);
+					$stmt->execute();
+
+					// Send email to upload POP
+					$sql = "SELECT * FROM tusers WHERE id=:idclient";
+					$stmt = $dbo->prepare($sql);
+					$stmt->setFetchMode(PDO::FETCH_ASSOC);
+					$stmt->bindValue(':idclient', $idclient);
+					$stmt->execute();
+					$user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+					$ownerEmailAddress = "mona.sherif@iidc.at";
+					$fromEmailAddress = "noreply@halal-digital.net";
+
+					$body['name'] = 'Halal Digital';
+					$body['email'] =  $fromEmailAddress;
+					$body['to'] = $user["email"];
+
+					// sending notification
+					$body['subject'] = "Halal Digital - Upload Proof of Payment - ".$user["name"];
+					$body['header'] = "";
+					$body['body'] = "Dear ".$user["name"].",";
+					$body['body'] .= "<br /><br />";
+					$body['body'] .= "kindly upload your proof of payment on the Halal Digital portal so that we can proceed to issue your certificate.";
+					$body['body'] .= "<br /><br />";
+					$body['body'] .= "Kind Regards,";
+					$body['body'] .= "<br/>";
+					$body['body'] .= "Your IIDC supporting Team";
+					sendEmail($body);
+
+					if (file_exists($absolutePath.'/'. $filename)) {
+						/*
+						$uploadDir = DRIVE_FILE_DIR."/".$config['clientsfolder']."/".str_replace('/', '{slash}', getClientInfo($idclient))."/application/Audit Forms/4 Decision Making Report";
+						require_once('../fileupload/GoogleDriveFunctions.php');
+						$client = gfGetClient();
+						$service = new Google_Service_Drive($client);
+						gfUploadFile($client, $service, $absolutePath, $filename,  mime_content_type($absolutePath ."/". $filename), $uploadDir); 
+						*/
+					}
 
 		}		
 		if (!$lastSentTime || ($currentTime - strtotime($lastSentTime) > $timeLimit)) {
 
-			$ownerEmailAddress = "halal.ezone@gmail.com";
-			$fromEmailAddress = "noreply@halal-e.zone";
+			$ownerEmailAddress = "mona.sherif@iidc.at";
+			$fromEmailAddress = "noreply@halal-digital.net";
 
-			$body['name'] = 'Halal e-Zone';
+			$body['name'] = 'Halal Digital';
 			$body['email'] = $fromEmailAddress;
 			$body['to'] = $adminEmailAddress;
 
 			// Sending notification
-			$body['subject'] = "Halal e-Zone - All Corrective Actions Confirmed - " . $user["name"];
+			$body['subject'] = "Halal Digital - All Corrective Actions Confirmed - " . $user["name"];
 			$body['header'] = "";
 			$body['body'] = "Dear Admin,";
 			$body['body'] .= "<br /><br />";
@@ -2384,7 +2645,7 @@ function updateDeviationStatus($data) {
 			$body['body'] .= "<br /><br />";
 			$body['body'] .= "Kind Regards,";
 			$body['body'] .= "<br/>";
-			$body['body'] .= "Your HQC Supporting Team";
+			$body['body'] .= "Your IIDC Supporting Team";
 
 			sendEmail($body);
 
@@ -2409,6 +2670,7 @@ function updateImplementationStatus($data) {
 	$dbo = &$GLOBALS['dbo'];
 	$myuser = cuser::singleton();
 	$myuser->getUserData();
+	$iduser = $myuser->userdata['id'];
 	$errors = "";
 	$id = $data["id"];
 	$Implemented = $data["Implemented"];
@@ -2438,15 +2700,15 @@ function updateImplementationStatus($data) {
 	$stmt->execute();
 	$user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-	$ownerEmailAddress = "halal.ezone@gmail.com";
-	$fromEmailAddress = "noreply@halal-e.zone";
+	$ownerEmailAddress = "mona.sherif@iidc.at";
+	$fromEmailAddress = "noreply@halal-digital.net";
 
-	$body['name'] = 'Halal e-Zone';
+	$body['name'] = 'Halal Digital';
 	$body['email'] =  $fromEmailAddress;
 	$body['to'] = $user["email"];
 
 	// sending notification
-	$body['subject'] = "Halal e-Zone - Audit Report update - ".$user["name"];
+	$body['subject'] = "Halal Digital - Audit Report update - ".$user["name"];
 	$body['header'] = "";
 	$body['body'] = "Dear ".$user["name"].",";
 	$body['body'] .= "<br /><br />";
@@ -2468,7 +2730,7 @@ function updateImplementationStatus($data) {
 	$body['body'] .= "<br /><br />";
 	$body['body'] .= "Kind Regards,";
 	$body['body'] .= "<br/>";
-	$body['body'] .= "Your HQC supporting Team";
+	$body['body'] .= "Your IIDC supporting Team";
 
 	sendEmail($body);
 
@@ -2496,6 +2758,7 @@ function updateImplementationStatus($data) {
 	   $all = 1;
 	   $state = "pop";
 	   
+	   
 	   $newIndex = array_search($state, $statusOptions);
 
 	   $query = "SELECT *
@@ -2513,20 +2776,211 @@ function updateImplementationStatus($data) {
 		   $stmt->bindParam(':state', $state, PDO::PARAM_STR);
 		   $stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);
 		   $stmt->bindParam(':idapp', $idapp, PDO::PARAM_STR);
-		   $stmt->execute();				
+		   $stmt->execute();	
+		   
+			$query = "SELECT *
+			FROM tapplications	
+			WHERE id='".$idapp."' AND idclient='".$idclient."'";
+			$stmt = $dbo->prepare($query);
+			$stmt->execute();
+			$data['app'] = $stmt->fetch(PDO::FETCH_ASSOC);
+		
+			$query = "SELECT *
+			FROM tusers	
+			WHERE id='".$idclient."'";
+			$stmt = $dbo->prepare($query);
+			$stmt->execute();
+			$data['user'] = $stmt->fetch(PDO::FETCH_ASSOC);
+		
+			$audit_report_settings = $data['app']['audit_report_settings'];
+			if ($audit_report_settings == "") $audit_report_settings = "[]";
+		
+			$decode = file_get_contents( __DIR__ ."/../config.json");
+			$config=json_decode($decode, TRUE);
+			$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".getClientInfo($idclient)."/application/report/";
+			$absolutePath = $config["basePath"].$hostPath;
+	
+			if (!file_exists($absolutePath)) {
+				mkdir($absolutePath, 0777, true);
+			}
+	
+			$attach = '../files/docs/F0436 Audit Report (NCR).pdf';
+			$ext = "pdf";
+	
+			$filename = basename($attach);
+			$dest_path = $absolutePath . $filename;
+	
+			saveAuditReportPDF($data, $attach, $dest_path, $audit_plan_settings, false);
 
+			// get cycle name
+			$sql = "SELECT * FROM tcycles WHERE idclient=:idclient AND state = '1' ORDER BY id ASC LIMIT 1";
+			$stmt = $dbo->prepare($sql);
+			$stmt->setFetchMode(PDO::FETCH_ASSOC);
+			$stmt->bindValue(':idclient', $idclient);
+			$stmt->execute();
+			$firstCycle = $stmt->fetch(PDO::FETCH_ASSOC);
+			$cycleName = $firstCycle["name"];
+			
+			if (file_exists($absolutePath.'/'. $filename)) {
+				/*
+				$uploadDir = DRIVE_FILE_DIR."/".$config['clientsfolder']."/".str_replace('/', '{slash}', getClientInfo($idclient))."/application/Audit Forms/3.1 NCR And Audit Report";
+				require_once('../fileupload/GoogleDriveFunctions.php');
+				$client = gfGetClient();
+				$service = new Google_Service_Drive($client);
+				gfUploadFile($client, $service, $absolutePath, $filename,  mime_content_type($absolutePath ."/". $filename), $uploadDir); 
+				*/
+			}
+
+			// Save review and decision making pdfs
+			$title = "Audit Review Report";
+			$category = "review";
+
+			$userData = [];
+			$query = "SELECT *
+						FROM tapplications	
+						WHERE id='".$idapp."' AND idclient='".$idclient."'";
+						$stmt = $dbo->prepare($query);
+						$stmt->execute();
+						$userData['app'] = $stmt->fetch(PDO::FETCH_ASSOC);
+
+						$query = "SELECT *
+						FROM tusers	
+						WHERE id='".$idclient."'";
+						$stmt = $dbo->prepare($query);
+						$stmt->execute();
+						$userData['user'] = $stmt->fetch(PDO::FETCH_ASSOC);
+
+			$filetoattach = "F0421 Audit Review Report.pdf";
+
+			$attach = '../files/docs/'.$filetoattach;
+			$ext = "pdf";
+			$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".getClientInfo($idclient)."/application/review/";
+			$absolutePath = $config["basePath"].$hostPath;
+			mkdir($absolutePath, 0777, true);
+
+			$query = "INSERT INTO tdocs (idapp, idclient, iduser, title, category, hostpath, signature) 
+								VALUES (:idapp, :idclient, :iduser, :title, :category, :hostpath, 0)";
+			$stmt = $dbo->prepare($query);
+
+			$stmt->bindParam(':idapp', $idapp, PDO::PARAM_STR);
+			$stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);
+			$stmt->bindParam(':iduser', $iduser, PDO::PARAM_STR);
+			$stmt->bindParam(':title', $title, PDO::PARAM_STR);
+			$stmt->bindParam(':category', $category, PDO::PARAM_STR);
+			$stmt->bindParam(':hostpath', $hostPath, PDO::PARAM_STR);
+			$stmt->execute();
+			$iddoc = $dbo->lastInsertId();
+
+			$filename = str_replace(".".$ext, '_'.$iddoc.'.'.$ext, basename($attach));
+			$dest_path = $absolutePath . $filename;
+
+			saveAuditReviewReportPDF($userData, $attach, $dest_path);
+
+			$query = "UPDATE tdocs SET filename = :filename WHERE id=:id";
+			$stmt = $dbo->prepare($query);
+			$stmt->bindParam(':filename', $filename, PDO::PARAM_STR);
+			$stmt->bindParam(':id', $iddoc, PDO::PARAM_STR);
+			$stmt->execute();
+
+			// Save review and decision making pdfs
+			$title = "Decision Making Report";
+			$category = "dm";
+
+			$userData = [];
+			$query = "SELECT *
+						FROM tapplications	
+						WHERE id='".$idapp."' AND idclient='".$idclient."'";
+						$stmt = $dbo->prepare($query);
+						$stmt->execute();
+						$userData['app'] = $stmt->fetch(PDO::FETCH_ASSOC);
+
+						$query = "SELECT *
+						FROM tusers	
+						WHERE id='".$idclient."'";
+						$stmt = $dbo->prepare($query);
+						$stmt->execute();
+						$userData['user'] = $stmt->fetch(PDO::FETCH_ASSOC);
+
+			$filetoattach = "F0403 Decision Making Report.pdf";
+
+			$attach = '../files/docs/'.$filetoattach;
+			$ext = "pdf";
+			$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".$user['name']." (".$idclient.")/application/review/";
+			$absolutePath = $config["basePath"].$hostPath;
+			mkdir($absolutePath, 0777, true);
+
+			$query = "INSERT INTO tdocs (idapp, idclient, iduser, title, category, hostpath, signature) 
+								VALUES (:idapp, :idclient, :iduser, :title, :category, :hostpath, 0)";
+			$stmt = $dbo->prepare($query);
+
+			$stmt->bindParam(':idapp', $idapp, PDO::PARAM_STR);
+			$stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);
+			$stmt->bindParam(':iduser', $iduser, PDO::PARAM_STR);
+			$stmt->bindParam(':title', $title, PDO::PARAM_STR);
+			$stmt->bindParam(':category', $category, PDO::PARAM_STR);
+			$stmt->bindParam(':hostpath', $hostPath, PDO::PARAM_STR);
+			$stmt->execute();
+			$iddoc = $dbo->lastInsertId();
+
+			$filename = str_replace(".".$ext, '_'.$iddoc.'.'.$ext, basename($attach));
+			$dest_path = $absolutePath . $filename;
+
+			saveDecisionMakingReportPDF($userData, $attach, $dest_path);
+
+			$query = "UPDATE tdocs SET filename = :filename WHERE id=:id";
+			$stmt = $dbo->prepare($query);
+			$stmt->bindParam(':filename', $filename, PDO::PARAM_STR);
+			$stmt->bindParam(':id', $iddoc, PDO::PARAM_STR);
+			$stmt->execute();
+
+			// Send email to upload POP
+			$sql = "SELECT * FROM tusers WHERE id=:idclient";
+			$stmt = $dbo->prepare($sql);
+			$stmt->setFetchMode(PDO::FETCH_ASSOC);
+			$stmt->bindValue(':idclient', $idclient);
+			$stmt->execute();
+			$user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+			$ownerEmailAddress = "mona.sherif@iidc.at";
+			$fromEmailAddress = "noreply@halal-digital.net";
+
+			$body['name'] = 'Halal Digital';
+			$body['email'] =  $fromEmailAddress;
+			$body['to'] = $user["email"];
+
+			// sending notification
+			$body['subject'] = "Halal Digital - Upload Proof of Payment - ".$user["name"];
+			$body['header'] = "";
+			$body['body'] = "Dear ".$user["name"].",";
+			$body['body'] .= "<br /><br />";
+			$body['body'] .= "kindly upload your proof of payment on the Halal Digital portal so that we can proceed to issue your certificate.";
+			$body['body'] .= "<br /><br />";
+			$body['body'] .= "Kind Regards,";
+			$body['body'] .= "<br/>";
+			$body['body'] .= "Your IIDC supporting Team";
+			sendEmail($body);
+
+			if (file_exists($absolutePath.'/'. $filename)) {
+				/*
+				$uploadDir = DRIVE_FILE_DIR."/".$config['clientsfolder']."/".str_replace('/', '{slash}', getClientInfo($idclient))."/application/Audit Forms/4 Decision Making Report";
+				require_once('../fileupload/GoogleDriveFunctions.php');
+				$client = gfGetClient();
+				$service = new Google_Service_Drive($client);
+				gfUploadFile($client, $service, $absolutePath, $filename,  mime_content_type($absolutePath ."/". $filename), $uploadDir); 
+				*/
+			}
 	   }		
 	   if (!$lastSentTime || ($currentTime - strtotime($lastSentTime) > $timeLimit)) {
 
-		   $ownerEmailAddress = "halal.ezone@gmail.com";
-		   $fromEmailAddress = "noreply@halal-e.zone";
+		   $ownerEmailAddress = "mona.sherif@iidc.at";
+		   $fromEmailAddress = "noreply@halal-digital.net";
 
-		   $body['name'] = 'Halal e-Zone';
+		   $body['name'] = 'Halal Digital';
 		   $body['email'] = $fromEmailAddress;
 		   $body['to'] = $adminEmailAddress;
 
 		   // Sending notification
-		   $body['subject'] = "Halal e-Zone - All Corrective Actions Confirmed - " . $user["name"];
+		   $body['subject'] = "Halal Digital - All Corrective Actions Confirmed - " . $user["name"];
 		   $body['header'] = "";
 		   $body['body'] = "Dear Admin,";
 		   $body['body'] .= "<br /><br />";
@@ -2536,7 +2990,7 @@ function updateImplementationStatus($data) {
 		   $body['body'] .= "<br /><br />";
 		   $body['body'] .= "Kind Regards,";
 		   $body['body'] .= "<br/>";
-		   $body['body'] .= "Your HQC Supporting Team";
+		   $body['body'] .= "Your IIDC Supporting Team";
 
 		   sendEmail($body);
 
@@ -2692,15 +3146,15 @@ function saveMeasureData($data) {
 		$stmt->execute();
 		$user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-		$ownerEmailAddress = "halal.ezone@gmail.com";
-		$fromEmailAddress = "noreply@halal-e.zone";
+		$ownerEmailAddress = "mona.sherif@iidc.at";
+		$fromEmailAddress = "noreply@halal-digital.net";
 
-		$body['name'] = 'Halal e-Zone';
+		$body['name'] = 'Halal Digital';
 		$body['email'] =  $fromEmailAddress; 
 		$body['to'] = $supportEmailAddress;
 
 		// sending notification
-		$body['subject'] = "Halal e-Zone - Audit Report update - ".$user["name"];
+		$body['subject'] = "Halal Digital - Audit Report update - ".$user["name"];
 		$body['header'] = "";
 		$body['body'] = "Dear Admin,";
 		$body['body'] .= "<br /><br />";
@@ -2720,7 +3174,7 @@ function saveMeasureData($data) {
 		$body['body'] .= "<br /><br />";
 		$body['body'] .= "Regards,";
 		$body['body'] .= "<br/>";
-		$body['body'] .= "Halal e-Zone";
+		$body['body'] .= "Halal Digital";
  
 		sendEmail($body);
 
@@ -2757,7 +3211,7 @@ function saveMeasureData($data) {
 			$body['body'] .= "<br /><br />";
 			$body['body'] .= "Regards,";
 			$body['body'] .= "<br/>";
-			$body['body'] .= "Halal e-Zone";
+			$body['body'] .= "Halal Digital";
 			sendEmail($body);		
 		}
 		
@@ -2895,24 +3349,26 @@ function getDisabledDates(){
 }
 
 function saveAuditDates($data){
-    global $adminEmailAddress, $calendarId, $serviceAccountFileName, $defaultTimezone, $supportEmailAddress;
-    $dbo = &$GLOBALS['dbo'];
-    $myuser = cuser::singleton();
-    $myuser->getUserData(); 
-    $idclient = intval($data["idclient"]);
-    $idapp = intval($data["idapp"]);
-    $AuditDate1 = $data["AuditDate1"];
-    $AuditDate2 = $data["AuditDate2"];
-    $AuditDate3 = $data["AuditDate3"];
+
+	global $adminEmailAddress, $calendarId, $serviceAccountFileName, $defaultTimezone, $supportEmailAddress;
+	$dbo = &$GLOBALS['dbo'];
+	$myuser = cuser::singleton();
+	$myuser->getUserData(); 
+	$idclient = intval($data["idclient"]);
+	$idapp = intval($data["idapp"]);
+	$AuditDate1 = $data["AuditDate1"];
+	$AuditDate2 = $data["AuditDate2"];
+	$AuditDate3 = $data["AuditDate3"];
     $preferredLanguage = isset($data["PreferredLanguage"]) ? trim($data["PreferredLanguage"]) : '';
     $englishAcceptable = isset($data["EnglishAcceptable"]) ? trim($data["EnglishAcceptable"]) : '';
-    $tempDate1 = "";
-    $tempDate2 = "";
-    $tempDate3 = "";
-    $SameDatesCheck = array();
-    $errors = "";
+    $auditNotes = isset($data["AuditNotes"]) ? trim($data["AuditNotes"]) : '';
+	$tempDate1 = "";
+	$tempDate2 = "";
+	$tempDate3 = "";
+	$SameDatesCheck = array();
+	$errors = "";
 
-    // Validate language preference fields
+	// Validate language preference fields
     if (empty($preferredLanguage)) {
         $errors .= "<li>Preferred audit language is required.</li>";
     } elseif (!in_array($preferredLanguage, ['ENGLISH', 'GERMAN', 'ITALIAN', 'FRENCH', 'HUNGARIAN'])) {
@@ -2925,67 +3381,167 @@ function saveAuditDates($data){
         $errors .= "<li>Invalid value for English acceptable option.</li>";
     }
 
-    $SameDatesCheck[$AuditDate1] = "1";
-    $SameDatesCheck[$AuditDate2] = "1";
-    $SameDatesCheck[$AuditDate3] = "1";
+	$SameDatesCheck[$AuditDate1] = "1";
+	$SameDatesCheck[$AuditDate2] = "1";
+	$SameDatesCheck[$AuditDate3] = "1";
 
-    $dateTime1 = "";
-    $dateTime2 = "";
-    $dateTime3 = "";
+	$dateTime1 = "";
+	$dateTime2 = "";
+	$dateTime3 = "";
 
-    if ($idclient <= 0 || $idapp <=0 ) {
-        die(json_encode(generateErrorResponse("<ul><li>Internal server error!</li></ul>")));
-    }
+	if ($idclient <= 0 || $idapp <=0 ) {
+		die(json_encode(generateErrorResponse("<ul><li>Internal server error!</li></ul>")));
+	}
 
-    // Error if date is already approved
-    $query = "SELECT id FROM tevents WHERE idclient = :idclient AND idapp = :idapp AND status =1 LIMIT 0,1";
-    $stmt = $dbo->prepare($query);
-    $stmt->bindValue(':idclient', $idclient);
-    $stmt->bindValue(':idapp', $idapp);
-    $stmt->execute();
-    if ($stmt->fetchColumn()) {
-    //    $errors .= "<li>Audit date is already approved.</li>";
-    }
+	// Error if date is already approved
+	$query = "SELECT id FROM tevents WHERE idclient = :idclient AND idapp = :idapp AND status =1 LIMIT 0,1";
+	$stmt = $dbo->prepare($query);
+	$stmt->bindValue(':idclient', $idclient);
+	$stmt->bindValue(':idapp', $idapp);
+	$stmt->execute();
+	if ($stmt->fetchColumn()) {
+	//	$errors .= "<li>Audit date is already approved.</li>";
+	}
+	/*
+		if ($AuditDate1 == "") {
+			$errors .= "<li>Date #1 is required.</li>";
+		}
+		else if(($dateTime1 = DateTime::createFromFormat('d/m/Y', $AuditDate1)) === FALSE) {
+			$errors .= "<li>Date #1 is invalid.";
+		}
+		else if($dateTime1->format('N') >= 6) {
+			$errors .= "<li>Date #1 is not available.</li>";
+		}
+		else {
+			$tempDate1 = $dateTime1->format('Y-m-d');
+			$query = "SELECT id FROM tevents WHERE :new_start <= end_date AND :new_end  >= start_date AND idclient <> :idclient AND idapp <> :idapp AND status =1 LIMIT 0,1";
+			$stmt = $dbo->prepare($query);
+			$stmt->bindValue(':idclient', $idclient);
+			$stmt->bindValue(':idapp', $idapp);
+			$stmt->bindParam(':new_start', $tempDate1, PDO::PARAM_STR);
+			$stmt->bindParam(':new_end', $tempDate1, PDO::PARAM_STR);
+			$stmt->execute();
+			if ($stmt->fetchColumn()) {
+				$errors .= "<li>Date #1 is not available.</li>";
+			}
+		}
+		if ($AuditDate2 == "") {
+			$errors .= "<li>Date #2 is required.</li>";
+		}
+		else if(($dateTime2 = DateTime::createFromFormat('d/m/Y', $AuditDate2)) === FALSE) {
+			$errors .= "<li>Date #2 is invalid.</li>";
+		}
+		else if($dateTime2->format('N') >= 6) {
+			$errors .= "<li>Date #2 is not available.</li>";
+		}
+		else {
+			$tempDate2 = $dateTime2->format('Y-m-d');
+			$query = "SELECT id FROM tevents WHERE :new_start <= end_date AND :new_end  >= start_date AND idclient <> :idclient AND idapp <> :idapp AND status =1 LIMIT 0,1";
+			$stmt = $dbo->prepare($query);
+			$stmt->bindValue(':idclient', $idclient);
+			$stmt->bindValue(':idapp', $idapp);
+			$stmt->bindParam(':new_start', $tempDate2, PDO::PARAM_STR);
+			$stmt->bindParam(':new_end', $tempDate2, PDO::PARAM_STR);
+			$stmt->execute();
+			if ($stmt->fetchColumn()) {
+				$errors .= "<li>Date #2 is not available.</li>";
+			}
+		}
+		if ($AuditDate3 == "") {
+			$errors .= "<li>Date #3 is required.</li>";
+		}
+		else if(($dateTime3 = DateTime::createFromFormat('d/m/Y', $AuditDate3)) === FALSE) {
+			$errors .= "<li>Date #3 is invalid.</li>";
+		}
+		else if($dateTime3->format('N') >= 6) {
+			$errors .= "<li>Date #3 is not available.</li>";
+		}
+		else {
+			$tempDate3 = $dateTime3->format('Y-m-d');
+			$query = "SELECT id FROM tevents WHERE :new_start <= end_date AND :new_end  >= start_date AND idclient <> :idclient AND idapp <> :idapp AND status =1 LIMIT 0,1";
+			$stmt = $dbo->prepare($query);
+			$stmt->bindValue(':idclient', $idclient);
+			$stmt->bindValue(':idapp', $idapp);
+			$stmt->bindParam(':new_start', $tempDate3, PDO::PARAM_STR);
+			$stmt->bindParam(':new_end', $tempDate3, PDO::PARAM_STR);
+			$stmt->execute();
+			if ($stmt->fetchColumn()) {
+				$errors .= "<li>Date #3 is not available.</li>";
+			}
+		}
 
-    if ($errors == "") {
-        $dates = [$AuditDate1, $AuditDate2, $AuditDate3];
-        $validDates = [];
-        $errors = "";
-        
-        foreach ($dates as $index => $date) {
-            if ($date != "") {
-                $dateTime = DateTime::createFromFormat('d/m/Y', $date);
-                if ($dateTime === FALSE) {
-                    $errors .= "<li>Date #" . ($index + 1) . " is invalid.</li>";
-                } elseif ($dateTime->format('N') >= 6) {
-                    $errors .= "<li>Date #" . ($index + 1) . " is on a weekend and not available.</li>";
-                } else {
-                    $tempDate = $dateTime->format('Y-m-d');
-                    $validDates[$index] = $tempDate;                    
-                }
-            } else {
-                $validDates[$index] = null;
-            }
-        }
-        
-        // Ensure at least one valid date is provided
-        if (empty(array_filter($validDates))) {
-            $errors .= "<li>At least one date is required.</li>";
-        }
-        
-        // Ensure all provided dates are unique
-        $filteredDates = array_filter($validDates);
-        if (count(array_unique($filteredDates)) < count($filteredDates)) {
-            $errors .= "<li>All the dates should be different from each other.</li>";
-        }
+		if ($errors == "" && count($SameDatesCheck)<3) {
+			$errors .= "<li>All the dates should be different from each other.</li>";
+		}
+		*/
+		if ($errors == "") {
 
-        if ($errors == "") {
-            $sql = "SELECT * FROM tusers WHERE id=:idclient";
-            $stmt = $dbo->prepare($sql);
-            $stmt->setFetchMode(PDO::FETCH_ASSOC);
-            $stmt->bindValue(':idclient', $idclient);
-            $stmt->execute();
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+		$dates = [$AuditDate1, $AuditDate2, $AuditDate3];
+		$validDates = [];
+		$errors = "";
+		
+		foreach ($dates as $index => $date) {
+			if ($date != "") {
+				$dateTime = DateTime::createFromFormat('d/m/Y', $date);
+				if ($dateTime === FALSE) {
+					$errors .= "<li>Date #" . ($index + 1) . " is invalid.</li>";
+				} elseif ($dateTime->format('N') >= 6) {
+					$errors .= "<li>Date #" . ($index + 1) . " is on a weekend and not available.</li>";
+				} else {
+					/*
+					$tempDate = $dateTime->format('Y-m-d');
+					$query = "SELECT id FROM tevents WHERE :new_start <= end_date AND :new_end >= start_date 
+							  AND idclient <> :idclient AND idapp <> :idapp AND status = 1 LIMIT 1";
+					$stmt = $dbo->prepare($query);
+					$stmt->bindValue(':idclient', $idclient);
+					$stmt->bindValue(':idapp', $idapp);
+					$stmt->bindParam(':new_start', $tempDate, PDO::PARAM_STR);
+					$stmt->bindParam(':new_end', $tempDate, PDO::PARAM_STR);
+					$stmt->execute();
+					if ($stmt->fetchColumn()) {
+						$errors .= "<li>Date #" . ($index + 1) . " is not available.</li>";
+					} else {
+						$validDates[$index] = $tempDate;
+					}
+					*/
+					$tempDate = $dateTime->format('Y-m-d');
+					$validDates[$index] = $tempDate;					
+				}
+			} else {
+				$validDates[$index] = null;
+			}
+		}
+		
+		// Ensure at least one valid date is provided
+		if (empty(array_filter($validDates))) {
+			$errors .= "<li>At least one date is required.</li>";
+		}
+		
+		// Ensure all provided dates are unique
+		$filteredDates = array_filter($validDates);
+		if (count(array_unique($filteredDates)) < count($filteredDates)) {
+			$errors .= "<li>All the dates should be different from each other.</li>";
+		}
+
+		if ($errors== "") {
+
+			$sql = "SELECT * FROM tusers WHERE id=:idclient";
+			$stmt = $dbo->prepare($sql);
+			$stmt->setFetchMode(PDO::FETCH_ASSOC);
+			$stmt->bindValue(':idclient', $idclient);
+			$stmt->execute();
+			$user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+			/*
+			$query = "UPDATE tapplications SET audit_date_1=:AuditDate1,  audit_date_2=:AuditDate2,  audit_date_3=:AuditDate3 WHERE idclient=:idclient AND id=:idapp";
+			$stmt = $dbo->prepare($query);
+			$stmt->bindParam(':AuditDate1', $tempDate1, PDO::PARAM_STR);
+			$stmt->bindParam(':AuditDate2', $tempDate2, PDO::PARAM_STR);
+			$stmt->bindParam(':AuditDate3', $tempDate3, PDO::PARAM_STR);
+			$stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);
+			$stmt->bindParam(':idapp', $idapp, PDO::PARAM_STR);
+			$stmt->execute();
+			*/
 
             // Update application with audit dates AND language preferences
             $query = "UPDATE tapplications SET 
@@ -2993,7 +3549,8 @@ function saveAuditDates($data){
                       audit_date_2 = :AuditDate2, 
                       audit_date_3 = :AuditDate3,
                       preferred_language = :PreferredLanguage,
-                      english_acceptable = :EnglishAcceptable
+                      english_acceptable = :EnglishAcceptable,
+  					  audit_notes = :AuditNotes
                       WHERE idclient = :idclient AND id = :idapp";
             
             $stmt = $dbo->prepare($query);
@@ -3002,153 +3559,258 @@ function saveAuditDates($data){
             $stmt->bindValue(':AuditDate3', $validDates[2], $validDates[2] === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
             $stmt->bindValue(':PreferredLanguage', $preferredLanguage, PDO::PARAM_STR);
             $stmt->bindValue(':EnglishAcceptable', $englishAcceptable, PDO::PARAM_STR);
+            $stmt->bindValue(':AuditNotes', $auditNotes, PDO::PARAM_STR);
             $stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);
             $stmt->bindParam(':idapp', $idapp, PDO::PARAM_STR);
             $stmt->execute();            
 			
-            // Google Calendar API
-            require __DIR__ . '/../vendor/autoload.php';
-            $serviceAccountFilePath =  __DIR__ . '/../config/google/'.$serviceAccountFileName;
-            $client = new Google_Client();
-            $client->setAuthConfig($serviceAccountFilePath);
-            $client->addScope(Google_Service_Calendar::CALENDAR);                
-            // Authenticate with the service account
-            if ($client->isAccessTokenExpired()) {
-                $client->fetchAccessTokenWithAssertion();
-            }
-            // Create a new Calendar service
-            $service = new Google_Service_Calendar($client);
+			// Google Calendar API
+			require __DIR__ . '/../vendor/autoload.php';
+			$serviceAccountFilePath =  __DIR__ . '/../config/google/'.$serviceAccountFileName;
+			$client = new Google_Client();
+			$client->setAuthConfig($serviceAccountFilePath);
+			$client->addScope(Google_Service_Calendar::CALENDAR);				
+			// Authenticate with the service account
+			if ($client->isAccessTokenExpired()) {
+				$client->fetchAccessTokenWithAssertion();
+			}
+			// Create a new Calendar service
+			$service = new Google_Service_Calendar($client);
 
-            $sql = "SELECT gcal_id FROM tevents WHERE idclient = :idclient AND idapp = :idapp AND gcal_id IS NOT NULL AND gcal_id != ''";
-            $stmt = $dbo->prepare($sql);
-            $stmt->bindValue(':idclient', $idclient);
-            $stmt->bindValue(':idapp', $idapp);
-            $stmt->execute();
-            $gcal_ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+			$sql = "SELECT gcal_id FROM tevents WHERE idclient = :idclient AND idapp = :idapp AND gcal_id IS NOT NULL AND gcal_id != ''";
+			$stmt = $dbo->prepare($sql);
+			$stmt->bindValue(':idclient', $idclient);
+			$stmt->bindValue(':idapp', $idapp);
+			$stmt->execute();
+			$gcal_ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-            foreach ($gcal_ids as $gcal_id) {
-                if (!empty($gcal_id)) {
-                    try {
-                        $service->events->delete($calendarId, $gcal_id);
-                    } catch (Exception $e) {
-                        // Handle any errors or log them
-                    }
-                }
-            }
-            $sql = "DELETE FROM tevents WHERE idclient=:idclient AND idapp=:idapp";
-            $stmt = $dbo->prepare($sql);
-            $stmt->bindValue(':idclient', $idclient);
-            $stmt->bindValue(':idapp', $idapp);
-            if(!$stmt->execute()) die(json_encode(generateErrorResponse("Unknown error!")));
+			foreach ($gcal_ids as $gcal_id) {
+				if (!empty($gcal_id)) { // Check if gcal_id is not empty
+					try {
+						$service->events->delete($calendarId, $gcal_id);
+					} catch (Exception $e) {
+						// Handle any errors or log them
+					}
+				}
+			}
+			$sql = "DELETE FROM tevents WHERE idclient=:idclient AND idapp=:idapp";
+			$stmt = $dbo->prepare($sql);
+			$stmt->bindValue(':idclient', $idclient);
+			$stmt->bindValue(':idapp', $idapp);
+			if(!$stmt->execute()) die(json_encode(generateErrorResponse("Unknown error!")));
 
-            foreach ($dates as $date) {
-                if (!empty($date)) {
-                    $dateTime = DateTime::createFromFormat('d/m/Y', $date);
-                    if ($dateTime === false) {
-                        die(json_encode(generateErrorResponse("Invalid date format!")));
-                    }
-                    $formattedDate = $dateTime->format('Y-m-d');
-            
-                    $title = $user['name'];
-                
-                    // Insert event into the database
-                    $sql = "INSERT INTO tevents (idclient, idapp, title, start_date, end_date, status) 
-                            VALUES (:idclient, :idapp, :title, :start_date, :end_date, 0)";
-                    $stmt = $dbo->prepare($sql);
-                    $stmt->bindValue(':idclient', $idclient);
-                    $stmt->bindValue(':idapp', $idapp);
-                    $stmt->bindValue(':title', $title);
-                    $stmt->bindValue(':start_date', $formattedDate, $formattedDate === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
-                    $stmt->bindValue(':end_date', $formattedDate, $formattedDate === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
-                
-                    if (!$stmt->execute()) {
-                        die(json_encode(generateErrorResponse("Unknown error!")));
-                    }
-                
-                    $ID = $dbo->lastInsertId();
-                }
-            }
-                        
-            $ownerEmailAddress = "halal.ezone@gmail.com";
-            $fromEmailAddress = "noreply@halal-e.zone";
+			foreach ($dates as $date) {
+				if (!empty($date)) {
+					$dateTime = DateTime::createFromFormat('d/m/Y', $date);
+					if ($dateTime === false) {
+						die(json_encode(generateErrorResponse("Invalid date format!")));
+					}
+					$formattedDate = $dateTime->format('Y-m-d');
+			
+					$title = $user['name'];
+				
+					// Insert event into the database
+					$sql = "INSERT INTO tevents (idclient, idapp, title, start_date, end_date, status) 
+							VALUES (:idclient, :idapp, :title, :start_date, :end_date, 0)";
+					$stmt = $dbo->prepare($sql);
+					$stmt->bindValue(':idclient', $idclient);
+					$stmt->bindValue(':idapp', $idapp);
+					$stmt->bindValue(':title', $title);
+					$stmt->bindValue(':start_date', $formattedDate, $formattedDate === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+					$stmt->bindValue(':end_date', $formattedDate, $formattedDate === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+				
+					if (!$stmt->execute()) {
+						die(json_encode(generateErrorResponse("Unknown error!")));
+					}
+				
+					$ID = $dbo->lastInsertId();
+				}
+			}
+						
+			/*
+ 			foreach ($dates as $date) {
+				$formattedDate = $date->format('Y-m-d');
+				$title = $user['name'];
+			
+				// Insert event into the database
+				$sql = "INSERT INTO tevents (idclient, idapp, title, start_date, end_date, status) VALUES (:idclient, :idapp, :title, :start_date, :end_date, 0)";
+				$stmt = $dbo->prepare($sql);
+				$stmt->bindValue(':idclient', $idclient);
+				$stmt->bindValue(':idapp', $idapp);
+				$stmt->bindValue(':title', $title);
+				$stmt->bindValue(':start_date', $formattedDate);
+				$stmt->bindValue(':end_date', $formattedDate);
+				if (!$stmt->execute()) {
+					die(json_encode(generateErrorResponse("Unknown error!")));
+				}
+				$ID = $dbo->lastInsertId();
+				
+				$auditor_name = "";
 
-            // Prepare language information for emails
+				if ($idclient != '-1') {
+					$json_id = json_encode([$idclient]);
+					$sql = "SELECT name FROM tusers WHERE isclient=2 AND JSON_CONTAINS(clients_audit, :json_id) > 0 LIMIT 0, 1";
+					$stmt = $dbo->prepare($sql);
+					$stmt->bindParam(':json_id', $json_id);
+					$stmt->execute();
+					$result = $stmt->fetch(PDO::FETCH_ASSOC);
+					// Check if a result was found
+					if ($result) {
+						$auditor_name = $result['name'] . ' - ';
+					}		
+				}
+			
+				// Insert event into Google Calendar
+				$event = new Google_Service_Calendar_Event(array(
+					'summary' => str_replace("Auditor_", "", str_replace("Auditor ", "", $auditor_name)) . $title,
+					'start' => array(
+						'date' => $date->format('Y-m-d'),
+						'timeZone' => $defaultTimezone,
+					),
+					'end' => array(
+						'date' => $date->format('Y-m-d'),
+						'timeZone' => $defaultTimezone,
+					),
+					'colorId' => 6, // Set the color ID here
+				));
+			
+				try {
+					$insertedEvent = $service->events->insert($calendarId, $event);
+					$gcal_id = $insertedEvent->getId(); // Retrieve the event ID from the inserted event
+					$sql = "UPDATE tevents SET gcal_id = :gcal_id WHERE id = :ID";
+					$stmt = $dbo->prepare($sql);
+					$stmt->bindValue(':gcal_id', $gcal_id);
+					$stmt->bindValue(':ID', $ID);
+					if (!$stmt->execute()) {
+						die(json_encode(generateErrorResponse("Unknown error!")));
+					}					
+				} catch (Exception $e) {
+					// Handle any errors or log them
+				}
+			}
+			*/
+			/*
+			$sql = "INSERT INTO tevents (idclient, idapp, title, start_date, end_date, status) VALUES (:idclient, :idapp, :title, :start_date, :end_date, 0)";
+			$stmt = $dbo->prepare($sql);
+			$stmt->bindValue(':idclient', $idclient);
+			$stmt->bindValue(':idapp', $idapp);
+			$stmt->bindValue(':title', "".$user['name']."");
+			$stmt->bindValue(':start_date', $tempDate1);
+			$stmt->bindValue(':end_date', $tempDate1);
+			if(!$stmt->execute()) die(json_encode(generateErrorResponse("Unknown error!")));
+			$ID = $dbo->lastInsertId();
+
+			$sql = "INSERT INTO tevents (idclient, idapp, title, start_date, end_date, status) VALUES (:idclient, :idapp, :title, :start_date, :end_date, 0)";
+			$stmt = $dbo->prepare($sql);
+			$stmt->bindValue(':idclient', $idclient);
+			$stmt->bindValue(':idapp', $idapp);
+			$stmt->bindValue(':title', "".$user['name']."");
+			$stmt->bindValue(':start_date', $tempDate2);
+			$stmt->bindValue(':end_date', $tempDate2);
+			if(!$stmt->execute()) die(json_encode(generateErrorResponse("Unknown error!")));
+			$ID = $dbo->lastInsertId();
+
+			$sql = "INSERT INTO tevents (idclient, idapp, title, start_date, end_date, status) VALUES (:idclient, :idapp, :title, :start_date, :end_date, 0)";
+			$stmt = $dbo->prepare($sql);
+			$stmt->bindValue(':idclient', $idclient);
+			$stmt->bindValue(':idapp', $idapp);
+			$stmt->bindValue(':title', "".$user['name']."");
+			$stmt->bindValue(':start_date', $tempDate3);
+			$stmt->bindValue(':end_date', $tempDate3);
+			if(!$stmt->execute()) die(json_encode(generateErrorResponse("Unknown error!")));
+			$ID = $dbo->lastInsertId();
+			*/
+
+			$ownerEmailAddress = "mona.sherif@iidc.at";
+			$fromEmailAddress = "noreply@halal-digital.net";
+
+			// Prepare language information for emails
             $languageInfo = "<strong>Language Preferences:</strong><br>";
             $languageInfo .= "Preferred Language: " . $preferredLanguage . "<br>";
             $languageInfo .= "English Acceptable: " . $englishAcceptable . "<br><br>";
 
-            // sending notification to admin
-            $body = [];
-            $body['name'] = 'Halal e-Zone';
-            $body['email'] =  $fromEmailAddress;
-            $body['to'] = $supportEmailAddress; 
-            $body['subject'] = "Halal e-Zone - Audit Date Proposals - ".$user["name"];            
-            $body['header'] = "";
-            $body['body'] = "Dear Admin,";
-            $body['body'] .= "<br /><br />";
-            $body['body'] .= "<strong>".$user["name"]."</strong> has provided three proposed dates for the audit. These are as follows:";
-            $body['body'] .= "<br /><br />";
-            $body['body'] .= $AuditDate1;
-            $body['body'] .= "<br />";
-            $body['body'] .= $AuditDate2;
-            $body['body'] .= "<br />";
-            $body['body'] .= $AuditDate3;
+			//sendEmailWithAttach
+			$body = [];
+			$body['name'] = 'Halal Digital';
+			$body['email'] =  $fromEmailAddress;
+			$body['to'] = $supportEmailAddress; 
+
+			//$body['attachhostpath'] = $dest_path;
+			//$body['attach'] = $filename;
+			//$AuditDate1 = DateTime::createFromFormat('d/m/Y', $AuditDate1)->format('d/m/Y');
+			//$AuditDate2 = DateTime::createFromFormat('d/m/Y', $AuditDate2)->format('d/m/Y');
+			//$AuditDate3 = DateTime::createFromFormat('d/m/Y', $AuditDate3)->format('d/m/Y');
+
+			// sending notification
+			$body['subject'] = "Halal Digital - Audit Date Proposals - ".$user["name"];			
+			$body['header'] = "";
+			$body['body'] = "Dear Admin,";
+			$body['body'] .= "<br /><br />";
+			$body['body'] .= "<strong>".$user["name"]."</strong> has provided three proposed dates for the audit. These are as follows:";
+			$body['body'] .= "<br /><br />";
+			$body['body'] .= $AuditDate1;
+			$body['body'] .= "<br />";
+			$body['body'] .= $AuditDate2;
+			$body['body'] .= "<br />";
+			$body['body'] .= $AuditDate3;
             $body['body'] .= "<br /><br />";
             $body['body'] .= $languageInfo;
-            $body['body'] .= "Regards,";
-            $body['body'] .= "<br/>";
-            $body['body'] .= "Halal e-Zone";
+			$body['body'] .= "<br /><br />";
+			$body['body'] .= "Regards,";
+			$body['body'] .= "<br/>";
+			$body['body'] .= "Halal Digital";
 
-            sendEmail($body);
-                    
-            $json_id = json_encode((string) $idclient);
-            $sql = "SELECT *
-                    FROM tusers 
-                    WHERE isclient = 2 
-                    AND deleted = 0  
-                    AND JSON_CONTAINS(clients_audit, :json_id, '$')";                    
+			sendEmail($body);
+					
+			$json_id = json_encode((string) $idclient); // Convert to string and JSON encode
+			$sql = "SELECT *
+					FROM tusers 
+					WHERE isclient = 2 
+					AND deleted = 0  
+					AND JSON_CONTAINS(clients_audit, :json_id, '$')";					
 
-            $stmt = $dbo->prepare($sql);
-            $stmt->bindParam(':json_id', $json_id);
-            $stmt->execute();
+			$stmt = $dbo->prepare($sql);
+			$stmt->bindParam(':json_id', $json_id);
+			$stmt->execute();
 
-            $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+			$results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            foreach ($results as $row) {
-                $emails = explode(',', $row['email']);
-                foreach ($emails as $email) {
-                    $body = [];
-                    $body['name'] = 'Halal e-Zone';
-                    $body['email'] =  $fromEmailAddress;
-                    $body['to'] = trim($email);
-                    $body['subject'] = "Halal e-Zone - Audit Date Proposals - " . $user["name"];
-                    $body['header'] = "";
-                    $body['body'] = "Dear Auditor,";
-                    $body['body'] .= "<br /><br />";
-                    $body['body'] .= "<strong>" . $user["name"] . "</strong> has provided three proposed dates for the audit. These are as follows:";
-                    $body['body'] .= "<br /><br />";
-                    $body['body'] .= $AuditDate1;
-                    $body['body'] .= "<br />";
-                    $body['body'] .= $AuditDate2;
-                    $body['body'] .= "<br />";
-                    $body['body'] .= $AuditDate3;
-                    $body['body'] .= "<br /><br />";
-                    $body['body'] .= $languageInfo;
-                    $body['body'] .= "Regards,";
-                    $body['body'] .= "<br/>";
-                    $body['body'] .= "Halal e-Zone";
-                    sendEmail($body);
-                }
-            }
+			foreach ($results as $row) {
+				$emails = explode(',', $row['email']);
+				foreach ($emails as $email) {
+					$body = [];
+					$body['name'] = 'Halal Digital';
+					$body['email'] =  $fromEmailAddress;
+					$body['to'] = trim($email); // Trim to remove any extra whitespace
+					$body['subject'] = "Halal Digital - Audit Date Proposals - " . $user["name"];
+					$body['header'] = "";
+					$body['body'] = "Dear Auditor,";
+					$body['body'] .= "<br /><br />";
+					$body['body'] .= "<strong>" . $user["name"] . "</strong> has provided three proposed dates for the audit. These are as follows:";
+					$body['body'] .= "<br /><br />";
+					$body['body'] .= $AuditDate1;
+					$body['body'] .= "<br />";
+					$body['body'] .= $AuditDate2;
+					$body['body'] .= "<br />";
+					$body['body'] .= $AuditDate3;
+					$body['body'] .= "<br /><br />";
+					$body['body'] .= $languageInfo;
+					$body['body'] .= "<br /><br />";
+					$body['body'] .= "Regards,";
+					$body['body'] .= "<br/>";
+					$body['body'] .= "Halal Digital";
+					sendEmail($body);
+				}
+			}
 
-            insertActivityLog($idclient, $idapp, $myuser->userdata['id'], $myuser->userdata['name'], 'Proposed three audit dates and language preferences');            
+			insertActivityLog($idclient, $idapp, $myuser->userdata['id'], $myuser->userdata['name'], 'Proposed three audit dates');			
 
-            echo json_encode(generateSuccessResponse());
-        }
-    }
-    if ($errors != "") {
-        echo json_encode(generateErrorResponse("<ul>".$errors."</ul>"));
-    }
+			echo json_encode(generateSuccessResponse());
+		}
+	}
+	if ($errors != "") {
+		echo json_encode(generateErrorResponse("<ul>".$errors."</ul>"));
+	}
 }
 
 function saveAuditPlanSettings() {
@@ -3304,7 +3966,7 @@ function saveAuditReportSettings() {
 }
 
 function approveAuditDates($data){ 
-	global $adminEmailAddress, $calendarId, $serviceAccountFileName, $defaultTimezone, $supportEmailAddress, $statusOptions;
+	global $adminEmailAddress, $calendarId, $serviceAccountFileName, $defaultTimezone, $supportEmailAddress;
 	$dbo = &$GLOBALS['dbo'];
 	$myuser = cuser::singleton();
 	$myuser->getUserData();
@@ -3529,19 +4191,19 @@ function approveAuditDates($data){
 				$updateStmt->execute();
 			}
 
-			$ownerEmailAddress = "halal.ezone@gmail.com";
-			$fromEmailAddress = "noreply@halal-e.zone";
+			$ownerEmailAddress = "mona.sherif@iidc.at";
+			$fromEmailAddress = "noreply@halal-digital.net";
 
 			// Explode and loop through email addresses
 			$emails = explode(',', $user["email"]);
 			foreach ($emails as $email) {
 				$body = [];
-				$body['name'] = 'Halal e-Zone';
+				$body['name'] = 'Halal Digital';
 				$body['email'] =  $fromEmailAddress;
 				$body['to'] = trim($email); // Trim to remove any extra whitespace
 
 				// sending notification
-				$body['subject'] = "Halal e-Zone - Audit Date Approval - ".$user["name"];
+				$body['subject'] = "Halal Digital - Audit Date Approval - ".$user["name"];
 				$body['header'] = "";
 				$body['body'] = "Dear ".$user["name"].",";
 				$body['body'] .= "<br /><br />";
@@ -3550,7 +4212,7 @@ function approveAuditDates($data){
 				$body['body'] .= "<strong>". $ApprovedDate1."</strong>";
 				$body['body'] .= "<br /><br />";
 				$body['message'] .= "Kind Regards<br/>";
-				$body['body'] .= "Your HQC Team ";
+				$body['body'] .= "Your IIDC Team ";
 
 				sendEmail($body);
 			}
@@ -3558,12 +4220,12 @@ function approveAuditDates($data){
 
 			if ($myuser->userdata['isclient'] == '2') { // Auditor
 
-				$ownerEmailAddress = "halal.ezone@gmail.com";
-				$fromEmailAddress = "noreply@halal-e.zone";
+				$ownerEmailAddress = "mona.sherif@iidc.at";
+				$fromEmailAddress = "noreply@halal-digital.net";
 				$body = [];
 
 				//sendEmailWithAttach
-				$body['name'] = 'Halal e-Zone';
+				$body['name'] = 'Halal Digital';
 				$body['email'] =  $fromEmailAddress;
 				$body['to'] = $supportEmailAddress;
 
@@ -3573,7 +4235,7 @@ function approveAuditDates($data){
 			//	$ApprovedDate1F = DateTime::createFromFormat('d/m/Y', $ApprovedDate1)->format('d/m/Y');
 
 				// sending notification
-				$body['subject'] = "Halal e-Zone - Audit Date Approval - ".$user["name"];
+				$body['subject'] = "Halal Digital - Audit Date Approval - ".$user["name"];
 				$body['header'] = "";
 				$body['body'] = "Dear Admin,";
 				$body['body'] .= "<br /><br />";
@@ -3582,18 +4244,18 @@ function approveAuditDates($data){
 				$body['body'] .= "<strong>". $ApprovedDate1."</strong>";
 				$body['body'] .= "<br /><br />";
 				$body['message'] .= "Kind Regards<br/>";
-				$body['body'] .= "Your HQC Team ";
+				$body['body'] .= "Your IIDC Team ";
 
 				sendEmail($body);
 			}
 			else {
 
-				$ownerEmailAddress = "halal.ezone@gmail.com";
-				$fromEmailAddress = "noreply@halal-e.zone";
+				$ownerEmailAddress = "mona.sherif@iidc.at";
+				$fromEmailAddress = "noreply@halal-digital.net";
 				$body = [];
 
 				//sendEmailWithAttach
-				$body['name'] = 'Halal e-Zone';
+				$body['name'] = 'Halal Digital';
 				$body['email'] =  $fromEmailAddress;
 				$body['to'] = $supportEmailAddress;
 
@@ -3603,7 +4265,7 @@ function approveAuditDates($data){
 			//	$ApprovedDate1F = DateTime::createFromFormat('d/m/Y', $ApprovedDate1)->format('d/m/Y');
 
 				// sending notification
-				$body['subject'] = "Halal e-Zone - Audit Date Approval - ".$user["name"];
+				$body['subject'] = "Halal Digital - Audit Date Approval - ".$user["name"];
 				$body['header'] = "";
 				$body['body'] = "Dear Admin,";
 				$body['body'] .= "<br /><br />";
@@ -3612,7 +4274,7 @@ function approveAuditDates($data){
 				$body['body'] .= "<strong>". $ApprovedDate1."</strong>";
 				$body['body'] .= "<br /><br />";
 				$body['message'] .= "Kind Regards<br/>";
-				$body['body'] .= "Your HQC Team ";
+				$body['body'] .= "Your IIDC Team ";
 
 				sendEmail($body);
 			}
@@ -3661,7 +4323,7 @@ $industry = $userData['user']["industry"];
 			//$attach = '../files/docs/'.$filetoattach;
 			$attach = $filetoattach;
 			$ext = "pdf";
-			$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".str_replace('"', '', $user['name'])." (".$idclient.")/application/checklist/";
+			$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".getClientInfo($idclient)."/application/checklist/";
 			$absolutePath = __DIR__ ."/../".$hostPath;
 			if (!file_exists($absolutePath)) {
 				mkdir($absolutePath, 0777, true);
@@ -3700,11 +4362,11 @@ $stmt->execute();
 			$stmt->bindParam(':id', $iddoc, PDO::PARAM_STR);
 			$stmt->execute();
 
-			$ownerEmailAddress = "halal.ezone@gmail.com";
-			$fromEmailAddress = "noreply@halal-e.zone";
+			$ownerEmailAddress = "mona.sherif@iidc.at";
+			$fromEmailAddress = "noreply@halal-digital.net";
 
 			//sendEmailWithAttach
-			$body['name'] = 'Halal e-Zone';
+			$body['name'] = 'Halal Digital';
 			$body['email'] =  $fromEmailAddress;
 			$body['to'] = $user['email'];
 
@@ -3712,12 +4374,12 @@ $stmt->execute();
 			$body['attach'] = $filename;
 
 			// sending notification
-			$body['subject'] = "Halal e-Zone - ".$title . ' - '.$user["name"];
+			$body['subject'] = "Halal Digital - ".$title . ' - '.$user["name"];
 			$body['header'] = "";
 			$body['message'] = "Dear Ms./ Mr. ".$user["contact_person"]."!<br /><br />";
-		$body['message'] .= "Attached is the Auditor Checklist for your reference. It is also available on the Halal eZone portal.<br/><br/>";
+		$body['message'] .= "Attached is the Auditor Checklist for your reference. It is also available on the Halal Digital portal.<br/><br/>";
 		$body['message'] .= "Kind Regards<br/>";
-		$body['message'] .= "Your HQC Team";
+		$body['message'] .= "Your IIDC Team";
 			//sendEmailWithAttach($body);
 			
 			// get cycle name
@@ -3736,6 +4398,7 @@ $stmt->execute();
 
 			$state = "report";
 
+			
 			$newIndex = array_search($state, $statusOptions);
 
 			$query = "SELECT *
@@ -3787,7 +4450,7 @@ function register($data) {
 	//$myuser->sec_session_start();
 	//$res = $myuser->login($data['email'], $data['password']);
 	$errors = array();
-	$recpatcha_secret = '6Ld8HiIhAAAAACAWLM1dPaqbmkJIMatPMRnO_SOG';
+	$recpatcha_secret = '6LfAxC0rAAAAAJxREARB2ZJkDX0A8EmTgu8XazUw';
 
 	if (trim($data['name']) == "") {
 		$errors['name'] = "Company Name is required.";
@@ -3879,18 +4542,18 @@ function register($data) {
 		$prefix = "CID_".date('m')."/".date('y')."_".$country_code."_";
 
 		$dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
-		$sql = "INSERT INTO tusers (
+			$sql = "INSERT INTO tusers (
             name, login, email, address, city, zip, country, industry, category, 
             prodnumber, ingrednumber, vat, contact_person, phone, lang, 
             isclient, app_token, prefix, 
             pork_free_facility, dedicated_halal_lines, export_regions, 
-            third_party_products, third_party_halal_certified
+            third_party_products, third_party_halal_certified, referred_by
         ) VALUES (
             :name, :login, :email, :address, :city, :zip, :country, :industry, :category, 
             :prodnumber, :ingrednumber, :vat, :contact_person, :phone, :lang, 
             1, :app_token, :prefix, 
             :pork_free_facility, :dedicated_halal_lines, :export_regions, 
-            :third_party_products, :third_party_halal_certified
+            :third_party_products, :third_party_halal_certified, :referred_by
         )";
 
 		$stmt = $dbo->prepare($sql);
@@ -3920,6 +4583,10 @@ function register($data) {
 		$stmt->bindValue(':export_regions', $data['export_regions']);
 		$stmt->bindValue(':third_party_products', $data['third_party_products']);
 		$stmt->bindValue(':third_party_halal_certified', $data['third_party_halal_certified']);
+
+		// NEW: Bind the referred_by parameter
+		$stmt->bindValue(':referred_by', isset($data['referred_by']) ? trim($data['referred_by']) : '');
+  
 		$stmt->execute();
 		$idclient = $dbo->lastInsertId();
 
@@ -3940,23 +4607,25 @@ function register($data) {
 		$stmt->bindValue(':prodnumber', $data['prodnumber']);
 		$stmt->bindValue(':ingrednumber', $data['ingrednumber']);
 		$stmt->execute();
-		$idapp = $dbo->lastInsertId();
+		$idapp = $dbo->lastInsertId(); 
 
 		insertActivityLog($idclient, $idapp, $idclient, $data['name'], 'New Registration');			
 		
-		$ownerEmailAddress = "halal.ezone@gmail.com";
-		$fromEmailAddress = "noreply@halal-e.zone";
+		$ownerEmailAddress = "mona.sherif@iidc.at";
+		$fromEmailAddress = "noreply@halal-digital.net";
 
 		$decode = file_get_contents( __DIR__ ."/../config.json");
 		$config=json_decode($decode, TRUE);
-		$attach = 'F0422 HQC Application Form.pdf';
+		$attach = 'Initial_Application_Form_DE_EN.pdf';
 		$ext = "pdf";
-		 $hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".str_replace('"', '', $client)."/application/app/";
-		 $absolutePath = __DIR__ ."/../".$hostPath;
+		$hostPath = $config['filesfolder']."/".$config['clientsfolder']."/".getClientInfo($idclient)."/application/app/";
+		$absolutePath = $config['basePath'].$hostPath;
 	 
 		mkdir($absolutePath, 0777, true);
 		$filename = str_replace(".".$ext, '_'.$idapp.'.'.$ext, $attach);
 		$dest_path = $absolutePath . $filename;
+
+		/*
 		$fields = array(
 			'Company Name' => $data['name'],
 			'Company Representative' => $data['contact_person'],
@@ -3965,10 +4634,29 @@ function register($data) {
 			'Contact person Name Email Telephone number' => $data['contact_person'] . ', '. $data['email'] . ', '. $data['phone'],
 			'Text1' => $data['address'],
 			'Example Ltd SA SPA BV GMBH AS NVVATTaxBTW Number' => $data['vat']);		
+		*/
+
+		$addressParts = array_filter([
+			$data['address'] ?? '',
+			$data['city'] ?? '',
+			$data['state'] ?? '',
+			$data['Country'] ?? ''
+		]);
+	
+		$address = implode(', ', $addressParts);
+
+		$fields = array(
+			'FirmennameCompany Name' => $data['name'],
+			//'GeschäftsfelderIndustry fields' => $data['industry'],
+			'StandortHeadqurter address' => $data['address'],
+			'Tel Nr Tel No' => $data['phone'],
+			'EMail AdresseEMail address' => $data['email'],
+		);
+
 		saveApplicationPDF1($fields, '../files/docs/'.$attach, $dest_path);
 
 		//sendEmailWithAttach
-		$body['name'] = 'Halal e-Zone';
+		$body['name'] = 'Halal Digital'; 
 		$body['email'] =  $fromEmailAddress;
 		$body['to'] = $data['email'];
 
@@ -3976,14 +4664,15 @@ function register($data) {
 		$body['attach'] = $filename;
 
 		// sending notification
-		$body['subject'] = "Halal e-Zone - Registration Confirmation - ".$data['name'];
+		$body['subject'] = "Halal Digital - Registration Confirmation - ".$data['name'];
 		$body['header'] = "";
-		$body['message'] = 'Thank you for registering. We have attached the "Application Form" for you to download, fill out, and upload using the link provided below. If you have any questions or require any assistance, please do not hesitate to contact us.';
+		$body['message'] = "Dear ".$data['name'].",<br/><br/>";
+		$body['message'] .= 'Thank you for registering. We have attached the "Application Form" for you to download, fill out, and upload using the link provided below. If you have any questions or require any assistance, please do not hesitate to contact us.';
 		$body['message'] .= "<br /><br />";
-		$body['message'] .= '<a href="http://halal-e.zone/upload?code='.urlencode($appToken).'">http://halal-e.zone/upload?code='.$appToken.'</a><br/><br/>';
+		$body['message'] .= '<a href="https://www.halal-digital.net/upload?code='.urlencode($appToken).'">https://www.halal-digital.net/upload?code='.$appToken.'</a><br/><br/>';
 		$body['message'] .= "Kind Regards,";
 		$body['message'] .= "<br/>";
-		$body['message'] .= "Your HQC supporting Team";
+		$body['message'] .= "Your IIDC supporting Team";
 
 		$Title = 'Application';
 		$category = 'app';
@@ -4001,10 +4690,10 @@ $stmt->bindParam(':category', $category, PDO::PARAM_STR);
 $stmt->bindParam(':filename', $filename, PDO::PARAM_STR);
 $stmt->execute();
 
-		//sendEmailWithAttach($body);
+		sendEmailWithAttach($body);
 
 		//sendEmailWithAttach
-		$body['name'] = 'Halal e-Zone';
+		$body['name'] = 'Halal Digital';
 		$body['email'] =  $fromEmailAddress;
 		$body['to'] = $adminEmailAddress;
 
@@ -4012,10 +4701,10 @@ $stmt->execute();
 		$body['attach'] = $filename;
 
 		// sending notification
-		$body['subject'] = "Halal e-Zone - Registration Notification - ".$data['name'];
+		$body['subject'] = "Halal Digital - Registration Notification - ".$data['name'];
 		$body['header'] = "";
 		$body['message'] = 'Dear Admin,<br/>
-		A new client has registered on the Halal e-Zone platform. The registration details are as follows:<br/><br/>
+		A new client has registered on the Halal Digital platform. The registration details are as follows:<br/><br/>
 			Name: '.$data['name'].'<br/>
 			Email: '.$data['email'].'<br/>
 			Address: '. $data['address'].'<br/>
@@ -4029,6 +4718,7 @@ $stmt->execute();
 			Vat: '. $data['vat'].'<br/>
 			Contact Person: '. $data['contact_person'].'<br/>
 			Phone: '. $data['phone'].'<br/>
+			Referred by: '. $data['referred_by'].'<br/>
 			Is your facility a pork-free facility? '.$data['pork_free_facility'].'<br/>
 			Do you have dedicated lines for Halal production? '.$data['dedicated_halal_lines'].'<br/>
 			What are your target export regions? '.$data['export_regions'].'<br/>
@@ -4037,7 +4727,7 @@ $stmt->execute();
 			Date of Registration: '.date('d/m/Y');
 		$body['message'] .= "<br /><br />";
 		$body['message'] .= 'Best regards,<br />
-		Halal e-Zone';
+		Halal Digital';
 
 		sendEmailWithAttach($body);
 
@@ -4104,24 +4794,28 @@ function sendClientsData() {
 }
 
 function getIngredientsForProduct($prod){
-	try{
-		$dbo = &$GLOBALS['dbo'];
-		$dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
-		$filter = " AND (idclient = '".$prod['idclient']."' OR idclient IN (SELECT id FROM tusers WHERE parent_id = '".$prod['idclient']."'))";
-		$sql = 'SELECT id, IFNULL(CONCAT("RMC_", id, "/", rmcode, "/", name), "") as text '.
-			'from tingredients where 1 '.$filter.' and deleted=0 order by name';
-		$stmt = $dbo->prepare($sql);
-		$stmt->setFetchMode(PDO::FETCH_ASSOC);
-		//$stmt->bindValue(':idclient', $prod['idclient']);
-		if(!$stmt->execute()) {
-			echo json_encode(generateErrorResponse("Getting ingredients list failed"));
-			die();
-		}
-		return $stmt->fetchAll();
-	} catch (PDOException $e){
-		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
-		die();
-	}
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+        
+        $familyIds = getFamilyClientIds($prod['idclient']);
+        $placeholders = implode(',', array_fill(0, count($familyIds), '?'));
+        
+        $sql = "SELECT id, IFNULL(CONCAT('RMC_', id, '/', rmcode, '/', name), '') as text " .
+            "FROM tingredients WHERE idclient IN ({$placeholders}) AND deleted = 0 ORDER BY name";
+        
+        $stmt = $dbo->prepare($sql);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        
+        if(!$stmt->execute($familyIds)) {
+            echo json_encode(generateErrorResponse("Getting ingredients list failed"));
+            die();
+        }
+        return $stmt->fetchAll();
+    } catch (PDOException $e){
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
 }
 
 function sendIngredientsForProductData($prod) {
@@ -4144,24 +4838,31 @@ function sendNextProdIdData($prod){
 	}
 }
 
-
 function saveProductData($prod){
-	try{
-		$dbo = &$GLOBALS['dbo'];
-		$sql = "UPDATE tproducts SET item=:item, ean=:ean, spec=:spec, addoc=:addoc, label=:label WHERE id=:id";
-		$stmt = $dbo->prepare($sql);
-		$stmt->bindValue(':item', $prod['item']);
-		$stmt->bindValue(':ean', $prod['ean']);
-		$stmt->bindValue(':spec', $prod['spec']);
-		$stmt->bindValue(':addoc', $prod['addoc']);
-		$stmt->bindValue(':label', $prod['label']);
-		$stmt->bindValue(':id', $prod['id']);
-		if (!$stmt->execute()){
-			echo json_encode(generateErrorResponse('Product updating failed'));
-			die();
-		}
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        
+        // Start transaction
+        $dbo->beginTransaction();
+        
+        // Update product data (NO group_id in main table anymore)
+        $sql = "UPDATE tproducts SET item=:item, ean=:ean, spec=:spec, addoc=:addoc, label=:label WHERE id=:id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':item', $prod['item']);
+        $stmt->bindValue(':ean', $prod['ean']);
+        $stmt->bindValue(':spec', $prod['spec']);
+        $stmt->bindValue(':addoc', $prod['addoc']);
+        $stmt->bindValue(':label', $prod['label']);
+        $stmt->bindValue(':id', $prod['id']);
+        if (!$stmt->execute()){
+            $dbo->rollBack();
+            echo json_encode(generateErrorResponse('Product updating failed'));
+            die();
+        }
 
-		/*
+        // NEW: Handle multiple group assignments
+        saveProductGroups($dbo, $prod['id'], $prod['group_ids'] ?? []);
+
 		$sql = "DELETE FROM tp2i WHERE idp=".$prod['id'];
 		$stmt = $dbo->prepare($sql);
 		if (!$stmt->execute()){
@@ -4179,8 +4880,42 @@ function saveProductData($prod){
 				die();
 			}
 		}
-		*/
 
+         $dbo->commit();
+        updateProductStats($prod['idclient']);
+        echo json_encode(generateSuccessResponse('Product was updated'));
+    } catch (PDOException $e){
+        $dbo->rollBack();
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
+}
+
+function addProductData($prod){
+    try{
+        $dbo = &$GLOBALS['dbo'];
+        
+        // Start transaction
+        $dbo->beginTransaction();
+        
+        // Update product data (NO group_id in main table anymore)
+        $sql = "UPDATE tproducts SET item=:item, ean=:ean, spec=:spec, addoc=:addoc, label=:label WHERE id=:id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':item', $prod['item']);
+        $stmt->bindValue(':ean', $prod['ean']);
+        $stmt->bindValue(':spec', $prod['spec']);
+        $stmt->bindValue(':addoc', $prod['addoc']);
+        $stmt->bindValue(':label', $prod['label']);
+        $stmt->bindValue(':id', $prod['id']);
+        if (!$stmt->execute()){
+            $dbo->rollBack();
+            echo json_encode(generateErrorResponse('New product adding failed'));
+            die();
+        }
+        
+        // NEW: Handle multiple group assignments
+        saveProductGroups($dbo, $prod['id'], $prod['group_ids'] ?? []);
+     
 		// Get existing ingredients for the product
 		$sql = "SELECT idi FROM tp2i WHERE idp = :idp";
 		$stmt = $dbo->prepare($sql);
@@ -4226,50 +4961,37 @@ function saveProductData($prod){
 		}
 
 		updateProductStats($prod['idclient']);
-		echo json_encode(generateSuccessResponse('Product was updated'));
-	} catch (PDOException $e){
-		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
-		die();
-	}
+        
+        
+        $dbo->commit();
+        echo json_encode(generateSuccessResponse('Product was updated'));
+    } catch (PDOException $e){
+        $dbo->rollBack();
+        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+        die();
+    }
 }
 
-function addProductData($prod){
-	try{
-		$dbo = &$GLOBALS['dbo'];
-		$sql = "UPDATE tproducts SET item=:item, ean=:ean, spec=:spec, addoc=:addoc, label=:label WHERE id=:id";
-		$stmt = $dbo->prepare($sql);
-		$stmt->bindValue(':item', $prod['item']);
-		$stmt->bindValue(':ean', $prod['ean']);
-		$stmt->bindValue(':spec', $prod['spec']);
-		$stmt->bindValue(':addoc', $prod['addoc']);
-		$stmt->bindValue(':label', $prod['label']);
-		$stmt->bindValue(':id', $prod['id']);
-		if (!$stmt->execute()){
-			echo json_encode(generateErrorResponse('New product adding failed'));
-			die();
-		}
-		if(isset($prod['ingredients']) && !empty($prod['ingredients']))
-		foreach($prod['ingredients'] as $i){
-			$sql = "INSERT INTO tp2i (idp, idi) VALUES (:id, :idi)";
-			$stmt = $dbo->prepare($sql);
-			$stmt->bindValue(':idi', $i);
-			$stmt->bindValue(':id', $prod['id']);
-			if (!$stmt->execute()){
-				echo json_encode(generateErrorResponse('Product ingredients list updating failed'));
-				die();
-			}
-		}
-		// sending notification
-		$body['subject'] = "New Product notification";
-		$body['header'] = "Client ".getClientInfo($prod['idclient'])." added a new product:";
-		$body['body'] = $prod['item']." (HCP_".$prod['id'].")";
-		//sendEmail($body);
-		echo json_encode(generateSuccessResponse('Product was updated'));
-	} catch (PDOException $e){
-		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
-		die();
-	}
+// NEW: Helper function to save product-group relationships
+function saveProductGroups($dbo, $product_id, $group_ids) {
+    // Delete existing assignments for this product
+    $sql = "DELETE FROM tproduct_group_assignments WHERE product_id = ?";
+    $stmt = $dbo->prepare($sql);
+    $stmt->execute([$product_id]);
+    
+    // Insert new assignments
+    if (!empty($group_ids) && is_array($group_ids)) {
+        $sql = "INSERT INTO tproduct_group_assignments (product_id, group_id) VALUES (?, ?)";
+        $stmt = $dbo->prepare($sql);
+        
+        foreach ($group_ids as $group_id) {
+            if (is_numeric($group_id) && $group_id > 0) {
+                $stmt->execute([$product_id, (int)$group_id]);
+            }
+        }
+    }
 }
+
 
 function removeProductData($prod){
 	try{
@@ -4378,11 +5100,11 @@ function additionalItemsApplicationData($data) {
 	$stmt->execute();
 	$return['user'] = $stmt->fetch(PDO::FETCH_ASSOC);
 
-	$sql = "SELECT * FROM tapplications WHERE idclient=:idclient1 AND idcycle=:idcycle";
+	$sql = "SELECT * FROM tapplications WHERE idclient=:idclient1 AND idcycle=(SELECT id FROM tcycles WHERE idclient=:idclient2 AND `state`=1)";
 	$stmt = $dbo->prepare($sql);
 	$stmt->setFetchMode(PDO::FETCH_ASSOC);
 	$stmt->bindValue(':idclient1', $data["idclient"]);
-	$stmt->bindValue(':idcycle', $data['idcycle']);
+	$stmt->bindValue(':idclient2', $data["idclient"]);
 	$stmt->execute();
 	$return['app'] = $stmt->fetch(PDO::FETCH_ASSOC);
 	$decode = file_get_contents( __DIR__ ."/../config.json");
@@ -4470,25 +5192,25 @@ function additionalItemsApplicationData($data) {
 		$stmt->execute();
 
 		/*
-		$ownerEmailAddress = "halal.ezone@gmail.com";
-		$fromEmailAddress = "noreply@halal-e.zone";
+		$ownerEmailAddress = "mona.sherif@iidc.at";
+		$fromEmailAddress = "noreply@halal-digital.net";
 
 		$body = [];
-		$body['name'] = 'Halal e-Zone';
+		$body['name'] = 'Halal Digital';
 		$body['email'] =  $fromEmailAddress;
 		$body['to'] = $adminEmailAddress;
 
 		$body['attachhostpath'] = $dest_path;
 		$body['attach'] = $filename;
 	// sending notification
-	$body['subject'] = "Halal eZone - Additional Items Application";
+	$body['subject'] = "Halal Digital - Additional Items Application";
 	//$body['header'] = "Client ".getClientInfo($prod['idclient'])." added a new product:";
 	$body['message'] = "Dear Admin,
 <br /><br />
 Client ".getClientInfo($data["idclient"])." has uploaded Additional Items Application. Please find attached. 
 <br /><br />
 Best regards,<br />
-Your HQC supporting Team";
+Your IIDC supporting Team";
 sendEmailWithAttach($body);
 */
 		/*
@@ -4519,12 +5241,12 @@ sendEmailWithAttach($body);
 		$csvdata[] = ["Contact person/ Ansprechperson", $return["user"]["contact_person"]];
 		$csvdata[] = ["Tel.", $return["user"]["phone"]];
 		$csvdata[] = ["E-Mail", $return["user"]["email"]];
-		$csvdata[] = ["HQC certificate N�/ HQC Zertifikat Nummer", ""];
+		$csvdata[] = ["IIDC certificate N�/ IIDC Zertifikat Nummer", ""];
 		$csvdata[] = ["", ""];
 
 		$csvdata[] = ["Item name/ Artikelbezeichnung",
 		  "Item N�/ Artikelnummer",
-		  "Halal e-Zone HCP N�"];
+		  "Halal Digital HCP N�"];
 
 	  foreach ($return["products"] as $product) {
 		if ($product["conf"] == '1') {
@@ -4576,12 +5298,12 @@ sendEmailWithAttach($body);
 		// Close the zip file
 		$zip->close();
 
-		$ownerEmailAddress = "halal.ezone@gmail.com";
-		$fromEmailAddress = "noreply@halal-e.zone";
+		$ownerEmailAddress = "mona.sherif@iidc.at";
+		$fromEmailAddress = "noreply@halal-digital.net";
 
 		//sendEmailWithAttach
 		$body = [];
-		$body['name'] = 'Halal e-Zone';
+		$body['name'] = 'Halal Digital';
 		$body['email'] =  $fromEmailAddress;
 		$body['to'] = $adminEmailAddress; 
 
@@ -4589,13 +5311,13 @@ sendEmailWithAttach($body);
 		$body['attach'] = $zipFilename;
 
 		// sending notification
-		$body['subject'] = "Halal e-Zone - Additional Items Application - ".$return['user']["name"];
+		$body['subject'] = "Halal Digital - Additional Items Application - ".$return['user']["name"];
 		$body['header'] = "";
 		$body['message'] = "Dear Admin,<br /><br />";
 		$body['message'] .= "<strong>".$return['user']["name"]."</strong> has uploaded the additional items application. Please find attached.<br/>";
 		$body['message'] .= "Regards,";
 		$body['message'] .= "<br/>";
-		$body['message'] .= "Halal e-Zone";
+		$body['message'] .= "Halal Digital";
 
 		//$body['message'] .= getClientInformation($return['user']);
 
@@ -4896,7 +5618,15 @@ function saveIngredientData($prod) {
 		$stmt->execute();
 		$ingredient = $stmt->fetch();
 
-		$sql = "UPDATE tingredients SET sub=:sub, name=:name, supplier=:supplier, statement=:statement, halalcert=:halalcert, ".
+		if (isset($prod['stmt_exp_date']) && !empty($prod['stmt_exp_date'])) {
+			
+			$stmt_exp_date = date("Y-m-d", strtotime($prod['stmt_exp_date']));
+		}
+		else {
+ 		   $stmt_exp_date = null;
+		}
+
+		$sql = "UPDATE tingredients SET sub=:sub, name=:name, supplier=:supplier, statement=:statement, stmt_exp_date=:stmt_exp_date, halalcert=:halalcert, ".
 					"cert=:cert, ".($prod['halalcert'] == 1 ? "cb=:cb, halalexp=:halalexp, rmposition=:rmposition,":"halalexp=:halalexp,")." rmcode=:rmcode, material=:material, spec=:spec, quest=:quest, ".
 					" conf=:conf, note=:note, status=:status, addoc=:addoc, producer=:producer WHERE id=:id";
 		$stmt = $dbo->prepare($sql);
@@ -4908,6 +5638,7 @@ function saveIngredientData($prod) {
 		$stmt->bindValue(':supplier', $prod['supplier']);
 		$stmt->bindValue(':producer', $prod['producer']);
 		$stmt->bindValue(':statement', $prod['state']);
+		$stmt->bindValue(':stmt_exp_date', $stmt_exp_date);
 		if($prod['halalcert'] == 1){
 			$stmt->bindValue(':halalcert', 1);
 			$stmt->bindValue(':cert', $prod['cert']);
@@ -4946,15 +5677,15 @@ function saveIngredientData($prod) {
 		$stmt->bindValue(':id', $prod['id']);
 		if (!$stmt->execute()){
 			$dberror = $stmt->errorInfo();
-			$ownerEmailAddress = "halal.ezone@gmail.com";
-			$fromEmailAddress = "noreply@halal-e.zone";
+			$ownerEmailAddress = "mona.sherif@iidc.at";
+			$fromEmailAddress = "noreply@halal-digital.net";
 			$body = [];
-			$body['name'] = 'Halal e-Zone';
+			$body['name'] = 'Halal Digital';
 			$body['email'] =  $fromEmailAddress;
 			$body['to'] = 'alrahmahsolutions@gmail.com';
 			$body['header'] = "";
 			// sending notification
-			$body['subject'] = "Halal e-Zone - Ingredient updating failed";
+			$body['subject'] = "Halal Digital - Ingredient updating failed";
 			$body['header'] = "";
 			$body['body'] .= print_r($dberror, true);
 			$body['body'] .= print_r($ingredient, true);
@@ -5083,7 +5814,7 @@ function saveIngredientData($prod) {
 		// Concatenate all deviations into a single string (comma-separated)
 		$tasks = implode("|", $deviations);
 		 
-		$sql = "INSERT INTO tingredients_log SET sub=:sub, name=:name, tasks=:tasks, supplier=:supplier, statement=:statement, halalcert=:halalcert, ".
+		$sql = "INSERT INTO tingredients_log SET sub=:sub, name=:name, tasks=:tasks, supplier=:supplier, statement=:statement, stmt_exp_date=:stmt_exp_date, halalcert=:halalcert, ".
 					"cert=:cert, cb=:cb, halalexp=:halalexp, rmposition=:rmposition, ingredients=:ingredients, rmcode=:rmcode, material=:material, spec=:spec, quest=:quest, ".
 					"conf=:conf, note=:note, status=:status, addoc=:addoc, producer=:producer, idingredient=:id, created_by=:created_by";
 		$stmt = $dbo->prepare($sql);
@@ -5093,6 +5824,8 @@ function saveIngredientData($prod) {
 		$stmt->bindValue(':supplier', $prod['supplier']);
 		$stmt->bindValue(':producer', $prod['producer']);
 		$stmt->bindValue(':statement', $prod['state']);
+		$stmt->bindValue(':stmt_exp_date', $stmt_exp_date);
+
 		if ($prod['halalcert'] == 1) {
 			$stmt->bindValue(':halalcert', 1);
 			$stmt->bindValue(':cert', $prod['cert']);
@@ -5132,7 +5865,94 @@ function saveIngredientData($prod) {
 		}
 		$stmt->bindValue(':id', $prod['id']);
 		$stmt->bindValue(':created_by', $myuser->userdata['name']);
-		$stmt->execute();
+		$stmt->execute(); 
+
+		// Handle facility assignments based on facilityIds from form
+		if (isset($prod['facilityIds'])) {
+			if (is_null($prod['facilityIds'])) {
+				// facilityIds is null - don't modify facility assignments (form was hidden)
+				// Keep existing assignments as-is
+			} else if (empty($prod['facilityIds'])) {
+				// facilityIds is empty array - this is an error if form was visible
+				echo json_encode(generateErrorResponse('At least one facility must be selected when facility selection is available.'));
+				die();
+			} else {
+				// facilityIds has values - update facility assignments
+				// Validate that all facility IDs are numeric and not empty
+				$validFacilityIds = [];
+				foreach ($prod['facilityIds'] as $facilityId) {
+					if (!empty($facilityId) && is_numeric($facilityId)) {
+						$validFacilityIds[] = intval($facilityId);
+					}
+				}
+				
+				if (empty($validFacilityIds)) {
+					echo json_encode(generateErrorResponse('At least one valid facility must be selected.'));
+					die();
+				}
+				
+				// First, remove existing assignments
+				$deleteSql = "DELETE FROM tingredient_facilities WHERE ingredient_id = :ingredient_id";
+				$deleteStmt = $dbo->prepare($deleteSql);
+				$deleteStmt->bindValue(':ingredient_id', $prod['id']);
+				$deleteStmt->execute();
+				
+				// Then add new assignments
+				$insertSql = "INSERT INTO tingredient_facilities 
+							(ingredient_id, facility_id, assigned_by, assigned_at, status) 
+							VALUES (:ingredient_id, :facility_id, :assigned_by, NOW(), 1)";
+				$insertStmt = $dbo->prepare($insertSql);
+				
+				$successCount = 0;
+				foreach ($validFacilityIds as $facilityId) {
+					$insertStmt->bindValue(':ingredient_id', $prod['id']);
+					$insertStmt->bindValue(':facility_id', $facilityId);
+					$insertStmt->bindValue(':assigned_by', $myuser->userdata['id']);
+					
+					if ($insertStmt->execute()) {
+						$successCount++;
+					} else {
+						error_log("Failed to assign ingredient {$prod['id']} to facility {$facilityId}");
+					}
+				}
+				
+				if ($successCount === 0) {
+					echo json_encode(generateErrorResponse('Failed to assign ingredient to any facilities. Please try again.'));
+					die();
+				}
+			}
+		} else {
+			// Auto-assign to facilities if no assignments exist
+			$checkFacilityAssignments = "SELECT COUNT(*) FROM tingredient_facilities WHERE facility_id = :facility_id AND ingredient_id = :ingredient_id";
+			$checkStmt = $dbo->prepare($checkFacilityAssignments);
+			$checkStmt->bindValue(':facility_id', $prod['idclient']);
+			$checkStmt->bindValue(':ingredient_id', $prod['id']);
+			$checkStmt->execute();
+			$hasAssignments = $checkStmt->fetchColumn();
+
+			if ($hasAssignments == 0) {
+
+				$insertSql = "INSERT INTO tingredient_facilities 
+						(ingredient_id, facility_id, assigned_by, assigned_at, status) 
+						VALUES (:ingredient_id, :facility_id, :assigned_by, NOW(), 1)
+						ON DUPLICATE KEY UPDATE 
+						assigned_by = VALUES(assigned_by),
+						assigned_at = VALUES(assigned_at),
+						status = 1";
+			
+				$insertStmt = $dbo->prepare($insertSql);
+			
+				$insertStmt->bindValue(':ingredient_id', $prod['id']);
+				$insertStmt->bindValue(':facility_id',  $prod["idclient"]);
+				$insertStmt->bindValue(':assigned_by', $myuser->userdata['id']);
+				
+				if (!$insertStmt->execute()) {
+					error_log("Failed to assign ingredient {$ingredientId} to facility {$facility['id']}");
+					return false;
+				}
+				
+			}
+		}
 		
 		updateIngredientStats($prod['idclient']);
 		echo json_encode(generateSuccessResponse('Ingredient was updated'));
@@ -5140,6 +5960,69 @@ function saveIngredientData($prod) {
 		echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
 		die();
 	}
+}
+
+function assignIngredientToFacilities($ingredientId, $clientId, $assignedBy) {
+    try {
+        $dbo = &$GLOBALS['dbo'];
+        
+        // Get all facilities that belong to this client
+        $sql = "SELECT id FROM tusers 
+                WHERE parent_id = :client_id 
+                AND isclient = 1 
+                AND deleted = 0";
+        
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':client_id', $clientId);
+        $stmt->execute();
+        $facilities = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // If no facilities found, assign to the client itself (if it's a facility)
+        if (empty($facilities)) {
+            // Check if the client itself is a facility (has a parent)
+            $sql = "SELECT parent_id FROM tusers WHERE id = :client_id AND isclient = 1 AND deleted = 0";
+            $stmt = $dbo->prepare($sql);
+            $stmt->bindValue(':client_id', $clientId);
+            $stmt->execute();
+            $clientData = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($clientData && !empty($clientData['parent_id'])) {
+                // This client is actually a facility, assign to it
+                $facilities = [['id' => $clientId]];
+            } else {
+                // No facilities to assign to
+                return true;
+            }
+        }
+        
+        // Insert assignments for all facilities
+        $insertSql = "INSERT INTO tingredient_facilities 
+                      (ingredient_id, facility_id, assigned_by, assigned_at, status) 
+                      VALUES (:ingredient_id, :facility_id, :assigned_by, NOW(), 1)
+                      ON DUPLICATE KEY UPDATE 
+                      assigned_by = VALUES(assigned_by),
+                      assigned_at = VALUES(assigned_at),
+                      status = 1";
+        
+        $insertStmt = $dbo->prepare($insertSql);
+        
+        foreach ($facilities as $facility) {
+            $insertStmt->bindValue(':ingredient_id', $ingredientId);
+            $insertStmt->bindValue(':facility_id', $facility['id']);
+            $insertStmt->bindValue(':assigned_by', $assignedBy);
+            
+            if (!$insertStmt->execute()) {
+                error_log("Failed to assign ingredient {$ingredientId} to facility {$facility['id']}");
+                return false;
+            }
+        }
+        
+        return true;
+        
+    } catch (Exception $e) {
+        error_log("Error in assignIngredientToFacilities: " . $e->getMessage());
+        return false;
+    }
 }
 
 function addIngredientFiles($prod)
@@ -5280,12 +6163,12 @@ function addIngredientFiles($prod)
 
 	echo json_encode(generateSuccessResponse('Files were updated'));
 }
-
 function addActivityFiles($activityData) {
+
     $documentFields = [
         'invoice_inbound', 
-		'travel_invoices', 
-		'training_request_form', 
+        'travel_invoices', 
+        'training_request_form', 
         'attendance_list', 
         'customer_feedback_form', 
         'attendance_certificates'
@@ -5300,30 +6183,39 @@ function addActivityFiles($activityData) {
 
     $dbo = &$GLOBALS['dbo'];
     
-    // Get current activity data
-    $sql = "SELECT * FROM ttrainer_activities WHERE id=:id";
+    // Get current activity data with auditor info
+    $sql = "SELECT a.*, u.name as auditor_name 
+            FROM ttrainer_activities a 
+            LEFT JOIN tusers u ON a.idauditor = u.id 
+            WHERE a.id = :id";
     $stmt = $dbo->prepare($sql);
     $stmt->bindValue(':id', $activityData['id']);
     $stmt->execute();
-    $activity = $stmt->fetch();
+    $activity = $stmt->fetch(PDO::FETCH_ASSOC);
 
     $updates = [];
     $clause = [];
+    $invoiceInboundUploaded = false;
 
     foreach ($values as $field => $value) {
 
-		if (!empty($value)) {
-			// insert or append to the existing field value
-			$updates[$field] = empty($activity[$field])
-				? $value
-				: sprintf('%s,%s', $activity[$field], $value);
-			$clause[$field] = sprintf('%s=:%s', $field, $field);
-		}
-	}
+        if (!empty($value)) {
+            // Check if invoice_inbound is being uploaded
+            if ($field === 'invoice_inbound') {
+                $invoiceInboundUploaded = true;
+            }
+            
+            // insert or append to the existing field value
+            $updates[$field] = empty($activity[$field])
+                ? $value
+                : sprintf('%s,%s', $activity[$field], $value);
+            $clause[$field] = sprintf('%s=:%s', $field, $field);
+        }
+    }
 
-	if (empty($updates)) {
-		return;
-	}	
+    if (empty($updates)) {
+        return;
+    }	
 
     // Prepare the update query
     $strClause = implode(', ', $clause);
@@ -5338,11 +6230,11 @@ function addActivityFiles($activityData) {
     if (!$stmt->execute()) {
         echo json_encode(generateErrorResponse('Failed to attach files to activity'));
         die();
-    }    
-
+    }
+ 
     echo json_encode(generateSuccessResponse('Activity documents were updated'));
 }
-
+ 
 function addProductFiles($prod)
 {
     $fields = ['spec', 'addoc', 'label'];
@@ -5404,8 +6296,7 @@ function addProductFiles($prod)
    	echo json_encode(generateSuccessResponse('Files were updated'));
 }
 
-
-function removeCompanyData($prod){
+function removeCompanyData($prod) { 
 	try {
 
 		$dbo = &$GLOBALS['dbo'];
@@ -5933,23 +6824,71 @@ function ingredientsSupplierQuestionsData($data){
         die();
     }
 }
+/**
+ * Get all client IDs whose ingredients should be visible to the given client.
+ * Parent: own + all children
+ * Child: own + parent + all siblings
+ * Standalone: own only
+ */
+function getFamilyClientIds($idclient) {
+    $dbo = &$GLOBALS['dbo'];
+    
+    $stmt = $dbo->prepare("SELECT id, parent_id FROM tusers WHERE id = :id AND deleted = 0");
+    $stmt->bindValue(':id', $idclient);
+    $stmt->execute();
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$user) return [$idclient];
+    
+    $familyIds = [$idclient];
+    $isChild = !empty($user['parent_id']) && $user['parent_id'] != '0';
+    
+    if ($isChild) {
+        // CHILD: parent + siblings
+        $parentId = $user['parent_id'];
+        $familyIds[] = $parentId;
+        
+        $stmt = $dbo->prepare("SELECT id FROM tusers WHERE parent_id = :pid AND isclient = 1 AND deleted = 0");
+        $stmt->bindValue(':pid', $parentId);
+        $stmt->execute();
+        foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $sibId) {
+            $familyIds[] = $sibId;
+        }
+    } else {
+        // PARENT: all children
+        $stmt = $dbo->prepare("SELECT id FROM tusers WHERE parent_id = :id AND isclient = 1 AND deleted = 0");
+        $stmt->bindValue(':id', $idclient);
+        $stmt->execute();
+        foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $childId) {
+            $familyIds[] = $childId;
+        }
+    }
+    
+    return array_values(array_unique($familyIds));
+}
+
 
 function ingredientsExcelReportData($data){
     try{
         $dbo = &$GLOBALS['dbo'];
         $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
-        $sql = 'select DATE_FORMAT(di.created_at, \'%e %M %Y\') as time, '.
-            'CONCAT("RMC_", i.id) as rmid, REPLACE(i.name, "<br/>", "\\n\\r") as name, '.
-            'i.supplier, i.producer, GROUP_CONCAT(d.deviation) as deviation, GROUP_CONCAT(d.measure) as measure from tingredients i '.
-            ' inner join td2i di on di.idi=i.id '.
-            ' inner join tdeviations d on d.id=di.idd '.
-            ' WHERE (i.idclient=:idclient1 OR i.idclient IN (SELECT id FROM tusers WHERE parent_id=:idclient2)) AND di.status < 2 GROUP BY i.id ORDER BY i.id';
+        
+        $familyIds = getFamilyClientIds($data['idclient']);
+        $placeholders = implode(',', array_fill(0, count($familyIds), '?'));
+        
+        $sql = "SELECT DATE_FORMAT(di.created_at, '%e %M %Y') as time, " .
+            "CONCAT('RMC_', i.id) as rmid, REPLACE(i.name, '<br/>', '\\n\\r') as name, " .
+            "i.supplier, i.producer, GROUP_CONCAT(d.deviation) as deviation, GROUP_CONCAT(d.measure) as measure " .
+            "FROM tingredients i " .
+            "INNER JOIN td2i di ON di.idi = i.id " .
+            "INNER JOIN tdeviations d ON d.id = di.idd " .
+            "WHERE i.idclient IN ({$placeholders}) AND di.status < 2 " .
+            "GROUP BY i.id ORDER BY i.id";
+        
         $stmt = $dbo->prepare($sql);
         $stmt->setFetchMode(PDO::FETCH_ASSOC);
-        $stmt->bindValue(':idclient1', $data['idclient']);
-		$stmt->bindValue(':idclient2', $data['idclient']);
-        //$stmt->bindValue(':deleted', $data['displaymode']);
-        if(!$stmt->execute()) {
+        
+        if(!$stmt->execute($familyIds)) {
             echo json_encode(generateErrorResponse("Getting ingredients list failed"));
             die();
         }
@@ -5960,22 +6899,28 @@ function ingredientsExcelReportData($data){
     }
 }
 
+
 function ingredientsAllExcelReportData($data){
     try{
         $dbo = &$GLOBALS['dbo'];
         $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
-			$sql = 'select DATE_FORMAT(di.created_at, \'%e %M %Y\') as time, '.
-            'CONCAT("RMC_", i.id) as rmid, i.name, i.rmcode, i.halalcert, i.cb, i.conf, '.
-            'i.supplier, i.producer, GROUP_CONCAT(d.deviation) as deviation, GROUP_CONCAT(d.measure) as measure from tingredients i '.
-            ' left join td2i di on di.idi=i.id '.
-            ' left join tdeviations d on d.id=di.idd '.
-            ' WHERE (i.idclient=:idclient1 OR i.idclient IN (SELECT id FROM tusers WHERE parent_id=:idclient2)) AND i.deleted = 0 GROUP BY i.id ORDER BY i.id';
-        $stmt = $dbo->prepare($sql); 
+        
+        $familyIds = getFamilyClientIds($data['idclient']);
+        $placeholders = implode(',', array_fill(0, count($familyIds), '?'));
+        
+        $sql = "SELECT DATE_FORMAT(di.created_at, '%e %M %Y') as time, " .
+            "CONCAT('RMC_', i.id) as rmid, i.name, i.rmcode, i.halalcert, i.cb, i.conf, " .
+            "i.supplier, i.producer, GROUP_CONCAT(d.deviation) as deviation, GROUP_CONCAT(d.measure) as measure " .
+            "FROM tingredients i " .
+            "LEFT JOIN td2i di ON di.idi = i.id " .
+            "LEFT JOIN tdeviations d ON d.id = di.idd " .
+            "WHERE i.idclient IN ({$placeholders}) AND i.deleted = 0 " .
+            "GROUP BY i.id ORDER BY i.id";
+        
+        $stmt = $dbo->prepare($sql);
         $stmt->setFetchMode(PDO::FETCH_ASSOC);
-        $stmt->bindValue(':idclient1', $data['idclient']);
-		$stmt->bindValue(':idclient2', $data['idclient']);
-        //$stmt->bindValue(':deleted', $data['displaymode']);
-        if(!$stmt->execute()) {
+        
+        if(!$stmt->execute($familyIds)) {
             echo json_encode(generateErrorResponse("Getting ingredients list failed"));
             die();
         }
@@ -6034,32 +6979,52 @@ function tasksAllExcelReportData($data){
 }
 
 /** QM */
-function tasksAllToolTipData($data){
-    try{
+function tasksAllToolTipData($data) {
+    try {
         $dbo = &$GLOBALS['dbo'];
-        $dbo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
-		$sql = 'SELECT d.id, if(td2i.idi is NULL, 0, 1) as flag, d.deviation, d.measure FROM tdeviations d '.
-		' inner join td2i on td2i.idd=d.id AND td2i.status < 2 and td2i.idi = :idi GROUP BY d.id ORDER BY flag DESC';
+        $dbo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING);
+
+        $sql = 'SELECT d.id, IF(td2i.idi IS NULL, 0, 1) AS flag, d.deviation, d.measure
+                FROM tdeviations d
+                INNER JOIN td2i ON td2i.idd = d.id 
+                    AND td2i.status < 2 
+                    AND td2i.idi = :idi
+                GROUP BY d.id 
+                ORDER BY flag DESC';
         $stmt = $dbo->prepare($sql);
         $stmt->setFetchMode(PDO::FETCH_ASSOC);
         $stmt->bindValue(':idi', $data['idingredient']);
-        //$stmt->bindValue(':deleted', $data['displaymode']);
-        if(!$stmt->execute()) {
+
+        if (!$stmt->execute()) {
             echo json_encode(generateErrorResponse("Getting tasks list failed"));
             die();
         }
-		$data = '<table class="table table-bordered table-condensed" style="width:100%;">';
-		$data .= '<thead><tr><th width="50%">Deviation</th><th width="50%">Measure</th></tr></thead><tbody>';
-		while ($task = $stmt->fetch(PDO::FETCH_ASSOC)) {
-			$data .= '<tr><td>'.$task['deviation'].'</td><td>'.$task["measure"].'</td></tr>';
-		}
-		$data .= '</tbody></table>';
-        echo json_encode(generateSuccessResponse($data));
-    } catch (PDOException $e){
-        echo json_encode(generateErrorResponse("Error: ".$e->getMessage()));
+
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // ✅ If no data, return blank string
+        if (empty($rows)) {
+            echo json_encode(generateSuccessResponse("")); 
+            return;
+        }
+
+        // ✅ Otherwise, build the table
+        $table = '<table class="table table-bordered table-condensed" style="width:100%;">';
+        $table .= '<thead><tr><th width="50%">Deviation</th><th width="50%">Measure</th></tr></thead><tbody>';
+
+        foreach ($rows as $task) {
+            $table .= '<tr><td>' . htmlspecialchars($task['deviation']) . '</td><td>' . htmlspecialchars($task['measure']) . '</td></tr>';
+        }
+
+        $table .= '</tbody></table>';
+
+        echo json_encode(generateSuccessResponse($table));
+    } catch (PDOException $e) {
+        echo json_encode(generateErrorResponse("Error: " . $e->getMessage()));
         die();
     }
 }
+
 
 function sendNextQMIdData($prod){
 	try{
@@ -6439,20 +7404,19 @@ function saveAdminData($prod) {
 		$stmt->bindValue(':third_party_products', $prod['third_party_products']);
 		$stmt->bindValue(':third_party_halal_certified', $prod['third_party_halal_certified']);
 		$stmt->bindValue(':id', $prod['id']);		
-		
 
 		if ($prefix == "") {
 			//sendEmailWithAttach
 			$ownerEmailAddress = "halal.ezone@gmail.com";
-			$fromEmailAddress = "noreply@halal-e.zone";			
+			$fromEmailAddress = "noreply@halal-digital.net";			
 			$body = [];
-			$body['name'] = 'Halal e-Zone';
+			$body['name'] = 'Halal Digital';
 			$body['email'] =  $fromEmailAddress;
 			$body['to'] = $adminEmailAddress;
 			//$body['to'] = 'alrahmahsolutions@gmail.com';
 	
 			// sending notification
-			$body['subject'] = "Halal e-Zone - New branch added by - ".$myuser->userdata['name'];
+			$body['subject'] = "Halal Digital - New branch added by - ".$myuser->userdata['name'];
 			$body['header'] = "";
 			$body['body'] = 'Dear Admin,<br/>
 			I am writing to inform you that a new branch has been added by '.$myuser->userdata['name'].' on our platform. The details are as follows:<br/><br/>
@@ -6472,7 +7436,7 @@ function saveAdminData($prod) {
 				Date of Registration: '.date('d/m/Y');
 			$body['body'] .= "<br /><br />";
 			$body['body'] .= 'Best regards,<br />
-			Halal e-Zone';
+			Halal Digital';
 			sendEmail($body);
 		}
 
@@ -6525,18 +7489,18 @@ function saveAdminData($prod) {
 				$client_list .= '</ul>';
 				
 				// Send email with client list
-				$fromEmailAddress = "noreply@halal-e.zone";            
+				$fromEmailAddress = "noreply@halal-digital.net";            
 				$body = [
-					'name' => 'Halal e-Zone',
+					'name' => 'Halal Digital',
 					'email' => $fromEmailAddress,
 					'to' => $prod['email'],
-					'subject' => "Halal e-Zone - New Client Audit Assignments",
+					'subject' => "Halal Digital - New Client Audit Assignments",
 					'header' => "",
 					'body' => 'Dear Auditor,<br/><br/>
 					You have been assigned the following clients to audit:<br/><br/>
 					'.$client_list.'<br/>
 					Please log in to your account to view details and begin your audit process.<br/><br/>
-					<strong>Halal e-Zone Team</strong>'
+					<strong>Halal Digital Team</strong>'
 				];
 				
 				sendEmail($body);
@@ -6652,19 +7616,19 @@ function saveFacilityData($prod) {
 
 		insertActivityLog($idclient, $idapp, $idclient, $prod['name'], 'New Facility');		
 
-			$ownerEmailAddress = "halal.ezone@gmail.com";
-			$fromEmailAddress = "noreply@halal-e.zone";			
+			$ownerEmailAddress = "mona.sherif@iidc.at";
+			$fromEmailAddress = "noreply@halal-digital.net";			
 			$body = [];
-			$body['name'] = 'Halal e-Zone';
+			$body['name'] = 'Halal Digital';
 			$body['email'] =  $fromEmailAddress;
 			$body['to'] = $supportEmailAddress;
 			//$body['to'] = 'alrahmahsolutions@gmail.com';
 	
 			// sending notification
-			$body['subject'] = "Halal e-Zone - New facility added by - ".$myuser->userdata['name'];
+			$body['subject'] = "Halal Digital - New facility added by - ".$myuser->userdata['name'];
 			$body['header'] = ""; 
 			$body['body'] = 'Dear Admin,<br/>
-			A new Facility has been added by '.$myuser->userdata['name'].' on the Halal e-Zone platform. The details are as follows:<br/><br/>
+			A new Facility has been added by '.$myuser->userdata['name'].' on the Halal Digital platform. The details are as follows:<br/><br/>
 			Name: '.$data['name'].'<br/>
 			Email: '.$data['email'].'<br/>
 			Address: '. $data['address'].'<br/>
@@ -6687,7 +7651,7 @@ function saveFacilityData($prod) {
 
 			$body['body'] .= "<br /><br />";
 			$body['body'] .= 'Best regards,<br />
-			Halal e-Zone';
+			Halal Digital';
 			sendEmail($body);
 		}
 
@@ -7589,30 +8553,23 @@ function skipApplicationData($app){
 /*  Dashboard Data */
 function getClientStatistics($data){
     try{
-        $dbo = &$GLOBALS['dbo']; 
+        $dbo = &$GLOBALS['dbo'];
 
-       // all clients ingredients (excluding Cleaning agents and Packaging Material)
-		$sql = "SELECT COUNT(id) AS count FROM tingredients 
-				WHERE deleted = 0 
-				AND idclient = :idclient 
-				AND material NOT IN ('Cleaning agents', 'Packaging Material')";
-		$stmt = $dbo->prepare($sql);
-		$stmt->setFetchMode(PDO::FETCH_ASSOC);
-		$stmt->bindValue(':idclient', $data['id']);
-		if (!$stmt->execute()) return false;
-		$result['ingredPublished'] = $stmt->fetch()['count'] * 1;
+        // all clients ingredients
+        $sql = "select count(id) count from tingredients WHERE deleted=0 AND idclient=:idclient";
+        $stmt = $dbo->prepare($sql);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        $stmt->bindValue(':idclient', $data['id']);
+        if(!$stmt->execute()) return false;
+        $result['ingredPublished'] = $stmt->fetch()['count']*1;
 
-		// all client confirmed ingredients (excluding Cleaning agents and Packaging Material)
-		$sql = "SELECT COUNT(id) AS count FROM tingredients 
-				WHERE deleted = 0 
-				AND idclient = :idclient 
-				AND conf = 1 
-				AND material NOT IN ('Cleaning agents', 'Packaging Material')";
-		$stmt = $dbo->prepare($sql);
-		$stmt->setFetchMode(PDO::FETCH_ASSOC);
-		$stmt->bindValue(':idclient', $data['id']);
-		if (!$stmt->execute()) return false;
-		$result['ingredConfirmed'] = $stmt->fetch()['count'] * 1;
+        // all client confirmed ingredients
+        $sql = "select count(id) count from tingredients WHERE deleted=0 AND idclient=:idclient and conf=1";
+        $stmt = $dbo->prepare($sql);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        $stmt->bindValue(':idclient', $data['id']);
+        if(!$stmt->execute()) return false;
+        $result['ingredConfirmed'] = $stmt->fetch()['count']*1;
 
         // all client allowed
         $sql = "select ingrednumber from tusers WHERE id=:idclient";
@@ -7979,70 +8936,72 @@ function sendEmailMessage($data){
 
 function createTask($data) {
 
-	$dbo = &$GLOBALS['dbo'];
-	$myuser = cuser::singleton();
-	$idauditor = trim($data["idauditor"]);
-	$idclient = trim($data["idclient"]);
- 	$issueDescription = trim($data["issueDescription"]);
-	$issueType = trim($data["issueType"]);
-	$attachments = trim($data["attachments"]);
-	$taskType = isset($data["taskType"]) ? trim($data["taskType"]) : 'auditor'; // Default to auditor if not set
+    $dbo = &$GLOBALS['dbo'];
+    $myuser = cuser::singleton();
+    $idauditor = trim($data["idauditor"]);
+    $idclient = trim($data["idclient"]);
+    $issueDescription = trim($data["issueDescription"]);
+    $issueType = trim($data["issueType"]);
+	$subject = trim($data["subject"]);
+    $attachments = trim($data["attachments"]);
+    $taskType = isset($data["taskType"]) ? trim($data["taskType"]) : 'auditor'; // Default to auditor if not set
 
-	$myuser->getUserData();
-	$user_id = $myuser->userdata['id'];
-	$username = $myuser->userdata['name'];
-	$email = $myuser->userdata['email'];
+    $myuser->getUserData();
+    $user_id = $myuser->userdata['id'];
+    $username = $myuser->userdata['name'];
+    $email = $myuser->userdata['email'];
 
-	$errors = "";
-	$id = "";
+    $errors = "";
+    $id = "";
 
-	// Validate logged-in user
-	if (empty($user_id)) {
-		$errors .= "<li>User not logged in or session expired. Please refresh the page. If the problem persists, please log out and log in again.</li>";
-	}
+    // Validate logged-in user
+    if (empty($user_id)) {
+        $errors .= "<li>User not logged in or session expired. Please refresh the page. If the problem persists, please log out and log in again.</li>";
+    }
 
-	if ($idauditor == "") {
-		$errors .= "<li>Team member or auditor is required.</li>";
-	}
-
-	if ($idclient == "") {
-		$errors .= "<li>Client is required.</li>";
-	}
-
-	if ($issueType == "") {
-		$errors .= "<li>Category is required.</li>";
-	}
-	
-	if ($issueDescription == "") {
-		$errors .= "<li>Task Description is required.</li>";
-	}
-
-	if ($errors == "") {
-		try {
-
-			$query = "INSERT INTO ttasks 
-          (user_id, username, email, issue_type, issue_description, current_url, attachments, last_updated_by, idauditor, idclient, task_type) 
-          VALUES 
-          (:user_id, :username, :email, :issueType, :issueDescription, :currentURL, :attachments, :last_updated_by, :idauditor, :idclient, :task_type)";
-$stmt = $dbo->prepare($query);
-
-// Bind the new parameters for idauditor and idclient
-$stmt->bindParam(':user_id', $user_id, PDO::PARAM_STR);
-$stmt->bindParam(':username', $username, PDO::PARAM_STR);
-$stmt->bindParam(':email', $email, PDO::PARAM_STR);
-$stmt->bindParam(':issueType', $issueType, PDO::PARAM_STR);                                     
-$stmt->bindParam(':issueDescription', $issueDescription, PDO::PARAM_STR);
-$stmt->bindParam(':currentURL', $currentURL, PDO::PARAM_STR);
-$stmt->bindParam(':attachments', $attachments, PDO::PARAM_STR);
-$stmt->bindParam(':last_updated_by', $user_id, PDO::PARAM_STR);
-$stmt->bindParam(':idauditor', $idauditor, PDO::PARAM_STR);  // Bind idauditor
-$stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);  // Bind idclient
-$stmt->bindParam(':task_type', $taskType, PDO::PARAM_STR);
-
-$stmt->execute();
+    // Common validations for both task types
+    if ($idauditor == "") {
+        $errors .= "<li>Team member or auditor is required.</li>";
+    }
+    
+    if ($idclient == "") {
+        $errors .= "<li>Client is required.</li>";
+    }
 
 
-			$id = $dbo->lastInsertId();
+    if ($issueType == "") {
+        $errors .= "<li>Category is required.</li>";
+    }
+    
+    if ($issueDescription == "") {
+        $errors .= "<li>Task Description is required.</li>";
+    }
+
+    if ($errors == "") {
+        try {
+            $query = "INSERT INTO ttasks 
+                (user_id, username, email, issue_type, subject, issue_description, current_url, attachments, last_updated_by, idauditor, idclient, task_type) 
+                VALUES 
+                (:user_id, :username, :email, :issueType, :subject, :issueDescription, :currentURL, :attachments, :last_updated_by, :idauditor, :idclient, :task_type)";
+            $stmt = $dbo->prepare($query);
+
+            // Bind parameters
+            $stmt->bindParam(':user_id', $user_id, PDO::PARAM_STR);
+            $stmt->bindParam(':username', $username, PDO::PARAM_STR);
+            $stmt->bindParam(':email', $email, PDO::PARAM_STR);
+            $stmt->bindParam(':issueType', $issueType, PDO::PARAM_STR);                                     
+			$stmt->bindParam(':subject', $subject, PDO::PARAM_STR);                                     			
+            $stmt->bindParam(':issueDescription', $issueDescription, PDO::PARAM_STR);
+            $stmt->bindParam(':currentURL', $currentURL, PDO::PARAM_STR);
+            $stmt->bindParam(':attachments', $attachments, PDO::PARAM_STR);
+            $stmt->bindParam(':last_updated_by', $user_id, PDO::PARAM_STR);
+            $stmt->bindParam(':idauditor', $idauditor, PDO::PARAM_STR);
+            $stmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);
+            $stmt->bindParam(':task_type', $taskType, PDO::PARAM_STR);
+
+            $stmt->execute();
+
+            $id = $dbo->lastInsertId();
 
 			// Insert the new record into the treplies table
 $replyQuery = "INSERT INTO treplies (task_id, user_id, username, email, message, attachments) VALUES (:task_id, :user_id, :username, :email, :message, :attachments)";
@@ -8061,89 +9020,102 @@ $replyStmt->execute();
 					$hostPath = $config['filesfolder'] . "/";
 					$absolutePath = __DIR__ ."/../".$hostPath;
 
-					$ownerEmailAddress = "halal.ezone@gmail.com";
-					$fromEmailAddress = "noreply@halal-e.zone";
+					$ownerEmailAddress = "mona.sherif@iidc.at";
+					$fromEmailAddress = "noreply@halal-digital.net";
 
-					
-					$auditorQuery = "SELECT email, name FROM tusers WHERE id = :idauditor";  // isclient = 2 for auditors
-					$auditorStmt = $dbo->prepare($auditorQuery);
-					
-					// Bind the idauditor parameter
-					$auditorStmt->bindParam(':idauditor', $idauditor, PDO::PARAM_STR);
-					
-					// Execute the query
-					$auditorStmt->execute();
-					
-					// Fetch the result
-					$auditorData = $auditorStmt->fetch(PDO::FETCH_ASSOC);
-					
-					// Get the auditor's email and name
-					$auditorEmail = $auditorData['email'];
-					$auditorName = $auditorData['name'];
+				$auditorQuery = "SELECT email, name FROM tusers WHERE id = :idauditor";  // isclient = 2 for auditors
+			// Get auditor and client details (same as before)
+			$auditorQuery = "SELECT email, name FROM tusers WHERE id = :idauditor";
+			$auditorStmt = $dbo->prepare($auditorQuery);
+			$auditorStmt->bindParam(':idauditor', $idauditor, PDO::PARAM_STR);
+			$auditorStmt->execute();
+			$auditorData = $auditorStmt->fetch(PDO::FETCH_ASSOC);
+			$auditorEmail = $auditorData['email'];
+			$auditorName = $auditorData['name'];
 
+			$clientQuery = "SELECT email, name FROM tusers WHERE id = :idclient";
+			$clientStmt = $dbo->prepare($clientQuery);
+			$clientStmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);
+			$clientStmt->execute();
+			$clientData = $clientStmt->fetch(PDO::FETCH_ASSOC);
+			$clientEmail = $clientData['email'];
+			$clientName = $clientData['name'];
 
-					$clientQuery = "SELECT email, name FROM tusers WHERE id = :idclient";  // isclient = 1 for clients
-$clientStmt = $dbo->prepare($clientQuery);
+			// Prepare attachments (same as before)
+			$attachment_filenames = explode(',', $attachments);
+			$attachmentsArray = [];
+			if (count($attachment_filenames) > 1) {
+				foreach ($attachment_filenames as $filename) {
+					$attachmentsArray[] = [
+						'name' => trim($filename),
+						'hostpath' => $absolutePath . trim($filename)
+					];
+				}
+			}
 
-// Bind the idclient parameter
-$clientStmt->bindParam(':idclient', $idclient, PDO::PARAM_STR);
+	if ($taskType == 'auditor') {
+			// 1. Always send email to auditor
+			$auditorBody = [
+				'name' => 'Halal Digital',
+				'email' => $fromEmailAddress,
+				'to' => $auditorEmail,
+				'subject' => "Halal Digital - New Task Assigned to You - ".$auditorName,
+				'header' => "",
+				'message' => "<p>Dear ".$auditorName.",</p>
+					<p>A new task has been assigned to you on the Halal Digital portal:</p>
+					<p><strong>Reference number:</strong> ".$id."</p>
+					<p><strong>Client:</strong> $clientName</p>
+					<p><strong>Category:</strong> $issueType</p>
+					<p><strong>Subject:</strong> $subject</p>
+					<p><strong>Description:</strong> $issueDescription</p>
+					<p><strong>Assigned By:</strong> $username</p>
+					<p>Please log in to the Halal Digital portal to review and address the task. Once completed, kindly update the task status accordingly.</p>
+					<p>Regards,</p>
+					<p>Halal Digital</p>"
+			];
 
-// Execute the query
-$clientStmt->execute();
+			// Add attachments to auditor email
+			if (!empty($attachmentsArray)) {
+				$auditorBody['attach'] = $attachmentsArray;
+			} elseif (!empty($attachments)) {
+				$auditorBody['attachhostpath'] = $absolutePath . $attachments;
+				$auditorBody['attach'] = $attachments;
+			}
 
-// Fetch the result
-$clientData = $clientStmt->fetch(PDO::FETCH_ASSOC);
+			sendEmailWithAttach($auditorBody);
+		}
 
-// Get the client's email and name
-$clientEmail = $clientData['email'];
-$clientName = $clientData['name'];
-
-									
-					
-					//sendEmailWithAttach
-					$body = [];
-					$body['name'] = 'Halal e-Zone';
-					$body['email'] =  $fromEmailAddress;
-					$body['to'] = $auditorEmail;
-					$attachment_filenames = explode(',', $attachments);
-
-					// Check if there are multiple attachments
-					if (count($attachment_filenames) > 1) {
-						// If there are multiple attachments, set $body['attach'] to an array
-						$body['attach'] = [];
+			// 2. Only send email to client if task type is 'client'
+			if ($taskType === 'client') {
+				$clientBody = [
+					'name' => 'Halal Digital',
+					'email' => $fromEmailAddress,
+					'to' => $clientEmail,
+					'subject' => "Halal Digital - New Task Regarding Your Account - " . $clientName,
+					'header' => "",
+					'message' => "<p>Dear ".$clientName.",</p>
+						<p>A new task regarding your account has been created:</p>
+						<p><strong>Reference number:</strong> ".$id."</p>
+						<p><strong>Assigned Auditor:</strong> $auditorName</p>
+						<p><strong>Category:</strong> $issueType</p>
+						<p><strong>Subject:</strong> $subject</p>
+						<p><strong>Description:</strong> $issueDescription</p>
+						<p><strong>Created By:</strong> $username</p>
+						<p>Please log in to the Halal Digital portal to review and address the task. Once completed, kindly update the task status accordingly.</p>
+						<p>Regards,</p>
+						<p>Halal Digital</p>"
+				];
 				
-						// Loop through each filename
-						foreach ($attachment_filenames as $filename) {
-							// Add each filename to the array with its hostpath
-							$body['attach'][] = [
-								'name' => trim($filename),
-								'hostpath' => $absolutePath . trim($filename)
-							];
-						}
-					} else {
-						// If there is only one attachment, set $body['attach'] to the single filename with its hostpath
-						$body['attachhostpath'] = $absolutePath . $attachments;
-						$body['attach'] =  $attachments;
- 					}
-
-					// sending notification
-					$body['subject'] = "Halal e-Zone - New Task Assigned to You - ".$auditorName;
-$body['header'] = "";
-$body['message'] = "<p>Dear ".$auditorName.",</p>";
-$body['message'] .= "<p>A new task has been assigned to you on the Halal e-Zone portal:</p>
-<p><strong>Reference number for this task:</strong> ".$id."</p>
-<p><strong>Client:</strong> $clientName</p>
-<p><strong>Task Category:</strong> $issueType</p>
-<p><strong>Task Description:</strong> $issueDescription</p>
-<p><strong>Assigned By:</strong> $username</p>
-<p>Please log in to the Halal e-Zone portal to review and address the task. Once completed, kindly update the task status accordingly.</p>
-<p>Regards,</p>
-<p>Halal e-Zone</p>
-";
-
-sendEmailWithAttach($body);
-
-					
+				// Add attachments to client email
+				if (!empty($attachmentsArray)) {
+					$clientBody['attach'] = $attachmentsArray;
+				} elseif (!empty($attachments)) {
+					$clientBody['attachhostpath'] = $absolutePath . $attachments;
+					$clientBody['attach'] = $attachments;
+				}
+				
+				sendEmailWithAttach($clientBody);
+			}					
 
 		} catch (PDOException $e) {
 			$errors .= "<li>Database error: " . $e->getMessage() . "</li>";
@@ -8159,6 +9131,7 @@ function createTicket($data) {
 	$myuser = cuser::singleton();
  	$issueDescription = trim($data["issueDescription"]);
 	$issueType = trim($data["issueType"]);
+	$subject = trim($data["subject"]);
 	$currentURL = trim($data["currentURL"]);
 	$stepsToReproduce = trim($data["stepsToReproduce"]);
 	$attachments = trim($data["attachments"]);
@@ -8187,12 +9160,13 @@ function createTicket($data) {
 	if ($errors == "") {
 		try {
 
-			$query = "INSERT INTO ttickets (user_id, username, email, issue_type, issue_description, current_url, attachments, last_updated_by) VALUES (:user_id, :username, :email, :issueType, :issueDescription, :currentURL, :attachments, :last_updated_by)";
+			$query = "INSERT INTO ttickets (user_id, username, email, issue_type, subject, issue_description, current_url, attachments, last_updated_by) VALUES (:user_id, :username, :email, :issueType, :subject, :issueDescription, :currentURL, :attachments, :last_updated_by)";
 			$stmt = $dbo->prepare($query);
 			$stmt->bindParam(':user_id', $user_id, PDO::PARAM_STR);
 			$stmt->bindParam(':username', $username, PDO::PARAM_STR);
 			$stmt->bindParam(':email', $email, PDO::PARAM_STR);
 			$stmt->bindParam(':issueType', $issueType, PDO::PARAM_STR);									
+			$stmt->bindParam(':subject', $subject, PDO::PARAM_STR);									
 			$stmt->bindParam(':issueDescription', $issueDescription, PDO::PARAM_STR);
 			$stmt->bindParam(':currentURL', $currentURL, PDO::PARAM_STR);
 			$stmt->bindParam(':attachments', $attachments, PDO::PARAM_STR);
@@ -8219,16 +9193,16 @@ $replyStmt->execute();
 					$hostPath = $config['filesfolder'] . "/";
 					$absolutePath = __DIR__ ."/../".$hostPath;
 
-					$ownerEmailAddress = "halal.ezone@gmail.com";
-					$fromEmailAddress = "noreply@halal-e.zone";
+					$ownerEmailAddress = "mona.sherif@iidc.at";
+					$fromEmailAddress = "noreply@halal-digital.net";
 
 					$body = [];
-					$body['name'] = 'Halal e-Zone';
+					$body['name'] = 'Halal Digital';
 					$body['email'] =  $fromEmailAddress;
 					$body['to'] = $email;
 					 
 					// sending notification
-					$body['subject'] = "Halal e-Zone - New Ticket - Reference Number: ".$id;
+					$body['subject'] = "Halal Digital - New Ticket - Reference Number: ".$id;
 					$body['header'] = "";
 					$body['message'] = "<p>Dear ".$username.",</p>";
 					$body['message'] .= "<p>Thank you for contacting us! Your inquiry is important to us.
@@ -8236,17 +9210,18 @@ $replyStmt->execute();
 					We will review your request and reply to you within 2 business days. Please do not send multiple emails, as the review time will be prolonged to an additional business day after every email. </p>
 					<p>Reference number for this inquiry: ".$id."</p>
 					<p><strong>Issue Type:</strong> $issueType</p>
+					<p><strong>Issue Subject:</strong> $subject</p>
 					<p><strong>Issue Description:</strong> $issueDescription</p>
 					<p><strong>Current URL:</strong> <a href='$currentURL'>$currentURL</a></p>
-					<p>Please log in to the Halal e-Zone portal to track the issue status.</p>
+					<p>Please log in to the Halal Digital portal to track the issue status.</p>
 					<p>Regards</p> 
-					<p>Halal e-Zone</p>
+					<p>Halal Digital</p>
 					";
 					sendEmailWithAttach($body);
 
 					//sendEmailWithAttach
 					$body = [];
-					$body['name'] = 'Halal e-Zone';
+					$body['name'] = 'Halal Digital';
 					$body['email'] =  $fromEmailAddress;
 					$body['to'] = "alrahmahsolutions@gmail.com";
 					$attachment_filenames = explode(',', $attachments);
@@ -8271,19 +9246,20 @@ $replyStmt->execute();
  					}
 
 					// sending notification
-					$body['subject'] = "Halal e-Zone - New Issue Reported - ".$username;
+					$body['subject'] = "Halal Digital - New Issue Reported - ".$username;
 					$body['header'] = "";
 					$body['message'] = "<p>Dear Admin,</p>";
-					$body['message'] .= "<p>A new issue has been reported on the Halal e-Zone portal:</p>
+					$body['message'] .= "<p>A new issue has been reported on the Halal Digital portal:</p>
 					<p><strong>Reference number for this inquiry:</strong> ".$id."</p>
 					<p><strong>Client:</strong> $username</p>
 					<p><strong>Client Email:</strong> $email</p>
 					<p><strong>Issue Type:</strong> $issueType</p>
+					<p><strong>Issue Subject:</strong> $subject</p>
 					<p><strong>Issue Description:</strong> $issueDescription</p>
 					<p><strong>Current URL:</strong> <a href='$currentURL'>$currentURL</a></p>
-					<p>Please log in to the Halal e-Zone portal to update the client about the issue status.</p>
+					<p>Please log in to the Halal Digital portal to update the client about the issue status.</p>
 					<p>Regards</p>
-					<p>Halal e-Zone</p>
+					<p>Halal Digital</p>
 					";
 					sendEmailWithAttach($body);
 					
@@ -8379,8 +9355,8 @@ function postReply($data) {
             $hostPath = $config['filesfolder'] . "/";
             $absolutePath = __DIR__ . "/../" . $hostPath;
 
-            $ownerEmailAddress = "halal.ezone@gmail.com";
-            $fromEmailAddress = "noreply@halal-e.zone";
+            $ownerEmailAddress = "mona.sherif@iidc.at";
+            $fromEmailAddress = "noreply@halal-digital.net";
 
             $ticket_query = "SELECT user_id, email, idauditor, idclient, $descriptionField FROM $tableName WHERE $updateField = :id";
             $ticket_stmt = $dbo->prepare($ticket_query);
@@ -8458,13 +9434,13 @@ function postReply($data) {
             foreach ($to as $recipient) {
                 if ($recipient['email'] != $email && !in_array($recipient['email'], $sentEmails)) {
                     $body = [];
-                    $body['name'] = 'Halal e-Zone';
+                    $body['name'] = 'Halal Digital';
                     $body['email'] = $fromEmailAddress;
                     $body['to'] = $recipient['email'];
-					$body['subject'] = "Halal e-Zone - Reply Posted by " . $username . " - " . $type . ": " . $referenceId;
+					$body['subject'] = "Halal Digital - Reply Posted by " . $username . " - " . $type . ": " . $referenceId;
                     $body['header'] = "";
                     $body['message'] = "<p>Dear " . htmlspecialchars($recipient['name']) . ",</p>";
-                    $body['message'] .= "<p>A new reply has been posted by <strong>" . $username . "</strong> on the Halal e-Zone portal:</p>";
+                    $body['message'] .= "<p>A new reply has been posted by <strong>" . $username . "</strong> on the Halal Digital portal:</p>";
                     $body['message'] .= "<p><strong>Reference number:</strong> " . $referenceId . "</p>";
 					if ($taskId) {
 						$body['message'] .= "<p><strong>Client Name:</strong> " . $clientName . "</p>";
@@ -8473,12 +9449,266 @@ function postReply($data) {
  					   $body['message'] .= "<p><strong>Original Request:</strong> " . htmlspecialchars($issueDescription) . "</p>";
 					}
                     $body['message'] .= "<p><strong>Reply Text:</strong> " . nl2br(htmlspecialchars($replyText)) . "</p>";
-                    $body['message'] .= "<p>Regards</p><p>Halal e-Zone</p>";
+                    $body['message'] .= "<p>Regards</p><p>Halal Digital</p>";
                     sendEmailWithAttach($body);
                     $sentEmails[] = $recipient['email'];
                 }
             }
 
+        } catch (PDOException $e) {
+            $errors .= "<li>Database error: " . $e->getMessage() . "</li>";
+        }
+    }
+
+    echo json_encode(generateSuccessResponse(array("errors" => $errors, "id" => $id)));
+}
+
+
+function postReplyBackup($data) {
+	global $supportEmailAddress;
+
+    $dbo = &$GLOBALS['dbo'];
+    $myuser = cuser::singleton();
+    
+    $replyText = trim($data["message"]);
+    $ticketId = trim($data["ticketId"]);
+    $customerServiceId = trim($data["customerServiceId"]);
+    $taskId = trim($data["taskId"]);
+    $attachments = trim($data["attachments"]);
+
+    $myuser->getUserData();
+    $user_id = $myuser->userdata['id'];
+    $username = $myuser->userdata['name'];
+    $email = $myuser->userdata['email'];
+
+    $errors = "";
+    $id = "";
+
+    if ($replyText == "") {
+        $errors .= "<li>Reply text is required.</li>";
+    }
+
+    if ($ticketId == "" && $customerServiceId == "" && $taskId == "") {
+        $errors .= "<li>Reference# is required.</li>";
+    }
+
+    if ($errors == "") {
+        try {
+ 
+            // Determine the table and field names based on $ticketId, $customerServiceId, and $taskId
+            if ($ticketId != "") {
+                $tableName = 'ttickets';
+                $fieldId = 'ticket_id';
+                $replyField = 'ticket_id';
+                $updateField = 'id';
+            } elseif ($customerServiceId != "") {
+                $tableName = 'tcustomerservice';
+                $fieldId = 'customerservice_id';
+                $replyField = 'customerservice_id';
+                $updateField = 'id';
+            } elseif ($taskId != "") {
+                $tableName = 'ttasks';
+                $fieldId = 'task_id';
+                $replyField = 'task_id';
+                $updateField = 'id';        
+            } else {
+                throw new Exception('Neither ticketId, customerServiceId, nor taskId is set.');
+            }
+ 
+            // Insert into treplies table
+            $query = "INSERT INTO treplies ($replyField, user_id, username, email, message, attachments) VALUES (:id, :user_id, :username, :email, :replyText, :attachments)";
+            $stmt = $dbo->prepare($query);
+            $stmt->bindValue(':id', $ticketId ? $ticketId : ($customerServiceId ? $customerServiceId : $taskId), PDO::PARAM_INT);
+            $stmt->bindValue(':user_id', $user_id, PDO::PARAM_STR);
+            $stmt->bindValue(':username', $username, PDO::PARAM_STR);
+            $stmt->bindValue(':email', $email, PDO::PARAM_STR);
+            $stmt->bindValue(':replyText', $replyText, PDO::PARAM_STR);
+            $stmt->bindValue(':attachments', $attachments, PDO::PARAM_STR);
+            $stmt->execute();
+
+            $id = $dbo->lastInsertId();
+
+            // Update the appropriate table
+            $update_query = "UPDATE $tableName SET last_updated_by = :user_id, last_updated_by_name = :username, last_updated_by_email = :email, viewed = 0 WHERE $updateField = :id";
+            $update_stmt = $dbo->prepare($update_query);
+            $update_stmt->bindValue(':user_id', $user_id, PDO::PARAM_STR);
+            $update_stmt->bindValue(':username', $username, PDO::PARAM_STR);
+            $update_stmt->bindValue(':email', $email, PDO::PARAM_STR);
+            $update_stmt->bindValue(':id', $ticketId ? $ticketId : ($customerServiceId ? $customerServiceId : $taskId), PDO::PARAM_INT);
+            $update_stmt->execute();
+
+            $decode = file_get_contents(__DIR__ . "/../config.json");
+            $config = json_decode($decode, TRUE);
+
+            $hostPath = $config['filesfolder'] . "/";
+            $absolutePath = __DIR__ . "/../" . $hostPath;
+
+            $ownerEmailAddress = "mona.sherif@iidc.at";
+            $fromEmailAddress = "noreply@halal-digital.net";
+
+            $ticket_query = "SELECT user_id, email, idauditor, idclient FROM $tableName WHERE $updateField = :id";
+            $ticket_stmt = $dbo->prepare($ticket_query);
+            $ticket_stmt->bindValue(':id', $ticketId ? $ticketId : ($customerServiceId ? $customerServiceId : $taskId), PDO::PARAM_INT);
+            $ticket_stmt->execute();
+            $dataRet=$ticket_stmt->fetch(PDO::FETCH_ASSOC);
+			$creator = $dataRet['user_id'];
+			$idauditor = $dataRet['idauditor'];
+
+			$creatorQuery = "SELECT email, name FROM tusers WHERE id = :user_id";  // isclient = 2 for auditors
+			$creatorStmt = $dbo->prepare($creatorQuery);
+			
+			// Bind the idauditor parameter
+			$creatorStmt->bindParam(':user_id', $creator, PDO::PARAM_STR);
+			
+			// Execute the query
+			$creatorStmt->execute();
+			
+			// Fetch the result
+			$creatorData = $creatorStmt->fetch(PDO::FETCH_ASSOC);
+
+			// Get the auditor's email and name
+			$creatorEmail = $creatorData['email'];
+			$creatorName = $creatorData['name'];
+
+			if ($idauditor) {
+				$auditorQuery = "SELECT email, name FROM tusers WHERE id = :idauditor";  // isclient = 2 for auditors
+				$auditorStmt = $dbo->prepare($auditorQuery);
+				
+				// Bind the idauditor parameter
+				$auditorStmt->bindParam(':idauditor', $idauditor, PDO::PARAM_STR);
+				
+				// Execute the query
+				$auditorStmt->execute();
+				
+				// Fetch the result
+				$auditorData = $auditorStmt->fetch(PDO::FETCH_ASSOC);
+				
+				// Get the auditor's email and name
+				$auditorEmail = $auditorData['email'];
+				$auditorName = $auditorData['name'];
+			}
+
+			$to = [];
+			if ($customerServiceId) { 
+				// Also to the assigned auditors
+				$json_id = json_encode((string) $creator); // Convert to string and JSON encode
+				$sql = "SELECT *
+						FROM tusers 
+						WHERE isclient = 2 
+						AND deleted = 0  
+						AND JSON_CONTAINS(clients_audit, :json_id, '$')";
+				$stmt = $dbo->prepare($sql);
+				$stmt->bindParam(':json_id', $json_id);
+				$stmt->execute();
+				$results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+				foreach ($results as $row) { 
+					$to[] = ["name" => $row["name"], "email" => $row["email"]];
+				}
+			}
+
+			// If support or issue 
+			if ($ticketId || $customerServiceId) { 
+				$body = [];
+				$body['name'] = 'Halal Digital';
+				$body['email'] = $fromEmailAddress;
+				//if ($creatorEmail == $email) { 
+					if ($customerServiceId) { 
+						$to[] = ["name" => "Admin", "email" => $supportEmailAddress];
+					}
+					else { 
+						$to[] = ["name" => "Admin", "email" => "alrahmahsolutions@gmail.com"];
+					}
+				//}
+				//else {
+					$to[] =  ["name" => $creatorName, "email" => $creatorEmail];
+				//}
+			}
+			else {
+				//if ($creatorEmail == $email) {
+					$to[] =  ["name" => $auditorName, "email" => $auditor];
+				//}
+				//else {
+					$to[] =  ["name" => $creatorName, "email" => $creatorEmail];
+				//}
+			}
+
+			if ($ticketId) {
+				$type = "Issue Tracker";
+			} elseif ($customerServiceId) {
+				$type = "Customer Support";
+			} elseif ($taskId) {
+				$type = "Task";
+			} else {
+				$type = "Unknown"; // fallback, optional
+			}
+
+			$referenceId = $ticketId ?: ($customerServiceId ?: $taskId);
+			foreach ($to as $toName => $toEmail) {
+				if ($toEmail != $email) {
+					$body['to'] = $toEmail;
+					$body['subject'] = "Halal Digital - Reply Posted - ".$type .": " . $referenceId;
+					$body['header'] = "";
+					$body['message'] = "<p>Dear " . htmlspecialchars($toName) . ",</p>";
+					$body['message'] .= "<p>A new reply has been posted on the Halal Digital portal:</p>";
+					$body['message'] .= "<p><strong>Reference number:</strong> " . $referenceId . "</p>";
+					//$body['message'] .= "<p><strong>User :</strong> " . htmlspecialchars($creatorName) . "</p>";
+					//$body['message'] .= "<p><strong>Email:</strong> " . htmlspecialchars($creatorEmail) . "</p>";
+					$body['message'] .= "<p><strong>Reply Text:</strong> " . nl2br(htmlspecialchars($replyText)) . "</p>";
+					$body['message'] .= "<p>Regards</p><p>Halal Digital</p>";
+					sendEmailWithAttach($body);			
+				}
+			}
+
+            // Determine which email to send
+				if ($user_id == $creator) { 
+					// FIRST EMAIL: Sending email to the user who posted the reply
+					/*
+					$body = [];
+					$body['name'] = 'Halal Digital';
+					$body['email'] = $fromEmailAddress;
+					$body['to'] = $auditorEmail;
+
+					$body['subject'] = "Halal Digital - Reply Posted - Reference Number: " . ($ticketId ? $ticketId : ($customerServiceId ? $customerServiceId : $taskId));
+					$body['header'] = "";
+					$body['message'] = "<p>Dear " . htmlspecialchars($auditorName) . ",</p>";
+					$body['message'] .= "<p>A new reply has been posted on the Halal Digital portal:</p>";
+					$body['message'] .= "<p><strong>Reference number:</strong> " . htmlspecialchars($ticketId ? $ticketId : ($customerServiceId ? $customerServiceId : $taskId)) . "</p>";
+					$body['message'] .= "<p><strong>User :</strong> " . htmlspecialchars($creatorName) . "</p>";
+					$body['message'] .= "<p><strong>Email:</strong> " . htmlspecialchars($creatorEmail) . "</p>";
+					$body['message'] .= "<p><strong>Reply Text:</strong> " . nl2br(htmlspecialchars($replyText)) . "</p>";
+					$body['message'] .= "<p>Regards</p><p>Halal Digital</p>";
+
+					sendEmailWithAttach($body); 
+					*/
+				} else {
+					// SECOND EMAIL: Sending email to the admin
+					/*
+					$body = [];
+					$body['name'] = 'Halal Digital';
+					$body['email'] = $fromEmailAddress;
+					$body['to'] =  $creatorEmail;
+
+					$body['subject'] = "Halal Digital - New Reply Posted - " . htmlspecialchars($username);
+					$body['header'] = "";
+					$body['message'] = "<p>Dear " . htmlspecialchars($creatorName) . ",</p>";
+					$body['message'] .= "<p>A new reply has been posted on the Halal Digital portal:</p>";
+					$body['message'] .= "<p><strong>Reference number for this inquiry:</strong> " . htmlspecialchars($ticketId ? $ticketId : ($customerServiceId ? $customerServiceId : $taskId)) . "</p>";
+					if ($taskId) { 
+						$body['message'] .= "<p><strong>Team Member/Auditor:</strong> " . htmlspecialchars($auditorName) . "</p>";
+						$body['message'] .= "<p><strong>Team Member/Auditor Email:</strong> " . htmlspecialchars($auditorEmail) . "</p>";
+					}
+					else {
+						$body['message'] .= "<p><strong>Client:</strong> " . htmlspecialchars($username) . "</p>";
+						$body['message'] .= "<p><strong>Client Email:</strong> " . htmlspecialchars($email) . "</p>";
+					}
+					$body['message'] .= "<p><strong>Reply Text:</strong> " . nl2br(htmlspecialchars($replyText)) . "</p>";
+					$body['message'] .= "<p>Please log in to the Halal Digital portal to update the client about the issue status.</p>";
+					$body['message'] .= "<p>Regards</p><p>Halal Digital</p>";
+
+					sendEmailWithAttach($body);
+					*/
+				}
+          
         } catch (PDOException $e) {
             $errors .= "<li>Database error: " . $e->getMessage() . "</li>";
         }
@@ -8545,6 +9775,7 @@ function createCustomerService($data) {
 	$myuser = cuser::singleton();
  	$requestDescription = trim($data["requestDescription"]);
 	$requestType = trim($data["requestType"]);
+	$subject = trim($data["subject"]);
 	$currentURL = trim($data["currentURL"]);
 	$stepsToReproduce = trim($data["stepsToReproduce"]);
 	$attachments = trim($data["attachments"]);
@@ -8569,7 +9800,7 @@ function createCustomerService($data) {
 
 	$errors = "";
 	$id = "";
-
+	
 	// Validate logged-in user
 	if (empty($user_id)) {
 		$errors .= "<li>User not logged in or session expired. Please refresh the page. If the problem persists, please log out and log in again.</li>";
@@ -8586,12 +9817,13 @@ function createCustomerService($data) {
 	if ($errors == "") {
 		try {
 
-			$query = "INSERT INTO tcustomerservice (user_id, username, email, request_type, request_description, current_url, attachments, created_by, created_by_name, created_by_email) VALUES (:user_id, :username, :email, :requestType, :requestDescription, :currentURL, :attachments, :created_by, :created_by_name, :created_by_email)";
+			$query = "INSERT INTO tcustomerservice (user_id, username, email, request_type, subject, request_description, current_url, attachments, created_by, created_by_name, created_by_email) VALUES (:user_id, :username, :email, :requestType, :subject, :requestDescription, :currentURL, :attachments, :created_by, :created_by_name, :created_by_email)";
 			$stmt = $dbo->prepare($query);
 			$stmt->bindParam(':user_id', $user_id, PDO::PARAM_STR);
 			$stmt->bindParam(':username', $username, PDO::PARAM_STR);
 			$stmt->bindParam(':email', $email, PDO::PARAM_STR);
 			$stmt->bindParam(':requestType', $requestType, PDO::PARAM_STR);									
+			$stmt->bindParam(':subject', $subject, PDO::PARAM_STR);												
 			$stmt->bindParam(':requestDescription', $requestDescription, PDO::PARAM_STR);
 			$stmt->bindParam(':currentURL', $currentURL, PDO::PARAM_STR);
 			$stmt->bindParam(':attachments', $attachments, PDO::PARAM_STR);
@@ -8620,12 +9852,12 @@ $replyStmt->execute();
 					$hostPath = $config['filesfolder'] . "/";
 					$absolutePath = __DIR__ ."/../".$hostPath;
 
-					$ownerEmailAddress = "halal.ezone@gmail.com";
-					$fromEmailAddress = "noreply@halal-e.zone";
+					$ownerEmailAddress = "mona.sherif@iidc.at";
+					$fromEmailAddress = "noreply@halal-digital.net";
 
 					if ($data["user_id"] != "") {
 						$body = [];
-						$body['name'] = 'Halal e-Zone';
+						$body['name'] = 'Halal Digital';
 						$body['email'] =  $fromEmailAddress;
 						$body['to'] = $email;
 						$attachment_filenames = explode(',', $attachments);
@@ -8650,16 +9882,17 @@ $replyStmt->execute();
 						}
 
 						// sending notification
-						$body['subject'] = "Halal e-Zone - New Request Submitted";
+						$body['subject'] = "Halal Digital - New Request Submitted";
 						$body['header'] = "";
 						$body['message'] = "<p>Dear $username,</p>";
-						$body['message'] .= "<p>A new request has been submitted on the Halal e-Zone portal:</p>
+						$body['message'] .= "<p>A new request has been submitted on the Halal Digital portal:</p>
 						<p><strong>Reference number:</strong> ".$id."</p>
 						<p><strong>Request Type:</strong> $requestType</p>
+						<p><strong>Request Subject:</strong> $subject</p>
 						<p><strong>Request Description:</strong> $requestDescription</p>
-						<p>You can log in to the Halal e-Zone portal to view and respond to this request.</p>
+						<p>You can log in to the Halal Digital portal to view and respond to this request.</p>
 						<p>Regards</p>
-						<p>Halal e-Zone</p>
+						<p>Halal Digital</p>
 						";
 						sendEmailWithAttach($body);
 						
@@ -8669,29 +9902,30 @@ $replyStmt->execute();
 					}
 					else {
 						$body = [];
-						$body['name'] = 'Halal e-Zone';
+						$body['name'] = 'Halal Digital';
 						$body['email'] =  $fromEmailAddress;
 						$body['to'] = $email;
 						
 						// sending notification
-						$body['subject'] = "Halal e-Zone - New Request - Reference Number: ".$id;
+						$body['subject'] = "Halal Digital - New Request - Reference Number: ".$id;
 						$body['header'] = "";
 						$body['message'] = "<p>Dear ".$username.",</p>";
 						$body['message'] .= "<p>Thank you for contacting us!
 											We will review your request and reply to you within 2 business days. </p>
 						<p>Reference number: ".$id."</p>
 						<p><strong>Request Type:</strong> $requestType</p>
+						<p><strong>Request Subject:</strong> $subject</p>
 						<p><strong>Request Description:</strong> $requestDescription</p>
 						<p><strong>Current URL:</strong> <a href='$currentURL'>$currentURL</a></p>
-						<p>Please log in to the Halal e-Zone portal to track the request status.</p>
+						<p>Please log in to the Halal Digital portal to track the request status.</p>
 						<p>Regards</p> 
-						<p>Halal e-Zone</p>
+						<p>Halal Digital</p>
 						";
 						sendEmailWithAttach($body);
 
 						//sendEmailWithAttach
 						$body = [];
-						$body['name'] = 'Halal e-Zone';
+						$body['name'] = 'Halal Digital';
 						$body['email'] =  $fromEmailAddress;
 						$body['to'] = $supportEmailAddress;
 						$attachment_filenames = explode(',', $attachments);
@@ -8716,19 +9950,20 @@ $replyStmt->execute();
 						}
 
 						// sending notification
-						$body['subject'] = "Halal e-Zone - New Request Submitted - ".$username;
+						$body['subject'] = "Halal Digital - New Request Submitted - ".$username;
 						$body['header'] = "";
 						$body['message'] = "<p>Dear Admin,</p>";
-						$body['message'] .= "<p>A new request has been submitted on the Halal e-Zone portal:</p>
+						$body['message'] .= "<p>A new request has been submitted on the Halal Digital portal:</p>
 						<p><strong>Reference number:</strong> ".$id."</p>
 						<p><strong>Client:</strong> $username</p>
 						<p><strong>Client Email:</strong> $email</p>
 						<p><strong>Request Type:</strong> $requestType</p>
+						<p><strong>Request Subject:</strong> $subject</p>
 						<p><strong>Request Description:</strong> $requestDescription</p>
 						<p><strong>Current URL:</strong> <a href='$currentURL'>$currentURL</a></p>
-						<p>Please log in to the Halal e-Zone portal to update the client about the request status.</p>
+						<p>Please log in to the Halal Digital portal to update the client about the request status.</p>
 						<p>Regards</p>
-						<p>Halal e-Zone</p>
+						<p>Halal Digital</p>
 						";
 						sendEmailWithAttach($body);
 						
@@ -9211,6 +10446,7 @@ function startNewCertCycleData($data) {
 		$existingDocs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 		$excludedCategories = ['invoice', 'popinv', 'audit', 'checklist', 'review', 'dm', 'invoicete', 'pop', 'certificate', 'additional_items', 'invoiceai', 'popai', 'extension'];
+
 		// Duplicate the documents with the newAppId
 		foreach ($existingDocs as $doc) {
 
@@ -9291,6 +10527,7 @@ function startNewCertCycleData($data) {
     }
 }
 
+
 function sendNextActivityIdData($data) {
     try {
         $dbo = &$GLOBALS['dbo'];
@@ -9348,14 +10585,18 @@ function saveActivityData($activity) {
                 date_of_service = :date_of_service,
                 service_type = :service_type,
                 auditor_type = :auditor_type,
+                standards = :standards,
+                audit_type = :audit_type,
+                audit_category = :audit_category,
                 invoice_number_inbound = :invoice_number_inbound,
                 invoice_date_inbound = :invoice_date_inbound,
                 invoice_inbound = :invoice_inbound,
-                travel_invoices = :travel_invoices,
+				travel_invoices = :travel_invoices,
 				travel_expenses = :travel_expenses,
                 paid_on = :paid_on,
                 invoice_number_outbound = :invoice_number_outbound,
                 paid = :paid,
+                issuing_invoice = :issuing_invoice,
                 training_request_form = :training_request_form,
                 attendance_list = :attendance_list,
                 customer_feedback_form = :customer_feedback_form,
@@ -9366,7 +10607,7 @@ function saveActivityData($activity) {
         $stmt = $dbo->prepare($sql);
 
         // Format dates for SQL (Y-m-d)
-$dateOfService = null;
+		$dateOfService = null;
 if (!empty($activity['date_of_service'])) {
     $dt = DateTime::createFromFormat("d M Y", $activity['date_of_service']);
     if ($dt !== false) {
@@ -9396,15 +10637,19 @@ if (!empty($activity['paid_on'])) {
         $stmt->bindValue(':company_name', $activity['company_name']);
         $stmt->bindValue(':date_of_service', $dateOfService);
         $stmt->bindValue(':service_type', $activity['service_type']);
-        $stmt->bindValue(':auditor_type', $activity['auditor_type'] ?? 'External'); // Default to External if not set		
+        $stmt->bindValue(':auditor_type', $activity['auditor_type'] ?? 'External'); // Default to External if not set
+        $stmt->bindValue(':standards', $activity['standards'] ?? '');
+        $stmt->bindValue(':audit_type', $activity['audit_type'] ?? '');
+        $stmt->bindValue(':audit_category', $activity['audit_category'] ?? '');
         $stmt->bindValue(':invoice_number_inbound', $activity['invoice_number_inbound']);
         $stmt->bindValue(':invoice_date_inbound', $invoiceDateInbound);
         $stmt->bindValue(':invoice_inbound', $activity['invoice_inbound'] ?? '');
-		$stmt->bindValue(':travel_invoices', $activity['travel_invoices'] ?? '');
+        $stmt->bindValue(':travel_invoices', $activity['travel_invoices'] ?? '');
 		$stmt->bindValue(':travel_expenses', $activity['travel_expenses'] ?? '');
         $stmt->bindValue(':paid_on', $paidOn);
         $stmt->bindValue(':invoice_number_outbound', $activity['invoice_number_outbound']);
         $stmt->bindValue(':paid', $activity['paid']);
+        $stmt->bindValue(':issuing_invoice', $activity['issuing_invoice'] ?? 'No');
         $stmt->bindValue(':training_request_form', $activity['training_request_form']);
         $stmt->bindValue(':attendance_list', $activity['attendance_list']);
         $stmt->bindValue(':customer_feedback_form', $activity['customer_feedback_form']);
@@ -9421,12 +10666,11 @@ if (!empty($activity['paid_on'])) {
         die();
     }
 }
-
 /* Other functions */
-
 function validateUserId($uid){
 	return $uid == $GLOBALS['userId'] ? true : false;
 }
+
 
 // ----------- Incoming data processing ------------
 
@@ -9437,6 +10681,8 @@ function processGetRequests() {
 		die();
 	}
 	*/
+	$dbo = &$GLOBALS['dbo'];
+	
 	switch ($_GET['rtype']) {
 		case 'clients':
 			sendClientsData();
@@ -9482,6 +10728,83 @@ function processGetRequests() {
 		case 'nextActivityId':
 			sendNextActivityIdData($_GET['data']);
 			break;			
+case "nextSfdaApplicationId":
+	
+     try {
+        $dbo = &$GLOBALS['dbo'];
+        $dbo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING);
+        
+        // Insert a new empty activity record
+       $sql = "INSERT INTO tsfda_applications	 
+                (created_by, created_at) 
+                VALUES 
+                (:created_by, NOW())";
+        
+        $stmt = $dbo->prepare($sql);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        
+        // Get current user
+        $myuser = cuser::singleton();
+        $myuser->getUserData();
+        
+        // Bind parameters
+        $stmt->bindValue(':created_by', $myuser->userdata['id']);
+        
+        if (!$stmt->execute()) {
+            die(json_encode(generateErrorResponse("Adding new activity failed")));
+        }
+        
+        // Return the new activity ID
+        echo json_encode(generateSuccessResponse(array(
+            "id" => $dbo->lastInsertId()
+        )));
+        
+    } catch (PDOException $e) {
+        echo json_encode(generateErrorResponse("Error: " . $e->getMessage()));
+        die();
+    }
+
+    
+    break;
+
+	case "nextHalalSlaughteringId":
+    try {
+        $dbo = &$GLOBALS['dbo'];
+        $dbo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING);
+        
+        // Insert a new empty activity record
+       $sql = "INSERT INTO thalal_slaughtering	 
+                (created_by, created_at) 
+                VALUES 
+                (:created_by, NOW())";
+        
+        $stmt = $dbo->prepare($sql);
+        $stmt->setFetchMode(PDO::FETCH_ASSOC);
+        
+        // Get current user
+        $myuser = cuser::singleton();
+        $myuser->getUserData();
+        
+        // Bind parameters
+        $stmt->bindValue(':created_by', $myuser->userdata['id']);
+        
+        if (!$stmt->execute()) {
+            die(json_encode(generateErrorResponse("Adding new activity failed")));
+        }
+        
+        // Return the new activity ID
+        echo json_encode(generateSuccessResponse(array(
+            "id" => $dbo->lastInsertId()
+        )));
+        
+    } catch (PDOException $e) {
+        echo json_encode(generateErrorResponse("Error: " . $e->getMessage()));
+        die();
+    }
+    break;
+
+
+
 		case 'importClientsFromExcel':
 			importClientsFromExcel();
 			break;
@@ -9852,7 +11175,1412 @@ function processPostRequests() {
 		case 'saveActivity':
 			saveActivityData($_POST['data']);
 			break;
+case 'getIngredientsForAssignment':
+    echo json_encode(getIngredientsForProductAssignment($data));
+    break;
+    
+case 'saveIngredientAssignment':
+    echo json_encode(saveIngredientAssignment($data));
+    break;
 
+case 'bulkAssignIngredientToFacilities':
+    try {
+		 $dbo = &$GLOBALS['dbo'];
+        $data = $_POST['data'];
+        $ingredient_id = intval($data['ingredient_id']);
+        $facility_ids = $data['facility_ids']; // Array of facility IDs
+        $replace_existing = isset($data['replace_existing']) ? intval($data['replace_existing']) : 1;
+        
+        // Get current user
+        $myuser = cuser::singleton();
+        $myuser->getUserData();
+        $assigned_by = intval($myuser->userdata['id']);
+        
+        // Validate input
+        if ($ingredient_id <= 0) {
+            throw new Exception("Invalid ingredient ID");
+        }
+        
+        if (!is_array($facility_ids) || empty($facility_ids)) {
+            throw new Exception("No facilities selected");
+        }
+        
+        if ($assigned_by <= 0) {
+            throw new Exception("Invalid user ID");
+        }
+        
+        // Validate that all facility IDs are integers
+        $facility_ids = array_map('intval', $facility_ids);
+        $facility_ids = array_filter($facility_ids, function($id) { return $id > 0; });
+        
+        if (empty($facility_ids)) {
+            throw new Exception("No valid facility IDs provided");
+        }
+        
+        // Check if ingredient exists and user has permission
+        $checkSql = "SELECT t.id, t.idclient, t.name as ingredient_name 
+                     FROM tingredients t 
+                     WHERE t.id = ? AND t.deleted = 0";
+        $checkStmt = $dbo->prepare($checkSql);
+        $checkStmt->execute([$ingredient_id]);
+        $ingredient = $checkStmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$ingredient) {
+            throw new Exception("Ingredient not found or access denied");
+        }
+        
+        // Get the parent client ID for the ingredient's client
+        $clientSql = "SELECT id, parent_id FROM tusers WHERE id = ?";
+        $clientStmt = $dbo->prepare($clientSql);
+        $clientStmt->execute([$ingredient['idclient']]);
+        $clientInfo = $clientStmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Determine the parent ID - if the client has no parent, it IS the parent
+        $parentClientId = $clientInfo['parent_id'] ? $clientInfo['parent_id'] : $clientInfo['id'];
+        
+        // Verify that all facilities belong to the same parent client OR are the parent client itself
+        $facilitiesCheck = "SELECT id, parent_id, name FROM tusers 
+                           WHERE id IN (" . implode(',', array_fill(0, count($facility_ids), '?')) . ") 
+                           AND isclient IN (1, 3) AND deleted = 0 
+                           AND (parent_id = ? OR (parent_id IS NULL AND id = ?))";
+        $facilitiesStmt = $dbo->prepare($facilitiesCheck);
+        $facilitiesParams = array_merge($facility_ids, [$parentClientId, $parentClientId]);
+        $facilitiesStmt->execute($facilitiesParams);
+        $validFacilities = $facilitiesStmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        if (count($validFacilities) !== count($facility_ids)) {
+            $validIds = array_column($validFacilities, 'id');
+            $invalidIds = array_diff($facility_ids, $validIds);
+            throw new Exception("Some facilities are invalid or don't belong to the client: " . implode(', ', $invalidIds));
+        }
+        
+        $dbo->beginTransaction();
+        
+        try {
+            // If replace_existing is true, remove existing assignments
+            if ($replace_existing) {
+                $deleteSql = "DELETE FROM tingredient_facilities 
+                             WHERE ingredient_id = ?";
+                $deleteStmt = $dbo->prepare($deleteSql);
+                $deleteStmt->execute([$ingredient_id]);
+            }
+            
+            // Insert new assignments
+            $insertSql = "INSERT INTO tingredient_facilities 
+                         (ingredient_id, facility_id, assigned_by, assigned_at, status) 
+                         VALUES (?, ?, ?, NOW(), 1)
+                         ON DUPLICATE KEY UPDATE 
+                         assigned_by = VALUES(assigned_by),
+                         assigned_at = VALUES(assigned_at),
+                         status = 1";
+            $insertStmt = $dbo->prepare($insertSql);
+            
+            $assignedCount = 0;
+            foreach ($facility_ids as $facility_id) {
+                if ($insertStmt->execute([$ingredient_id, $facility_id, $assigned_by])) {
+                    $assignedCount++;
+                }
+            }
+            
+            $dbo->commit();
+            
+            // Log the action
+            $logData = [
+                'ingredient_id' => $ingredient_id,
+                'facility_ids' => $facility_ids,
+                'assigned_count' => $assignedCount,
+                'replace_existing' => $replace_existing
+            ];
+            
+            // You can add logging here if needed
+            // Common::logAction($assigned_by, 'bulk_assign_ingredient', json_encode($logData));
+            
+            $result = [
+                'status' => 1,
+                'statusDescription' => "Successfully assigned ingredient to {$assignedCount} facilities",
+                'data' => [
+                    'assigned_count' => $assignedCount,
+                    'ingredient_id' => $ingredient_id,
+                    'facility_count' => count($facility_ids)
+                ]
+            ];
+            
+        } catch (Exception $e) {
+            $dbo->rollBack();
+            throw $e;
+        }
+        
+    } catch (Exception $e) {
+        $result = [
+            'status' => 0,
+            'statusDescription' => $e->getMessage()
+        ];
+        
+        // Log error if needed
+        error_log("Bulk assign error: " . $e->getMessage());
+    }
+    
+    echo json_encode($result);
+    break;
+
+// Optional: Add a case to get current facility assignments for an ingredient
+case 'getIngredientFacilityAssignments':
+    try {
+		$dbo = &$GLOBALS['dbo'];
+		$data = $_POST['data'];
+        $ingredient_id = intval($data['ingredient_id']);
+        
+        if ($ingredient_id <= 0) {
+            throw new Exception("Invalid ingredient ID");
+        }
+        
+        $sql = "SELECT 
+                    tf.id,
+                    tf.facility_id,
+                    u.name as facility_name,
+                    u.prefix,
+                    tf.assigned_at,
+                    tf.status,
+                    assignedBy.name as assigned_by_name
+                FROM tingredient_facilities tf
+                LEFT JOIN tusers u ON tf.facility_id = u.id
+                LEFT JOIN tusers assignedBy ON tf.assigned_by = assignedBy.id
+                WHERE tf.ingredient_id = ? AND tf.status = 1
+                ORDER BY u.name";
+        
+        $stmt = $dbo->prepare($sql);
+        $stmt->execute([$ingredient_id]);
+        $assignments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $result = [
+            'status' => 1,
+            'data' => $assignments
+        ];
+        
+    } catch (Exception $e) {
+        $result = [
+            'status' => 0,
+            'statusDescription' => $e->getMessage()
+        ];
+    }
+    
+    echo json_encode($result);
+    break;
+
+
+	// Add these cases to your ajax/ajaxHandler.php switch statement
+
+case "saveSfdaApplication":
+    try {
+		$dbo = &$GLOBALS['dbo'];
+        $data = $_POST['data'];
+        $isNewApplication = empty($data['id']);
+        
+        if ($isNewApplication) {
+            // Insert new application
+            $sql = "INSERT INTO tsfda_applications (
+                idclient, application_name, company_name, address, commercial_registration_no, 
+                vat_number, accreditation_certificates, accreditation_certificates_other,
+                number_of_production_lines, number_of_critical_points, number_of_full_time_employees,
+                number_of_shifts, number_of_shift_employees, production_area_space_m2,
+                additional_branches_of_the_company, validity_of_certificate_period,
+                commercial_registration_certificate, upload_product_information, invoice,
+                proof_of_payment, sfda_facility_certificate, status, created_at, created_by
+            ) VALUES (
+                :idclient, :application_name, :company_name, :address, :commercial_registration_no,
+                :vat_number, :accreditation_certificates, :accreditation_certificates_other,
+                :number_of_production_lines, :number_of_critical_points, :number_of_full_time_employees,
+                :number_of_shifts, :number_of_shift_employees, :production_area_space_m2,
+                :additional_branches_of_the_company, :validity_of_certificate_period,
+                :commercial_registration_certificate, :upload_product_information, :invoice,
+                :proof_of_payment, :sfda_facility_certificate, 'draft', NOW(), :created_by
+            )";
+            
+            $stmt = $dbo->prepare($sql);
+            $stmt->execute([
+                ':idclient' => $data['idclient'],
+                ':application_name' => $data['application_name'],
+                ':company_name' => $data['company_name'],
+                ':address' => $data['address'],
+                ':commercial_registration_no' => $data['commercial_registration_no'],
+                ':vat_number' => $data['vat_number'],
+                ':accreditation_certificates' => $data['accreditation_certificates'],
+                ':accreditation_certificates_other' => $data['accreditation_certificates_other'],
+                ':number_of_production_lines' => $data['number_of_production_lines'],
+                ':number_of_critical_points' => $data['number_of_critical_points'],
+                ':number_of_full_time_employees' => $data['number_of_full_time_employees'],
+                ':number_of_shifts' => $data['number_of_shifts'],
+                ':number_of_shift_employees' => $data['number_of_shift_employees'],
+                ':production_area_space_m2' => $data['production_area_space_m2'],
+                ':additional_branches_of_the_company' => $data['additional_branches_of_the_company'],
+                ':validity_of_certificate_period' => $data['validity_of_certificate_period'],
+                ':commercial_registration_certificate' => $data['commercial_registration_certificate'],
+                ':upload_product_information' => $data['upload_product_information'],
+                ':invoice' => $data['invoice'],
+                ':proof_of_payment' => $data['proof_of_payment'],
+                ':sfda_facility_certificate' => $data['sfda_facility_certificate'],
+				':created_by' => $myuser->userdata['id']
+            ]);
+            
+            $data['id'] = $dbo->lastInsertId();
+        } else {
+            // Update existing application
+            $sql = "UPDATE tsfda_applications SET 
+                idclient = :idclient,
+				application_name = :application_name, 
+				company_name = :company_name, address = :address,
+                commercial_registration_no = :commercial_registration_no, 
+				vat_number = :vat_number,
+                accreditation_certificates = :accreditation_certificates, 
+                accreditation_certificates_other = :accreditation_certificates_other,
+                number_of_production_lines = :number_of_production_lines,
+                number_of_critical_points = :number_of_critical_points,
+                number_of_full_time_employees = :number_of_full_time_employees,
+                number_of_shifts = :number_of_shifts,
+                number_of_shift_employees = :number_of_shift_employees,
+                production_area_space_m2 = :production_area_space_m2,
+                additional_branches_of_the_company = :additional_branches_of_the_company,
+                validity_of_certificate_period = :validity_of_certificate_period,
+                commercial_registration_certificate = :commercial_registration_certificate,
+                upload_product_information = :upload_product_information,
+                invoice = :invoice, proof_of_payment = :proof_of_payment,
+                sfda_facility_certificate = :sfda_facility_certificate,
+                created_by = :created_by
+                WHERE id = :id";
+                
+            $stmt = $dbo->prepare($sql);
+            $stmt->execute([
+                ':id' => $data['id'],
+                ':idclient' => $data['idclient'],
+                ':application_name' => $data['application_name'],
+                ':company_name' => $data['company_name'],
+                ':address' => $data['address'],
+                ':commercial_registration_no' => $data['commercial_registration_no'],
+                ':vat_number' => $data['vat_number'],
+                ':accreditation_certificates' => $data['accreditation_certificates'],
+                ':accreditation_certificates_other' => $data['accreditation_certificates_other'],
+                ':number_of_production_lines' => $data['number_of_production_lines'],
+                ':number_of_critical_points' => $data['number_of_critical_points'],
+                ':number_of_full_time_employees' => $data['number_of_full_time_employees'],
+                ':number_of_shifts' => $data['number_of_shifts'],
+                ':number_of_shift_employees' => $data['number_of_shift_employees'],
+                ':production_area_space_m2' => $data['production_area_space_m2'],
+                ':additional_branches_of_the_company' => $data['additional_branches_of_the_company'],
+                ':validity_of_certificate_period' => $data['validity_of_certificate_period'],
+                ':commercial_registration_certificate' => $data['commercial_registration_certificate'],
+                ':upload_product_information' => $data['upload_product_information'],
+                ':invoice' => $data['invoice'],
+                ':proof_of_payment' => $data['proof_of_payment'],
+                ':sfda_facility_certificate' => $data['sfda_facility_certificate'],
+				':created_by' => $myuser->userdata['id'] 
+            ]);
+        }
+        
+        echo json_encode(generateSuccessResponse("SFDA application saved successfully"));
+        
+    } catch (Exception $e) {
+        echo json_encode(generateErrorResponse("Error saving SFDA application: " . $e->getMessage()));
+    }
+    break;
+
+case "removeSfdaApplication":
+    try {
+		$dbo = &$GLOBALS['dbo'];
+        $data = $_POST['data'];
+        $sql = "DELETE FROM tsfda_applications WHERE id = :id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->execute([':id' => $data['id']]);
+        
+        echo json_encode(generateSuccessResponse("SFDA application removed successfully"));
+        
+    } catch (Exception $e) {
+        echo json_encode(generateErrorResponse("Error removing SFDA application: " . $e->getMessage()));
+    }
+    break;
+
+case "markDeletedSfdaApplication":
+    try {
+		$dbo = &$GLOBALS['dbo'];
+        $data = $_POST['data'];
+        $ids = implode(',', array_map('intval', $data['ids']));
+        
+        $sql = "UPDATE tsfda_applications SET deleted = 1, updated_at = NOW() WHERE id IN ($ids)";
+        $stmt = $dbo->prepare($sql);
+        $stmt->execute();
+        
+        echo json_encode(generateSuccessResponse("SFDA applications marked as deleted"));
+        
+    } catch (Exception $e) {
+        echo json_encode(generateErrorResponse("Error deleting SFDA applications: " . $e->getMessage()));
+    }
+    break;
+
+case "addSfdaApplicationFiles":
+    try {
+
+		$dbo = &$GLOBALS['dbo'];
+        $id = $_POST['id'];
+        $updateFields = [];
+        $updateValues = [':id' => $id];
+        
+        // Check which file fields are being updated
+        $documentFields = [
+            'commercial_registration_certificate',
+            'upload_product_information', 
+            'invoice',
+            'proof_of_payment',
+            'sfda_facility_certificate'
+        ];
+
+         
+          $values = array_intersect_key($_POST, array_flip($documentFields));
+ 
+
+
+    if (empty($values)) {
+        // nothing was sent to update
+        return;
+    }
+
+    $dbo = &$GLOBALS['dbo'];
+    
+    // Get current sfda_applications data
+    $sql = "SELECT * FROM tsfda_applications WHERE id=:id";
+    $stmt = $dbo->prepare($sql);
+    $stmt->bindValue(':id', $id);
+    $stmt->execute();
+    $sfda_applications = $stmt->fetch();
+
+    $updates = [];
+    $clause = [];
+
+    foreach ($values as $field => $value) {
+
+		if (!empty($value)) {
+			// insert or append to the existing field value
+			$updates[$field] = empty($sfda_applications[$field])
+				? $value
+				: sprintf('%s,%s', $sfda_applications[$field], $value);
+			$clause[$field] = sprintf('%s=:%s', $field, $field);
+		}
+	}
+
+	if (empty($updates)) {
+		return;
+	}	
+
+    // Prepare the update query
+    $strClause = implode(', ', $clause);
+    $sql = "UPDATE tsfda_applications SET $strClause WHERE id=:id";
+    $stmt = $dbo->prepare($sql);
+    $stmt->bindValue(':id', $_POST['id']);
+
+
+    foreach ($updates as $field => $value) {
+		
+        $stmt->bindValue(':' . $field, $value);
+    }
+
+	
+	    if (!$stmt->execute()) {
+        echo json_encode(generateErrorResponse('Failed to attach files to SFDA'));
+        die();
+    }    
+
+	        
+        echo json_encode(['status' => '1', 'message' => 'Files updated successfully']);
+        
+    } catch (Exception $e) {
+        echo json_encode(['status' => '0', 'message' => 'Error updating files: ' . $e->getMessage()]);
+    }
+    break;
+
+
+	case "saveShipmentCertificate":
+    try {
+		$dbo = &$GLOBALS['dbo'];
+        $data = $_POST['data'];
+        $isNewShipment = empty($data['id']);
+        
+        if ($isNewShipment) {
+            // Insert new shipment certificate
+            $sql = "INSERT INTO tsfda_shipment_certificates (
+                idclient, company_name, contact_person, email, iidc_certificate_no,
+                product_name, article_number, halal_digital_hcp_no, 
+                commercial_registration_no_importeur, shipping_method, shipping_port, port_of_entry,
+                quantity, total_actual_weight_brutto, production_date, expiry_date,
+                additional_documents, invoice, proof_of_payment, sfda_shipment_certificate,
+                status, created_at, updated_at
+            ) VALUES (
+                :idclient, :company_name, :contact_person, :email, :iidc_certificate_no,
+                :product_name, :article_number, :halal_digital_hcp_no,
+                :commercial_registration_no_importeur, :shipping_method, :shipping_port, :port_of_entry,
+                :quantity, :total_actual_weight_brutto, :production_date, :expiry_date,
+                :additional_documents, :invoice, :proof_of_payment, :sfda_shipment_certificate,
+                'draft', NOW(), NOW()
+            )";
+            
+            $stmt = $dbo->prepare($sql);
+            $stmt->execute([
+                ':idclient' => $data['idclient'],
+                ':company_name' => $data['company_name'],
+                ':contact_person' => $data['contact_person'],
+                ':email' => $data['email'],
+                ':iidc_certificate_no' => $data['iidc_certificate_no'],
+                ':product_name' => $data['product_name'],
+                ':article_number' => $data['article_number'],
+                ':halal_digital_hcp_no' => $data['halal_digital_hcp_no'],
+                ':commercial_registration_no_importeur' => $data['commercial_registration_no_importeur'],
+                ':shipping_method' => $data['shipping_method'] ?? '',
+                ':shipping_port' => $data['shipping_port'],
+                ':port_of_entry' => $data['port_of_entry'],
+                ':quantity' => $data['quantity'],
+                ':total_actual_weight_brutto' => $data['total_actual_weight_brutto'],
+                ':production_date' => !empty($data['production_date']) ? date('Y-m-d', strtotime($data['production_date'])) : null,
+                ':expiry_date' => !empty($data['expiry_date']) ? date('Y-m-d', strtotime($data['expiry_date'])) : null,
+                ':additional_documents' => $data['additional_documents'],
+                ':invoice' => $data['invoice'],
+                ':proof_of_payment' => $data['proof_of_payment'],
+                ':sfda_shipment_certificate' => $data['sfda_shipment_certificate']
+            ]);
+            
+            $data['id'] = $dbo->lastInsertId();
+        } else {
+            // Update existing shipment certificate
+            $sql = "UPDATE tsfda_shipment_certificates SET 
+                company_name = :company_name, contact_person = :contact_person, email = :email,
+                iidc_certificate_no = :iidc_certificate_no, product_name = :product_name,
+                article_number = :article_number, halal_digital_hcp_no = :halal_digital_hcp_no,
+                commercial_registration_no_importeur = :commercial_registration_no_importeur,
+                shipping_method = :shipping_method, shipping_port = :shipping_port, port_of_entry = :port_of_entry,
+                quantity = :quantity, total_actual_weight_brutto = :total_actual_weight_brutto,
+                production_date = :production_date, expiry_date = :expiry_date,
+                additional_documents = :additional_documents, invoice = :invoice,
+                proof_of_payment = :proof_of_payment, sfda_shipment_certificate = :sfda_shipment_certificate,
+                updated_at = NOW()
+                WHERE id = :id";
+                
+            $stmt = $dbo->prepare($sql);
+            $stmt->execute([
+                ':id' => $data['id'],
+                ':company_name' => $data['company_name'],
+                ':contact_person' => $data['contact_person'],
+                ':email' => $data['email'],
+                ':iidc_certificate_no' => $data['iidc_certificate_no'],
+                ':product_name' => $data['product_name'],
+                ':article_number' => $data['article_number'],
+                ':halal_digital_hcp_no' => $data['halal_digital_hcp_no'],
+                ':commercial_registration_no_importeur' => $data['commercial_registration_no_importeur'],
+                ':shipping_method' => $data['shipping_method'] ?? '',
+                ':shipping_port' => $data['shipping_port'],
+                ':port_of_entry' => $data['port_of_entry'],
+                ':quantity' => $data['quantity'],
+                ':total_actual_weight_brutto' => $data['total_actual_weight_brutto'],
+                ':production_date' => !empty($data['production_date']) ? date('Y-m-d', strtotime($data['production_date'])) : null,
+                ':expiry_date' => !empty($data['expiry_date']) ? date('Y-m-d', strtotime($data['expiry_date'])) : null,
+                ':additional_documents' => $data['additional_documents'],
+                ':invoice' => $data['invoice'],
+                ':proof_of_payment' => $data['proof_of_payment'],
+                ':sfda_shipment_certificate' => $data['sfda_shipment_certificate']
+            ]);
+        }
+        
+        echo json_encode(generateSuccessResponse("Shipment certificate saved successfully"));
+        
+    } catch (Exception $e) {
+        echo json_encode(generateErrorResponse("Error saving shipment certificate: " . $e->getMessage()));
+    }
+    break;
+
+case "removeShipmentCertificate":
+    try {
+		$dbo = &$GLOBALS['dbo'];
+        $data = $_POST['data'];
+        $sql = "DELETE FROM tsfda_shipment_certificates WHERE id = :id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->execute([':id' => $data['id']]);
+        
+        echo json_encode(generateSuccessResponse("Shipment certificate removed successfully"));
+        
+    } catch (Exception $e) {
+        echo json_encode(generateErrorResponse("Error removing shipment certificate: " . $e->getMessage()));
+    }
+    break;
+
+case "markDeletedShipmentCertificate":
+    try {
+		$dbo = &$GLOBALS['dbo'];
+        $data = $_POST['data'];
+        $ids = implode(',', array_map('intval', $data['ids']));
+        
+        $sql = "UPDATE tsfda_shipment_certificates SET deleted = 1, updated_at = NOW() WHERE id IN ($ids)";
+        $stmt = $dbo->prepare($sql);
+        $stmt->execute();
+        
+        echo json_encode(generateSuccessResponse("Shipment certificates marked as deleted"));
+        
+    } catch (Exception $e) {
+        echo json_encode(generateErrorResponse("Error deleting shipment certificates: " . $e->getMessage()));
+    }
+    break;
+
+case "nextShipmentCertificateId":
+    try {
+		$dbo = &$GLOBALS['dbo'];
+        $sql = "SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM tsfda_shipment_certificates";
+        $stmt = $dbo->prepare($sql);
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        echo json_encode([
+            'status' => 1,
+            'data' => [
+                'id' => $result['next_id'],
+                'shipment' => null
+            ]
+        ]);
+        
+    } catch (Exception $e) {
+        echo json_encode(generateErrorResponse("Error getting next shipment certificate ID: " . $e->getMessage()));
+    }
+    break;
+
+case "addShipmentCertificateFiles":
+    try {
+		$dbo = &$GLOBALS['dbo'];
+        $id = $_POST['id'];
+        $updateFields = [];
+        $updateValues = [':id' => $id];
+        
+        // Check which file fields are being updated
+        $documentFields = [
+            'additional_documents',
+            'invoice',
+            'proof_of_payment',
+            'sfda_shipment_certificate'
+        ];
+        
+       
+          $values = array_intersect_key($_POST, array_flip($documentFields));
+ 
+
+
+    if (empty($values)) {
+        // nothing was sent to update
+        return;
+    }
+
+    $dbo = &$GLOBALS['dbo'];
+    
+    // Get current sfda_applications data
+    $sql = "SELECT * FROM tsfda_shipment_certificates a
+ WHERE id=:id";
+    $stmt = $dbo->prepare($sql);
+    $stmt->bindValue(':id', $id);
+    $stmt->execute();
+    $sfda_applications = $stmt->fetch();
+
+    $updates = [];
+    $clause = [];
+
+    foreach ($values as $field => $value) {
+
+		if (!empty($value)) {
+			// insert or append to the existing field value
+			$updates[$field] = empty($sfda_applications[$field])
+				? $value
+				: sprintf('%s,%s', $sfda_applications[$field], $value);
+			$clause[$field] = sprintf('%s=:%s', $field, $field);
+		}
+	}
+
+	if (empty($updates)) {
+		return;
+	}	
+
+    // Prepare the update query
+    $strClause = implode(', ', $clause);
+    $sql = "UPDATE tsfda_shipment_certificates  SET $strClause WHERE id=:id";
+    $stmt = $dbo->prepare($sql);
+    $stmt->bindValue(':id', $_POST['id']);
+
+
+    foreach ($updates as $field => $value) {
+		
+        $stmt->bindValue(':' . $field, $value);
+    }
+
+	
+	    if (!$stmt->execute()) {
+        echo json_encode(generateErrorResponse('Failed to attach files to SFDA'));
+        die();
+    }    
+
+	        
+        echo json_encode(['status' => '1', 'message' => 'Files updated successfully']);
+        
+    } catch (Exception $e) {
+        echo json_encode(['status' => '0', 'message' => 'Error updating files: ' . $e->getMessage()]);
+    }
+    break;
+
+case "completeSfdaApplication":
+    try {
+        $dbo = &$GLOBALS['dbo'];
+        $data = $_POST['data'];
+        $id = $data['id'];
+        
+        if (!$id) {
+            echo json_encode(generateErrorResponse("Application ID is required"));
+            break;
+        }
+        
+        // Get the current application data for validation
+        $sql = "SELECT a.*, u.name as client_name, u.email as client_email 
+                FROM tsfda_applications a 
+                LEFT JOIN tusers u ON a.idclient = u.id 
+                WHERE a.id = :id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->execute([':id' => $id]);
+        $application = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$application) {
+            echo json_encode(generateErrorResponse("Application not found"));
+            break;
+        }
+        
+        // Update application status
+        $sql = "UPDATE tsfda_applications SET status = 'completed', updated_at = NOW() WHERE id = :id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->execute([':id' => $id]);
+        
+        // Insert row into shipment certificates table
+        $insertSql = "INSERT INTO tsfda_shipment_certificates (idsfdaapp, idclient, status, created_at, updated_at) 
+                      SELECT :idsfdaapp, idclient, 'draft', NOW(), NOW() 
+                      FROM tsfda_applications WHERE id = :id";
+        $insertStmt = $dbo->prepare($insertSql);
+        $insertStmt->execute([':idsfdaapp' => $id, ':id' => $id]);
+        
+        // Send notification email to admin when client completes application
+        if ($myuser->userdata['isclient'] == "1") {
+            $clientData = [
+                'name' => $application['client_name'],
+                'email' => $application['client_email']
+            ];
+            sendSfdaCompletionNotificationToAdmin($application, $clientData);
+        }
+        
+        echo json_encode(generateSuccessResponse("Application marked as complete and shipment certificate created"));
+        
+    } catch (Exception $e) {
+        echo json_encode(generateErrorResponse("Error updating application status: " . $e->getMessage()));
+    }
+    break;
+
+case "completeSfdaShipment":
+    try {
+		$dbo = &$GLOBALS['dbo'];
+        $data = $_POST['data'];
+        $id = $data['id'];
+        
+        if (!$id) {
+            echo json_encode(generateErrorResponse("Shipment certificate ID is required"));
+            break;
+        }
+        
+        $sql = "UPDATE tsfda_shipment_certificates SET status = 'completed', updated_at = NOW() WHERE idsfdaapp = :id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->execute([':id' => $id]);
+        
+        echo json_encode(generateSuccessResponse("Shipment certificate marked as complete"));
+        
+    } catch (Exception $e) {
+        echo json_encode(generateErrorResponse("Error updating shipment certificate status: " . $e->getMessage()));
+    }
+    break;
+
+// Add these cases to your ajax/ajaxHandler.php switch statement
+	// HALAL SLAUGHTERING MODULE
+case "saveHalalSlaughtering":
+    try {
+		$dbo = &$GLOBALS['dbo'];
+        $data = $_POST['data'];
+        $isNewRecord = empty($data['id']);
+        
+        if ($isNewRecord) {
+            // Insert new halal slaughtering record
+            $sql = "INSERT INTO thalal_slaughtering (
+                idclient, company_name, contact_person_1, contact_person_2, start_datetime, end_datetime,
+                type_of_animal, butcher_1, butcher_2, butcher_3, supervisor_1, supervisor_2, supervisor_3,
+                halal_slaughtering_documents, method_of_stunning, halal_slaughtering_data,
+                upload_live_animals_documents, upload_pictures_after_cleaning, upload_halal_slaughtering_video,
+                upload_additional_pictures, upload_halal_stock, invoice_travel_expenses, proof_of_payment,
+                status, created_at, created_by
+            ) VALUES (
+                :idclient, :company_name, :contact_person_1, :contact_person_2, :start_datetime, :end_datetime,
+                :type_of_animal, :butcher_1, :butcher_2, :butcher_3, :supervisor_1, :supervisor_2, :supervisor_3,
+                :halal_slaughtering_documents, :method_of_stunning, :halal_slaughtering_data,
+                :upload_live_animals_documents, :upload_pictures_after_cleaning, :upload_halal_slaughtering_video,
+                :upload_additional_pictures, :upload_halal_stock, :invoice_travel_expenses, :proof_of_payment,
+                'draft', NOW(), :created_by
+            )";
+            
+            $stmt = $dbo->prepare($sql);
+            $stmt->execute([
+                ':idclient' => $data['idclient'],
+                ':company_name' => $data['company_name'],
+                ':contact_person_1' => $data['contact_person_1'],
+                ':contact_person_2' => $data['contact_person_2'],
+                ':start_datetime' => !empty($data['start_datetime']) ? date('Y-m-d H:i:s', strtotime($data['start_datetime'])) : null,
+                ':end_datetime' => !empty($data['end_datetime']) ? date('Y-m-d H:i:s', strtotime($data['end_datetime'])) : null,
+                ':type_of_animal' => $data['type_of_animal'],
+                ':butcher_1' => $data['butcher_1'],
+                ':butcher_2' => $data['butcher_2'],
+                ':butcher_3' => $data['butcher_3'],
+                ':supervisor_1' => $data['supervisor_1'],
+                ':supervisor_2' => $data['supervisor_2'],
+                ':supervisor_3' => $data['supervisor_3'],
+                ':halal_slaughtering_documents' => $data['halal_slaughtering_documents'],
+                ':method_of_stunning' => $data['method_of_stunning'],
+                ':halal_slaughtering_data' => $data['halal_slaughtering_data'],
+                ':upload_live_animals_documents' => $data['upload_live_animals_documents'],
+                ':upload_pictures_after_cleaning' => $data['upload_pictures_after_cleaning'],
+                ':upload_halal_slaughtering_video' => $data['upload_halal_slaughtering_video'],
+                ':upload_additional_pictures' => $data['upload_additional_pictures'],
+                ':upload_halal_stock' => $data['upload_halal_stock'],
+                ':invoice_travel_expenses' => $data['invoice_travel_expenses'],
+                ':proof_of_payment' => $data['proof_of_payment'],
+                ':created_by' => $myuser->userdata['id']
+            ]);
+            
+            $data['id'] = $dbo->lastInsertId();
+        } else {
+            // Update existing halal slaughtering record
+            $sql = "UPDATE thalal_slaughtering SET 
+                idclient = :idclient,
+                company_name = :company_name,
+                contact_person_1 = :contact_person_1,
+                contact_person_2 = :contact_person_2,
+                start_datetime = :start_datetime,
+                end_datetime = :end_datetime,
+                type_of_animal = :type_of_animal,
+                butcher_1 = :butcher_1,
+                butcher_2 = :butcher_2,
+                butcher_3 = :butcher_3,
+                supervisor_1 = :supervisor_1,
+                supervisor_2 = :supervisor_2,
+                supervisor_3 = :supervisor_3,
+                halal_slaughtering_documents = :halal_slaughtering_documents,
+                method_of_stunning = :method_of_stunning,
+                halal_slaughtering_data = :halal_slaughtering_data,
+                upload_live_animals_documents = :upload_live_animals_documents,
+                upload_pictures_after_cleaning = :upload_pictures_after_cleaning,
+                upload_halal_slaughtering_video = :upload_halal_slaughtering_video,
+                upload_additional_pictures = :upload_additional_pictures,
+                upload_halal_stock = :upload_halal_stock,
+                invoice_travel_expenses = :invoice_travel_expenses,
+                proof_of_payment = :proof_of_payment,
+                updated_at = NOW(),
+                created_by = :created_by
+                WHERE id = :id";
+                
+            $stmt = $dbo->prepare($sql);
+            $stmt->execute([
+                ':id' => $data['id'],
+                ':idclient' => $data['idclient'],
+                ':company_name' => $data['company_name'],
+                ':contact_person_1' => $data['contact_person_1'],
+                ':contact_person_2' => $data['contact_person_2'],
+                ':start_datetime' => !empty($data['start_datetime']) ? date('Y-m-d H:i:s', strtotime($data['start_datetime'])) : null,
+                ':end_datetime' => !empty($data['end_datetime']) ? date('Y-m-d H:i:s', strtotime($data['end_datetime'])) : null,
+                ':type_of_animal' => $data['type_of_animal'],
+                ':butcher_1' => $data['butcher_1'],
+                ':butcher_2' => $data['butcher_2'],
+                ':butcher_3' => $data['butcher_3'],
+                ':supervisor_1' => $data['supervisor_1'],
+                ':supervisor_2' => $data['supervisor_2'],
+                ':supervisor_3' => $data['supervisor_3'],
+                ':halal_slaughtering_documents' => $data['halal_slaughtering_documents'],
+                ':method_of_stunning' => $data['method_of_stunning'],
+                ':halal_slaughtering_data' => $data['halal_slaughtering_data'],
+                ':upload_live_animals_documents' => $data['upload_live_animals_documents'],
+                ':upload_pictures_after_cleaning' => $data['upload_pictures_after_cleaning'],
+                ':upload_halal_slaughtering_video' => $data['upload_halal_slaughtering_video'],
+                ':upload_additional_pictures' => $data['upload_additional_pictures'],
+                ':upload_halal_stock' => $data['upload_halal_stock'],
+                ':invoice_travel_expenses' => $data['invoice_travel_expenses'],
+                ':proof_of_payment' => $data['proof_of_payment'],
+                ':created_by' => $myuser->userdata['id']
+            ]);
+        }
+        
+        echo json_encode(generateSuccessResponse("Halal slaughtering record saved successfully"));
+        
+    } catch (Exception $e) {
+        echo json_encode(generateErrorResponse("Error saving halal slaughtering record: " . $e->getMessage()));
+    }
+    break;
+case "removeHalalSlaughtering":
+    try {
+		$dbo = &$GLOBALS['dbo'];
+        $data = $_POST['data'];
+        $sql = "DELETE FROM thalal_slaughtering WHERE id = :id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->execute([':id' => $data['id']]);
+        
+        echo json_encode(generateSuccessResponse("Halal slaughtering record removed successfully"));
+        
+    } catch (Exception $e) {
+        echo json_encode(generateErrorResponse("Error removing halal slaughtering record: " . $e->getMessage()));
+    }
+    break;
+
+case "markDeletedHalalSlaughtering":
+    try {
+		$dbo = &$GLOBALS['dbo'];
+        $data = $_POST['data'];
+        $ids = implode(',', array_map('intval', $data['ids']));
+        
+        $sql = "UPDATE thalal_slaughtering SET deleted = 1, updated_at = NOW() WHERE id IN ($ids)";
+        $stmt = $dbo->prepare($sql);
+        $stmt->execute();
+        
+        echo json_encode(generateSuccessResponse("Halal slaughtering records marked as deleted"));
+        
+    } catch (Exception $e) {
+        echo json_encode(generateErrorResponse("Error deleting halal slaughtering records: " . $e->getMessage()));
+    }
+    break;
+
+case "addHalalSlaughteringFiles":
+    try {
+		$dbo = &$GLOBALS['dbo'];
+        $id = $_POST['id'];
+        
+        // Check which file fields are being updated - use database column names
+        $documentFields = [
+            'halal_slaughtering_data',
+			'halal_slaughtering_documents',
+            'upload_live_animals_documents',
+            'upload_pictures_after_cleaning',
+            'upload_halal_slaughtering_video',
+            'upload_additional_pictures',
+            'upload_halal_stock',
+            'invoice_travel_expenses',
+            'proof_of_payment'
+        ];
+
+        $values = array_intersect_key($_POST, array_flip($documentFields));
+
+        if (empty($values)) {
+            // nothing was sent to update
+            return;
+        }
+
+        // Get current halal_slaughtering data
+        $sql = "SELECT * FROM thalal_slaughtering WHERE id=:id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':id', $id);
+        $stmt->execute();
+        $halal_slaughtering = $stmt->fetch();
+
+        $updates = [];
+        $clause = [];
+
+        foreach ($values as $field => $value) {
+            if (!empty($value)) {
+                // insert or append to the existing field value
+                $updates[$field] = empty($halal_slaughtering[$field])
+                    ? $value
+                    : sprintf('%s,%s', $halal_slaughtering[$field], $value);
+                $clause[$field] = sprintf('%s=:%s', $field, $field);
+            }
+        }
+
+        if (empty($updates)) {
+            return;
+        }	
+
+        // Prepare the update query
+        $strClause = implode(', ', $clause);
+        $sql = "UPDATE thalal_slaughtering SET $strClause WHERE id=:id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':id', $_POST['id']);
+
+        foreach ($updates as $field => $value) {
+            $stmt->bindValue(':' . $field, $value);
+        }
+
+        if (!$stmt->execute()) {
+            echo json_encode(generateErrorResponse('Failed to attach files to Halal Slaughtering'));
+            die();
+        }    
+
+        echo json_encode(['status' => '1', 'message' => 'Files updated successfully']);
+        
+    } catch (Exception $e) {
+        echo json_encode(['status' => '0', 'message' => 'Error updating files: ' . $e->getMessage()]);
+    }
+    break;
+
+case "completeHalalSlaughtering":
+    try {
+        $dbo = &$GLOBALS['dbo'];
+        $data = $_POST['data'];
+        $id = $data['id'];
+        
+        if (!$id) {
+            echo json_encode(generateErrorResponse("Halal slaughtering ID is required"));
+            break;
+        }
+        
+        // Get the current halal slaughtering data for validation
+        $sql = "SELECT h.*, u.name as client_name, u.email as client_email 
+                FROM thalal_slaughtering h 
+                LEFT JOIN tusers u ON h.idclient = u.id 
+                WHERE h.id = :id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->execute([':id' => $id]);
+        $halalSlaughtering = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$halalSlaughtering) {
+            echo json_encode(generateErrorResponse("Halal slaughtering record not found"));
+            break;
+        }
+        
+        // Update halal slaughtering status
+        $sql = "UPDATE thalal_slaughtering SET status = 'completed', updated_at = NOW() WHERE id = :id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->execute([':id' => $id]);
+        
+        // Insert row into batch certificates table
+        $insertSql = "INSERT INTO thalal_batch_certificates (idhalal_slaughtering, idclient, status, created_at, updated_at) 
+                      SELECT :idhalal_slaughtering, idclient, 'draft', NOW(), NOW() 
+                      FROM thalal_slaughtering WHERE id = :id";
+        $insertStmt = $dbo->prepare($insertSql);
+        $insertStmt->execute([':idhalal_slaughtering' => $id, ':id' => $id]);
+        
+        // Send notification email to admin when client completes record
+        if ($myuser->userdata['isclient'] == "1") {
+            $clientData = [
+                'name' => $halalSlaughtering['client_name'],
+                'email' => $halalSlaughtering['client_email']
+            ];
+            // sendHalalSlaughteringCompletionNotificationToAdmin($halalSlaughtering, $clientData);
+        }
+        
+        echo json_encode(generateSuccessResponse("Halal slaughtering marked as complete and batch certificate created"));
+        
+    } catch (Exception $e) {
+        echo json_encode(generateErrorResponse("Error updating halal slaughtering status: " . $e->getMessage()));
+    }
+    break;
+
+case "nextHalalSlaughteringId":
+    try {
+		$dbo = &$GLOBALS['dbo'];
+        $sql = "SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM thalal_slaughtering";
+        $stmt = $dbo->prepare($sql);
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        echo json_encode([
+            'status' => 1,
+            'data' => [
+                'id' => $result['next_id'],
+                'halal_slaughtering' => null
+            ]
+        ]);
+        
+    } catch (Exception $e) {
+        echo json_encode(generateErrorResponse("Error getting next halal slaughtering ID: " . $e->getMessage()));
+    }
+    break;
+
+// BATCH CERTIFICATE HANDLERS
+
+case "saveBatchCertificate":
+    try {
+		$dbo = &$GLOBALS['dbo'];
+        $data = $_POST['data'];
+        $isNewRecord = empty($data['id']);
+        
+        if ($isNewRecord) {
+            // Insert new batch certificate
+            $sql = "INSERT INTO thalal_batch_certificates (
+                idhalal_slaughtering, idclient, company_name, company_address, date, country_of_origin,
+                quality, net_weight_kg, gross_weight_kg, transport_by, awb_voyage_flight_no,
+                loading_port, destination, exporter_name, exporter_address, importer_name, importer_address,
+                upload_product_information, upload_consignment_details, invoice, proof_of_payment, halal_batch_certificate,
+                status, created_at, updated_at
+            ) VALUES (
+                :idhalal_slaughtering, :idclient, :company_name, :company_address, :date, :country_of_origin,
+                :quality, :net_weight_kg, :gross_weight_kg, :transport_by, :awb_voyage_flight_no,
+                :loading_port, :destination, :exporter_name, :exporter_address, :importer_name, :importer_address,
+                :upload_product_information, :upload_consignment_details, :invoice, :proof_of_payment, :halal_batch_certificate,
+                'draft', NOW(), NOW()
+            )";
+            
+            $stmt = $dbo->prepare($sql);
+            $stmt->execute([
+                ':idhalal_slaughtering' => $data['idhalal_slaughtering'],
+                ':idclient' => $data['idclient'],
+                ':company_name' => $data['company_name'],
+                ':company_address' => $data['company_address'],
+                ':date' => !empty($data['date']) ? date('Y-m-d', strtotime($data['date'])) : null,
+                ':country_of_origin' => $data['country_of_origin'],
+                ':quality' => $data['quality'],
+                ':net_weight_kg' => $data['net_weight_kg'],
+                ':gross_weight_kg' => $data['gross_weight_kg'],
+                ':transport_by' => $data['transport_by'],
+                ':awb_voyage_flight_no' => $data['awb_voyage_flight_no'],
+                ':loading_port' => $data['loading_port'],
+                ':destination' => $data['destination'],
+                ':exporter_name' => $data['exporter_name'],
+                ':exporter_address' => $data['exporter_address'],
+                ':importer_name' => $data['importer_name'],
+                ':importer_address' => $data['importer_address'],
+                ':upload_product_information' => $data['upload_product_information'],
+                ':upload_consignment_details' => $data['upload_consignment_details'],
+                ':invoice' => $data['invoice'],
+                ':proof_of_payment' => $data['proof_of_payment'],
+                ':halal_batch_certificate' => $data['halal_batch_certificate']
+            ]);
+            
+            $data['id'] = $dbo->lastInsertId();
+        } else {
+            // Update existing batch certificate
+            $sql = "UPDATE thalal_batch_certificates SET 
+                company_name = :company_name,
+                company_address = :company_address,
+                date = :date,
+                country_of_origin = :country_of_origin,
+                quality = :quality,
+                net_weight_kg = :net_weight_kg,
+                gross_weight_kg = :gross_weight_kg,
+                transport_by = :transport_by,
+                awb_voyage_flight_no = :awb_voyage_flight_no,
+                loading_port = :loading_port,
+                destination = :destination,
+                exporter_name = :exporter_name,
+                exporter_address = :exporter_address,
+                importer_name = :importer_name,
+                importer_address = :importer_address,
+                upload_product_information = :upload_product_information,
+                upload_consignment_details = :upload_consignment_details,
+                invoice = :invoice,
+                proof_of_payment = :proof_of_payment,
+                halal_batch_certificate = :halal_batch_certificate,
+                updated_at = NOW()
+                WHERE id = :id";
+                
+            $stmt = $dbo->prepare($sql);
+            $stmt->execute([
+                ':id' => $data['id'],
+                ':company_name' => $data['company_name'],
+                ':company_address' => $data['company_address'],
+                ':date' => !empty($data['date']) ? date('Y-m-d', strtotime($data['date'])) : null,
+                ':country_of_origin' => $data['country_of_origin'],
+                ':quality' => $data['quality'],
+                ':net_weight_kg' => $data['net_weight_kg'],
+                ':gross_weight_kg' => $data['gross_weight_kg'],
+                ':transport_by' => $data['transport_by'],
+                ':awb_voyage_flight_no' => $data['awb_voyage_flight_no'],
+                ':loading_port' => $data['loading_port'],
+                ':destination' => $data['destination'],
+                ':exporter_name' => $data['exporter_name'],
+                ':exporter_address' => $data['exporter_address'],
+                ':importer_name' => $data['importer_name'],
+                ':importer_address' => $data['importer_address'],
+                ':upload_product_information' => $data['upload_product_information'],
+                ':upload_consignment_details' => $data['upload_consignment_details'],
+                ':invoice' => $data['invoice'],
+                ':proof_of_payment' => $data['proof_of_payment'],
+                ':halal_batch_certificate' => $data['halal_batch_certificate']
+            ]);
+        }
+        
+        echo json_encode(generateSuccessResponse("Batch certificate saved successfully"));
+        
+    } catch (Exception $e) {
+        echo json_encode(generateErrorResponse("Error saving batch certificate: " . $e->getMessage()));
+    }
+    break;
+
+case "removeBatchCertificate":
+    try {
+		$dbo = &$GLOBALS['dbo'];
+        $data = $_POST['data'];
+        $sql = "DELETE FROM thalal_batch_certificates WHERE id = :id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->execute([':id' => $data['id']]);
+        
+        echo json_encode(generateSuccessResponse("Batch certificate removed successfully"));
+        
+    } catch (Exception $e) {
+        echo json_encode(generateErrorResponse("Error removing batch certificate: " . $e->getMessage()));
+    }
+    break;
+
+case "markDeletedBatchCertificate":
+    try {
+		$dbo = &$GLOBALS['dbo'];
+        $data = $_POST['data'];
+        $ids = implode(',', array_map('intval', $data['ids']));
+        
+        $sql = "UPDATE thalal_batch_certificates SET deleted = 1, updated_at = NOW() WHERE id IN ($ids)";
+        $stmt = $dbo->prepare($sql);
+        $stmt->execute();
+        
+        echo json_encode(generateSuccessResponse("Batch certificates marked as deleted"));
+        
+    } catch (Exception $e) {
+        echo json_encode(generateErrorResponse("Error deleting batch certificates: " . $e->getMessage()));
+    }
+    break;
+
+case "nextBatchCertificateId":
+    try {
+		$dbo = &$GLOBALS['dbo'];
+        $sql = "SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM thalal_batch_certificates";
+        $stmt = $dbo->prepare($sql);
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        echo json_encode([
+            'status' => 1,
+            'data' => [
+                'id' => $result['next_id'],
+                'batch_certificate' => null
+            ]
+        ]);
+        
+    } catch (Exception $e) {
+        echo json_encode(generateErrorResponse("Error getting next batch certificate ID: " . $e->getMessage()));
+    }
+    break;
+
+case "addBatchCertificateFiles":
+    try {
+		$dbo = &$GLOBALS['dbo'];
+        $id = $_POST['id'];
+        
+        // Check which file fields are being updated
+        $documentFields = [
+            'upload_product_information',
+            'upload_consignment_details',
+            'invoice',
+            'proof_of_payment',
+            'halal_batch_certificate'
+        ];
+        
+        $values = array_intersect_key($_POST, array_flip($documentFields));
+
+        if (empty($values)) {
+            // nothing was sent to update
+            return;
+        }
+
+        // Get current batch certificate data
+        $sql = "SELECT * FROM thalal_batch_certificates WHERE id=:id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':id', $id);
+        $stmt->execute();
+        $batch_certificate = $stmt->fetch();
+
+        $updates = [];
+        $clause = [];
+
+        foreach ($values as $field => $value) {
+            if (!empty($value)) {
+                // insert or append to the existing field value
+                $updates[$field] = empty($batch_certificate[$field])
+                    ? $value
+                    : sprintf('%s,%s', $batch_certificate[$field], $value);
+                $clause[$field] = sprintf('%s=:%s', $field, $field);
+            }
+        }
+
+        if (empty($updates)) {
+            return;
+        }	
+
+        // Prepare the update query
+        $strClause = implode(', ', $clause);
+        $sql = "UPDATE thalal_batch_certificates SET $strClause WHERE id=:id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':id', $_POST['id']);
+
+        foreach ($updates as $field => $value) {
+            $stmt->bindValue(':' . $field, $value);
+        }
+
+        if (!$stmt->execute()) {
+            echo json_encode(generateErrorResponse('Failed to attach files to Batch Certificate'));
+            die();
+        }    
+
+        echo json_encode(['status' => '1', 'message' => 'Files updated successfully']);
+        
+    } catch (Exception $e) {
+        echo json_encode(['status' => '0', 'message' => 'Error updating files: ' . $e->getMessage()]);
+    }
+    break;
+
+case "completeBatchCertificate":
+    try {
+		$dbo = &$GLOBALS['dbo'];
+        $data = $_POST['data'];
+        $id = $data['id'];
+        
+        if (!$id) {
+            echo json_encode(generateErrorResponse("Batch certificate ID is required"));
+            break;
+        }
+        
+        $sql = "UPDATE thalal_batch_certificates SET status = 'completed', updated_at = NOW() WHERE idhalal_slaughtering = :id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->execute([':id' => $id]);
+        
+        echo json_encode(generateSuccessResponse("Batch certificate marked as complete"));
+        
+    } catch (Exception $e) {
+        echo json_encode(generateErrorResponse("Error updating batch certificate status: " . $e->getMessage()));
+    }
+    break;
+
+
+case "completeBatchCertificate":
+    try {
+        $dbo = &$GLOBALS['dbo'];
+        $data = $_POST['data'];
+        $id = $data['id'];
+        
+        if (!$id) {
+            echo json_encode(generateErrorResponse("Batch certificate ID is required"));
+            break;
+        }
+        
+        $sql = "UPDATE thalal_batch_certificates SET status = 'completed', updated_at = NOW() WHERE idhalal_slaughtering = :id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->execute([':id' => $id]);
+        
+        echo json_encode(generateSuccessResponse("Batch certificate marked as complete"));
+        
+    } catch (Exception $e) {
+        echo json_encode(generateErrorResponse("Error updating batch certificate status: " . $e->getMessage()));
+    }
+    break;
+
+	case "updatePaidStatus":
+    try {
+		$dbo = &$GLOBALS['dbo'];
+        $id = intval($_POST['id']);
+        $paid = $_POST['paid'] === 'Yes' ? 'Yes' : 'No';
+        
+        $sql = "UPDATE ttrainer_activities SET paid = :paid, updated_at = NOW() WHERE id = :id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindParam(':paid', $paid, PDO::PARAM_STR);
+        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+        
+        if ($stmt->execute()) {
+            $response['status'] = 1;
+            $response['statusDescription'] = 'Paid status updated successfully';
+        } else {
+            $response['status'] = 0;
+            $response['statusDescription'] = 'Failed to update paid status';
+        }
+    } catch (PDOException $e) {
+        $response['status'] = 0;
+        $response['statusDescription'] = 'Database error: ' . $e->getMessage();
+    }
+    echo json_encode($response);
+    break;
+
+	case "updateIssuingInvoiceStatus":
+    try {
+		global $adminEmailAddress;
+		$dbo = &$GLOBALS['dbo'];
+		$myuser = cuser::singleton();
+		$myuser->getUserData();
+		
+        $id = intval($_POST['id']);
+        $issuing_invoice = $_POST['issuing_invoice'] === 'Yes' ? 'Yes' : 'No';
+        
+        $sql = "UPDATE ttrainer_activities SET issuing_invoice = :issuing_invoice, updated_at = NOW() WHERE id = :id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindParam(':issuing_invoice', $issuing_invoice, PDO::PARAM_STR);
+        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+        
+        if ($stmt->execute()) {
+            $response['status'] = 1;
+            $response['statusDescription'] = 'Issuing invoice status updated successfully';
+            
+            // Send email notification to admin when switched to "Yes"
+            if ($issuing_invoice === 'Yes') {
+                // Get activity details
+                $sqlActivity = "SELECT a.*, u.name as auditor_name, u.email as auditor_email 
+                                FROM ttrainer_activities a 
+                                LEFT JOIN tusers u ON a.idauditor = u.id 
+                                WHERE a.id = :id";
+                $stmtActivity = $dbo->prepare($sqlActivity);
+                $stmtActivity->bindParam(':id', $id, PDO::PARAM_INT);
+                $stmtActivity->execute();
+                $activity = $stmtActivity->fetch(PDO::FETCH_ASSOC);
+                
+                if ($activity) {
+                    $fromEmailAddress = "noreply@halal-digital.net";
+                    
+                    $body = [];
+                    $body['name'] = 'Halal Digital';
+                    $body['email'] = $fromEmailAddress;
+                    $body['to'] = $adminEmailAddress;
+                    $body['subject'] = "Issuing Invoice Request - " . $activity['company_name'];
+                    $body['header'] = "";
+                    
+                    $message = "<p>Dear Admin,</p>";
+                    $message .= "<p>An auditor has requested issuing an invoice for the following activity:</p>";
+                    $message .= "<table style='border-collapse: collapse; width: 100%; max-width: 600px;'>";
+                    $message .= "<tr><td style='padding: 8px; border: 1px solid #ddd;'><strong>Activity ID:</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>" . htmlspecialchars($activity['id']) . "</td></tr>";
+                    $message .= "<tr><td style='padding: 8px; border: 1px solid #ddd;'><strong>Company Name:</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>" . htmlspecialchars($activity['company_name']) . "</td></tr>";
+                    $message .= "<tr><td style='padding: 8px; border: 1px solid #ddd;'><strong>Service Type:</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>" . htmlspecialchars($activity['service_type']) . "</td></tr>";
+                    $message .= "<tr><td style='padding: 8px; border: 1px solid #ddd;'><strong>Date of Service:</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>" . htmlspecialchars($activity['date_of_service']) . "</td></tr>";
+                    $message .= "<tr><td style='padding: 8px; border: 1px solid #ddd;'><strong>Auditor Type:</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>" . htmlspecialchars($activity['auditor_type']) . "</td></tr>";
+                    if (!empty($activity['standards'])) {
+                        $message .= "<tr><td style='padding: 8px; border: 1px solid #ddd;'><strong>Standards:</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>" . htmlspecialchars($activity['standards']) . "</td></tr>";
+                    }
+                    if (!empty($activity['audit_type'])) {
+                        $message .= "<tr><td style='padding: 8px; border: 1px solid #ddd;'><strong>Audit Type:</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>" . htmlspecialchars($activity['audit_type']) . "</td></tr>";
+                    }
+                    if (!empty($activity['audit_category'])) {
+                        $message .= "<tr><td style='padding: 8px; border: 1px solid #ddd;'><strong>Audit Category:</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>" . htmlspecialchars($activity['audit_category']) . "</td></tr>";
+                    }
+                    $message .= "<tr><td style='padding: 8px; border: 1px solid #ddd;'><strong>Auditor:</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>" . htmlspecialchars($activity['auditor_name']) . "</td></tr>";
+                    $message .= "<tr><td style='padding: 8px; border: 1px solid #ddd;'><strong>Requested By:</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>" . htmlspecialchars($myuser->userdata['name']) . "</td></tr>";
+                    $message .= "<tr><td style='padding: 8px; border: 1px solid #ddd;'><strong>Requested At:</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>" . date('d M Y H:i:s') . "</td></tr>";
+                    $message .= "</table>";
+                    $message .= "<p>Please log in to the Halal Digital system to process this invoice request.</p>";
+                    $message .= "<p>Best regards,<br>Halal Digital System</p>";
+                    
+                    $body['message'] = $message;
+                    
+                    // Send the email
+                    sendEmailWithAttach($body);
+                }
+            }
+        } else {
+            $response['status'] = 0;
+            $response['statusDescription'] = 'Failed to update issuing invoice status';
+        }
+    } catch (PDOException $e) {
+        $response['status'] = 0;
+        $response['statusDescription'] = 'Database error: ' . $e->getMessage();
+    }
+    echo json_encode($response);
+    break;
+
+	
+	
 	}
 }
 
@@ -9879,3 +12607,197 @@ function random_string($length) {
 
     return $key;
 }
+function convertToMySQLDate(string $inputDate): ?string {
+    // Replace dots with slashes and trim spaces
+    $inputDate = str_replace('.', '/', trim($inputDate));
+
+    // Split into day, month, year
+    $parts = explode('/', $inputDate);
+    if (count($parts) !== 3) {
+        return null; // Invalid format
+    }
+
+    list($day, $month, $year) = $parts;
+
+    // Handle 2-digit year
+    if (strlen($year) === 2) {
+        $year = intval($year);
+        $year += ($year < 50) ? 2000 : 1900;
+    }
+
+    // Check for valid date
+    if (!checkdate((int)$month, (int)$day, (int)$year)) {
+        return null; // Invalid date
+    }
+
+    // Return in MySQL format
+    return sprintf('%04d-%02d-%02d', $year, $month, $day);
+}
+
+ // Add this to your existing ajaxHandler.php or create a new handler
+
+// Enhanced ingredient loading with additional metadata
+function getIngredientsForProductAssignment($data) {
+    try {
+        $dbo = &$GLOBALS['dbo'];
+        
+        // Get all ingredients with enhanced information
+        $sql = "SELECT 
+                    i.id,
+                    i.rmid,
+                    i.name,
+                    i.rmcode as code,
+                    i.supplier,
+                    i.producer,
+                    i.material,
+                    CASE 
+                        WHEN i.deleted = 1 THEN 'inactive'
+                        ELSE 'active' 
+                    END as status,
+                    i.date as last_updated,
+                    COALESCE(usage.last_used, i.date) as last_used,
+                    COALESCE(usage.usage_count, 0) as usage_count,
+                    CASE 
+                        WHEN i.material IS NOT NULL THEN i.material
+                        ELSE 'general'
+                    END as category
+                FROM tingredients i
+                LEFT JOIN (
+                    SELECT 
+                        idi,
+                        MAX(p.date) as last_used,
+                        COUNT(*) as usage_count
+                    FROM tp2i pi
+                    JOIN tproducts p ON pi.idp = p.id
+                    WHERE p.idclient = :idclient
+                    GROUP BY idi
+                ) usage ON i.id = usage.idi
+                WHERE i.idclient = :idclient
+                ORDER BY 
+                    CASE 
+                        WHEN usage.usage_count > 0 THEN usage.usage_count 
+                        ELSE 0 
+                    END DESC,
+                    i.name ASC";
+        
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':idclient', $data['idclient']);
+        $stmt->execute();
+        
+        $ingredients = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $ingredients[] = [
+                'id' => $row['id'],
+                'rmid' => $row['rmid'],
+                'name' => $row['name'],
+                'code' => $row['code'],
+                'supplier' => $row['supplier'] ?: 'Unknown',
+                'producer' => $row['producer'] ?: '',
+                'material' => $row['material'] ?: 'general',
+                'status' => $row['status'],
+                'last_updated' => $row['last_updated'],
+                'last_used' => $row['last_used'],
+                'usage_count' => (int)$row['usage_count'],
+                'category' => $row['category']
+            ];
+        }
+        
+        // Get currently assigned ingredients for this product (if editing)
+        $currentIngredients = [];
+        if (isset($data['product_id']) && !empty($data['product_id'])) {
+            $sql = "SELECT idi FROM tp2i WHERE idp = :product_id";
+            $stmt = $dbo->prepare($sql);
+            $stmt->bindValue(':product_id', $data['product_id']);
+            $stmt->execute();
+            
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $currentIngredients[] = (int)$row['idi'];
+            }
+        }
+        
+        return [
+            'status' => 1,
+            'data' => [
+                'ingredients' => $ingredients,
+                'current_assignments' => $currentIngredients,
+                'total_count' => count($ingredients)
+            ]
+        ];
+        
+    } catch (PDOException $e) {
+        return [
+            'status' => 0,
+            'statusDescription' => 'Error loading ingredients: ' . $e->getMessage()
+        ];
+    }
+}
+
+// Fast ingredient assignment save
+function saveIngredientAssignment($data) {
+    try {
+        $dbo = &$GLOBALS['dbo'];
+        $dbo->beginTransaction();
+        
+        $product_id = $data['product_id'];
+        $ingredient_ids = $data['ingredient_ids'] ?: [];
+        
+        // Delete all existing assignments for this product
+        $sql = "DELETE FROM tp2i WHERE idp = :product_id";
+        $stmt = $dbo->prepare($sql);
+        $stmt->bindValue(':product_id', $product_id);
+        
+        if (!$stmt->execute()) {
+            $dbo->rollBack();
+            return [
+                'status' => 0,
+                'statusDescription' => 'Failed to clear existing ingredient assignments'
+            ];
+        }
+        
+        // Insert new assignments
+        if (!empty($ingredient_ids)) {
+            $sql = "INSERT INTO tp2i (idp, idi) VALUES (:product_id, :ingredient_id)";
+            $stmt = $dbo->prepare($sql);
+            
+            foreach ($ingredient_ids as $ingredient_id) {
+                $stmt->bindValue(':product_id', $product_id);
+                $stmt->bindValue(':ingredient_id', $ingredient_id);
+                
+                if (!$stmt->execute()) {
+                    $dbo->rollBack();
+                    return [
+                        'status' => 0,
+                        'statusDescription' => 'Failed to assign ingredient ID: ' . $ingredient_id
+                    ];
+                }
+            }
+        }
+        
+        $dbo->commit();
+        
+        // Update product stats if function exists
+        if (function_exists('updateProductStats')) {
+            updateProductStats($data['idclient']);
+        }
+        
+        return [
+            'status' => 1,
+            'statusDescription' => 'Ingredients assigned successfully',
+            'data' => [
+                'assigned_count' => count($ingredient_ids),
+                'product_id' => $product_id
+            ]
+        ];
+        
+    } catch (PDOException $e) {
+        if ($dbo->inTransaction()) {
+            $dbo->rollBack();
+        }
+        return [
+            'status' => 0,
+            'statusDescription' => 'Error saving ingredient assignment: ' . $e->getMessage()
+        ];
+    }
+}
+
+?>

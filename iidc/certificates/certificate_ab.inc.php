@@ -949,6 +949,21 @@ if (isset($act) and $act == "edit") {
 	}
 }
 $certificate_title = array('a' => 'Certificate type A (Raw / Fresh / Frozen Meats (Unprocessed))', 'b' => 'Certificate type B (Non-Fresh Meats / Foods / Beverages / Cosmetics)', 'sa' => 'Certificate type A (Raw / Fresh / Frozen Meats (Unprocessed)) <span style="color:red">for Saudi Arabia only</span>', 'sb' => 'Certificate type B (Non-Fresh Meats / Foods / Beverages / Cosmetics) <span style="color:red">for Saudi Arabia only</span>');
+
+// === DMC Conducted Check (for blocking HC issuance) ===
+$dmcConducted = false;
+$extClid = isset($clid) ? intval($clid) : (isset($_REQUEST['clid']) ? intval($_REQUEST['clid']) : 0);
+if ($extClid > 0) {
+    $dmcCheck = $amdb->get_row(
+        "SELECT decid, status FROM hqc_committee_decision 
+         WHERE clid = '$extClid' AND status = 'approved' 
+         ORDER BY decid DESC LIMIT 1"
+    );
+    if ($dmcCheck) {
+        $dmcConducted = true;
+    }
+}
+
 ?>
 
 <!-- Loading Overlay -->
@@ -1147,6 +1162,14 @@ function preview() {
 }
 
 function save_hc(savePrint) {
+    // === DMC Conducted Check ===
+    <?php if ($extClid > 0 && !$dmcConducted) { ?>
+    if (savePrint == 'print') {
+        alert_message('HC issuing is blocked: A DMC meeting must be conducted and approved before printing this certificate.');
+        return false;
+    }
+    <?php } ?>
+
     if (!validateForm()) {
         return false;
     }
@@ -1750,6 +1773,35 @@ $actionClass = $isEdit ? 'update' : 'issue';
     </div>
 
     <form name="certificateForm" id="certificateForm" method="post" action="" enctype="multipart/form-data">
+
+        <?php if ($extClid > 0 && !$dmcConducted) { ?>
+        <div id="dmcWarningBanner" style="
+            background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+            border: 1px solid #fed7aa;
+            border-radius: 8px;
+            padding: 14px 20px;
+            margin: 0 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        ">
+            <i class="fas fa-exclamation-triangle" style="color: #ea580c; font-size: 22px;"></i>
+            <div style="flex:1; min-width:200px;">
+                <strong style="color: #9a3412;">DMC Meeting Not Yet Conducted</strong><br/>
+                <span style="color: #78350f; font-size: 13px;">
+                    Print action is blocked until a DMC meeting is conducted and approved for this client.
+                </span>
+            </div>
+            <a href="/committee/index.php?inc=schedule_committee&act=add&clid=<?php echo $extClid; ?>&offid=<?php echo isset($_GET['offid']) ? $_GET['offid'] : (isset($offid) ? $offid : 0); ?>" 
+               style="display:inline-flex; align-items:center; gap:6px; padding:8px 16px; 
+                      background:linear-gradient(135deg, #ea580c, #f97316); color:#fff; 
+                      border-radius:6px; text-decoration:none; font-weight:600; font-size:13px; white-space:nowrap;">
+                <i class="fas fa-calendar-plus"></i> Schedule DMC Meeting
+            </a>
+        </div>
+        <?php } ?>
+
         <input type="hidden" name="offid" value="<?php echo $_GET['offid']; ?>">
         <input type="hidden" name="clid" value="<?php echo $clid; ?>">
         <input type="hidden" name="act" id="act" value="">
@@ -2115,7 +2167,10 @@ $actionClass = $isEdit ? 'update' : 'issue';
                                 Request Certificate
                             </button>
                         <?php } else { ?>
-                            <button type="button" class="btn-form-action primary" id="actionPrint" onclick="save_hc('print')">
+                            <button type="button" class="btn-form-action primary" id="actionPrint" onclick="save_hc('print')"
+                                <?php if (!$dmcConducted) { ?>
+                                disabled title="DMC meeting must be conducted before printing" style="opacity:0.5; cursor:not-allowed;"
+                                <?php } ?>>
                                 <i class="fas fa-print"></i>
                                 <span>Print</span>
                             </button>

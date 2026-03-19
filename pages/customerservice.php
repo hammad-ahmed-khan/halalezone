@@ -289,7 +289,7 @@
                             <textarea class="form-control" id="replyMessage" rows="3" placeholder="Enter your reply here"></textarea>
                         </div>
                         <div class="form-group">
-             <label for="attachment">Attachment (Screenshot, Excel, PDF file etc.)</label>
+            <label for="attachment">Attachment (Screenshot, Excel, PDF file etc.)</label>
             <span class="fileinput-button" id="dropzone144">Drop files here or click to upload
                     	<input class="fileupload" id="fileupload144" type="file" foldertype="addoc144" subfolder="Tickets" infotype="tickets" name="files[]" multiple="">
                			 </span><span class="loader"></span>
@@ -603,12 +603,11 @@ $(document).ready(function() {
         client: $('#postReplyModal #clientname').val(),
       };
       var goUpload = true;
-      var uploadFile = data.files[0];
+     var uploadFile = data.files[0];
 if (!/\.(jpg|jpeg|png|gif|xls|xlsx|pdf)$/i.test(uploadFile.name)) {
     alert('You can upload JPG, JPEG, PNG, GIF, Excel, or PDF file(s) only');
     goUpload = false;
 }
-
       if (goUpload == true) {
         data.submit();
       }

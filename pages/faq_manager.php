@@ -49,57 +49,59 @@
         .table-actions {
             white-space: nowrap;
         }
-/* Modern Tabs */
-.management-tabs .nav-tabs {
-    border-bottom: 2px solid #e5e7eb; /* lighter border */
-    display: flex;
-    gap: 1rem;
-}
+        
+        /* Modern Tabs */
+        .management-tabs .nav-tabs {
+            border-bottom: 2px solid #e5e7eb; 
+            display: flex;
+            gap: 1rem;
+        }
 
-.management-tabs .nav-tabs li {
-    margin-bottom: -2px; /* aligns with bottom border */
-}
+        .management-tabs .nav-tabs li {
+            margin-bottom: -2px;
+        }
 
-.management-tabs .nav-tabs a {
-    font-weight: 500;
-    color: #6b7280; /* gray-600 */
-    padding: 10px 18px;
-    border: none;
-    border-bottom: 2px solid transparent;
-    background: transparent;
-    transition: all 0.25s ease;
-    border-radius: 6px 6px 0 0;
-}
+        .management-tabs .nav-tabs a {
+            font-weight: 500;
+            color: #6b7280;
+            padding: 10px 18px;
+            border: none;
+            border-bottom: 2px solid transparent;
+            background: transparent;
+            transition: all 0.25s ease;
+            border-radius: 6px 6px 0 0;
+        }
 
-.management-tabs .nav-tabs a:hover {
-    color: #111827; /* gray-900 */
-    background: #f9fafb; /* light hover */
-}
+        .management-tabs .nav-tabs a:hover {
+            color: #111827;
+            background: #f9fafb;
+        }
 
-.management-tabs .nav-tabs .active a,
-.management-tabs .nav-tabs .active a:focus,
-.management-tabs .nav-tabs .active a:hover {
-    color: #2563eb; /* modern blue */
-    font-weight: 600;
-    border-bottom: 2px solid #2563eb;
-    background: #f9fafb;
-}
+        .management-tabs .nav-tabs .active a,
+        .management-tabs .nav-tabs .active a:focus,
+        .management-tabs .nav-tabs .active a:hover {
+            color: #2563eb;
+            font-weight: 600;
+            border-bottom: 2px solid #2563eb;
+            background: #f9fafb;
+        }
 
-/* Modern Tab Content */
-.tab-content {
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 0 0 8px 8px;
-    padding: 20px;
-    margin-top: -1px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    animation: fadeIn 0.3s ease-in-out;
-}
+        /* Tab Content */
+        .tab-content {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 0 0 8px 8px;
+            padding: 20px;
+            margin-top: -1px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            animation: fadeIn 0.3s ease-in-out;
+        }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(5px); }
-    to { opacity: 1; transform: translateY(0); }
-}
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
         .category-item, .tag-item {
             padding: 10px 15px;
             margin-bottom: 5px;
@@ -122,13 +124,100 @@
         .item-actions .btn {
             margin-left: 5px;
         }
+        
+        /* Pending Questions Styles */
+        .pending-question-card {
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            background: #fff9e6;
+        }
+        
+        .pending-question-header {
+            background: #fff3cd;
+            padding: 15px 20px;
+            border-bottom: 1px solid #ffc107;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .pending-question-content {
+            padding: 20px;
+        }
+        
+        .submitter-info {
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-size: 0.9em;
+        }
+        
+        .answer-form {
+            background: #f0f8ff;
+            border: 1px solid #cce7ff;
+            border-radius: 6px;
+            padding: 20px;
+            margin-top: 15px;
+        }
+        
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        .status-answered {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        .submitter-type {
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        
+        .submitter-admin {
+            background: #e7f3ff;
+            color: #0066cc;
+        }
+        
+        .submitter-auditor {
+            background: #fff2e7;
+            color: #cc6600;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 0.25em 0.4em;
+            font-size: 75%;
+            font-weight: 700;
+            line-height: 1;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: baseline;
+            border-radius: 0.25rem;
+        }
+        
+        .badge-warning {
+            color: #212529;
+            background-color: #ffc107;
+        }
     </style>
 </head>
 <body>
 <?php include_once('pages/navigation.php');
 try {
     $db = acsessDb :: singleton();
-    $dbo =  $db->connect(); // Create database connection object
+    $dbo =  $db->connect();
 }
 catch (PDOException $e) {
     echo 'Database error: '.$e->getMessage();
@@ -167,7 +256,13 @@ $isClient = $myuser->userdata['isclient'] == "1";
                             <ul class="nav nav-tabs" role="tablist">
                                 <li role="presentation" class="active">
                                     <a href="#faqs-tab" aria-controls="faqs-tab" role="tab" data-toggle="tab">
-                                        <i class="fas fa-question-circle"></i> FAQs
+                                        <i class="fas fa-question-circle"></i> All FAQs
+                                    </a>
+                                </li>
+                                <li role="presentation">
+                                    <a href="#pending-tab" aria-controls="pending-tab" role="tab" data-toggle="tab" id="pending-tab-link">
+                                        <i class="fas fa-clock"></i> Pending Questions
+                                        <span class="badge badge-warning" id="pendingCount" style="display: none;">0</span>
                                     </a>
                                 </li>
                                 <li role="presentation">
@@ -189,7 +284,7 @@ $isClient = $myuser->userdata['isclient'] == "1";
                             <div role="tabpanel" class="tab-pane active" id="faqs-tab">
                                 <div class="card">
                                     <div class="card-header">
-                                        <h5 class="card-title mb-0">FAQs List</h5>
+                                        <h5 class="card-title mb-0">All FAQs</h5>
                                     </div>
                                     <div class="card-body">
                                         <table id="faqsTable" class="table table-striped table-hover">
@@ -198,9 +293,11 @@ $isClient = $myuser->userdata['isclient'] == "1";
                                                     <th>ID</th>
                                                     <th>Question</th>
                                                     <th>Category</th>
+                                                    <th>Status</th>
+                                                    <th>Submitted By</th>
                                                     <th>Priority</th>
                                                     <th>Weight</th>
-                                                    <th>Status</th>
+                                                    <th>Active</th>
                                                     <th>Tags</th>
                                                     <th>Created</th>
                                                     <th>Actions</th>
@@ -210,6 +307,23 @@ $isClient = $myuser->userdata['isclient'] == "1";
                                                 <!-- Data will be loaded via AJAX -->
                                             </tbody>
                                         </table>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Pending Questions Tab -->
+                            <div role="tabpanel" class="tab-pane" id="pending-tab">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="card-title mb-0">
+                                            <i class="fas fa-clock text-warning"></i> Questions Awaiting Answers
+                                        </h5>
+                                        <p class="text-muted mb-0">Questions submitted by auditors and admins that need your response</p>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="pendingQuestionsList">
+                                            <!-- Pending questions will be loaded here -->
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -339,6 +453,62 @@ $isClient = $myuser->userdata['isclient'] == "1";
     </div>
 </div>
 
+<!-- Answer Question Modal -->
+<div class="modal fade" id="answerModal" tabindex="-1" role="dialog" aria-labelledby="answerModalLabel">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title" id="answerModalLabel">Answer Question</h4>
+            </div>
+            
+            <form id="answerForm">
+                <div class="modal-body">
+                    <input type="hidden" id="answer_faq_id" name="faq_id">
+                    
+                    <div class="form-group">
+                        <label class="control-label">Question:</label>
+                        <div class="well" id="questionDisplay"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="control-label">Submitted by:</label>
+                        <div id="submitterDisplay" class="submitter-info"></div>
+                    </div>
+                    
+                    <div class="form-group" id="contextDisplay" style="display: none;">
+                        <label class="control-label">Additional Context:</label>
+                        <div class="well" id="contextContent"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="answer_text" class="control-label">Answer *</label>
+                        <textarea class="form-control" id="answer_text" name="answer" rows="6" required 
+                                placeholder="Provide a comprehensive answer to this question"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="control-label">
+                            <input type="checkbox" id="make_public" name="make_public" checked value="1">
+                            Make this FAQ public (visible to all users)
+                        </label>
+                        <p class="help-block">Uncheck if you want to answer privately without adding to public FAQ</p>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-paper-plane"></i> Send Answer & Notify Submitter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Category Modal -->
 <div class="modal fade" id="categoryModal" tabindex="-1" aria-labelledby="categoryModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -438,25 +608,34 @@ $(document).ready(function() {
     loadTags();
     loadCategoriesList();
     loadTagsList();
+    loadPendingCount();
     
     // Form submissions
     $('#faqForm').on('submit', handleFaqSubmit);
+    $('#answerForm').on('submit', handleAnswerSubmit);
     $('#categoryForm').on('submit', handleCategorySubmit);
     $('#tagForm').on('submit', handleTagSubmit);
     
     // Modal events
     $('#faqModal').on('hidden.bs.modal', resetFaqForm);
+    $('#answerModal').on('hidden.bs.modal', resetAnswerForm);
     $('#categoryModal').on('hidden.bs.modal', resetCategoryForm);
     $('#tagModal').on('hidden.bs.modal', resetTagForm);
     
     // Tab change events
     $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
-        if (e.target.getAttribute('href') === '#categories-tab') {
+        const target = e.target.getAttribute('href');
+        if (target === '#pending-tab') {
+            loadPendingQuestions();
+        } else if (target === '#categories-tab') {
             loadCategoriesList();
-        } else if (e.target.getAttribute('href') === '#tags-tab') {
+        } else if (target === '#tags-tab') {
             loadTagsList();
         }
     });
+    
+    // Auto refresh pending count every 30 seconds
+    setInterval(loadPendingCount, 30000);
 });
 
 function initDataTable() {
@@ -486,6 +665,38 @@ function initDataTable() {
                 }
             },
             { 
+                data: 'status',
+                render: function(data, type, row) {
+                    if (data === 'pending') {
+                        return '<span class="status-pending">Pending</span>';
+                    } else if (data === 'answered') {
+                        return '<span class="status-answered">Answered</span>';
+                    } else {
+                        return '<span class="label label-default">Normal</span>';
+                    }
+                }
+            },
+            { 
+                data: 'submitted_by',
+                render: function(data, type, row) {
+                    if (!data) return '<span class="text-muted">Admin Created</span>';
+                    
+                    let typeClass = 'submitter-admin';
+                    let typeText = 'Admin';
+                    if (row.submitter_type === '2') {
+                        typeClass = 'submitter-auditor';
+                        typeText = 'Auditor';
+                    }
+                    
+                    return `
+                        <div>
+                            ${data}
+                            <br><span class="submitter-type ${typeClass}">${typeText}</span>
+                        </div>
+                    `;
+                }
+            },
+            { 
                 data: 'priority',
                 render: function(data, type, row) {
                     const priorities = {1: 'Low', 2: 'Normal', 3: 'High', 4: 'Critical'};
@@ -496,7 +707,7 @@ function initDataTable() {
             { 
                 data: 'training_weight',
                 render: function(data, type, row) {
-                    return `<span class="badge badge-secondary">${parseFloat(data).toFixed(1)}</span>`;
+                    return `<span class="badge badge-secondary">${parseFloat(data || 1).toFixed(1)}</span>`;
                 }
             },
             { 
@@ -525,24 +736,39 @@ function initDataTable() {
                 data: null,
                 orderable: false,
                 render: function(data, type, row) {
-                    return `
-                        <div class="btn-group btn-group-sm table-actions">
-                            <button type="button" class="btn btn-outline-primary" onclick="editFaq(${row.id})" title="Edit">
+                    let actions = '';
+                    
+                    if (row.status === 'pending') {
+                        actions += `
+                            <button type="button" class="btn btn-sm btn-success" 
+                                    onclick="answerQuestion(${row.id}, '${escapeHtml(row.question)}', '${escapeHtml(row.submitted_by || '')}', '${escapeHtml(row.submitter_email || '')}', '${escapeHtml(row.additional_context || '')}')" 
+                                    title="Answer Question">
+                                <i class="fas fa-reply"></i>
+                            </button>
+                        `;
+                    } else {
+                        actions += `
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="editFaq(${row.id})" title="Edit">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button type="button" class="btn btn-outline-${row.is_active == 1 ? 'warning' : 'success'}" 
-                                    onclick="toggleStatus(${row.id})" title="${row.is_active == 1 ? 'Deactivate' : 'Activate'}">
-                                <i class="fas fa-${row.is_active == 1 ? 'eye-slash' : 'eye'}"></i>
-                            </button>
-                            <button type="button" class="btn btn-outline-danger" onclick="deleteFaq(${row.id})" title="Delete">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
+                        `;
+                    }
+                    
+                    actions += `
+                        <button type="button" class="btn btn-sm btn-outline-${row.is_active == 1 ? 'warning' : 'success'}" 
+                                onclick="toggleStatus(${row.id})" title="${row.is_active == 1 ? 'Deactivate' : 'Activate'}">
+                            <i class="fas fa-${row.is_active == 1 ? 'eye-slash' : 'eye'}"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteFaq(${row.id})" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     `;
+                    
+                    return `<div class="btn-group btn-group-sm table-actions">${actions}</div>`;
                 }
             }
         ],
-        order: [[0, 'desc']],
+        order: [[3, 'asc'], [0, 'desc']], // Sort by status first (pending first), then by ID
         pageLength: 25,
         responsive: true,
         language: {
@@ -551,6 +777,156 @@ function initDataTable() {
     });
 }
 
+function loadPendingCount() {
+    $.get('ajax/faqManager.php?action=get_faqs')
+        .done(function(response) {
+            if (response.success && response.data) {
+                const pendingCount = response.data.filter(faq => faq.status === 'pending').length;
+                if (pendingCount > 0) {
+                    $('#pendingCount').text(pendingCount).show();
+                } else {
+                    $('#pendingCount').hide();
+                }
+            }
+        });
+}
+
+function loadPendingQuestions() {
+    $.get('ajax/faqManager.php?action=get_faqs')
+        .done(function(response) {
+            if (response.success && response.data) {
+                const pendingQuestions = response.data.filter(faq => faq.status === 'pending');
+                renderPendingQuestions(pendingQuestions);
+            }
+        })
+        .fail(function() {
+            $('#pendingQuestionsList').html('<div class="alert alert-danger">Error loading pending questions.</div>');
+        });
+}
+
+function renderPendingQuestions(questions) {
+    const container = $('#pendingQuestionsList');
+    
+    if (questions.length === 0) {
+        container.html(`
+            <div class="text-center" style="padding: 40px;">
+                <i class="fas fa-check-circle text-success" style="font-size: 48px; margin-bottom: 20px;"></i>
+                <h4>All Caught Up!</h4>
+                <p class="text-muted">No pending questions at the moment. All questions have been answered.</p>
+            </div>
+        `);
+        return;
+    }
+    
+    let html = '';
+    questions.forEach(question => {
+        const submitterType = question.submitter_type === '2' ? 'Auditor' : 'Admin User';
+        const submitterTypeClass = question.submitter_type === '2' ? 'submitter-auditor' : 'submitter-admin';
+        
+        html += `
+            <div class="pending-question-card" data-question-id="${question.id}">
+                <div class="pending-question-header">
+                    <h4>${escapeHtml(question.question)}</h4>
+                    <div class="submitter-info">
+                        <strong>Submitted by:</strong> ${escapeHtml(question.submitted_by || 'Unknown')}
+                        ${question.submitter_email ? `(${escapeHtml(question.submitter_email)})` : ''}
+                        <span class="submitter-type ${submitterTypeClass}">${submitterType}</span>
+                        <br>
+                        <strong>Date:</strong> ${new Date(question.created_at).toLocaleDateString()}
+                        ${question.category_name ? `| <strong>Category:</strong> ${escapeHtml(question.category_name)}` : ''}
+                    </div>
+                    
+                    ${question.additional_context ? `
+                        <div style="margin-top: 10px;">
+                            <strong>Additional Context:</strong>
+                            <p>${escapeHtml(question.additional_context).replace(/\n/g, '<br>')}</p>
+                        </div>
+                    ` : ''}
+                </div>
+                
+                <div class="pending-question-content">
+                    <button type="button" class="btn btn-success" 
+                            onclick="answerQuestion(${question.id}, '${escapeHtml(question.question)}', '${escapeHtml(question.submitted_by || '')}', '${escapeHtml(question.submitter_email || '')}', '${escapeHtml(question.additional_context || '')}')">
+                        <i class="fas fa-reply"></i> Answer This Question
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.html(html);
+}
+
+function answerQuestion(id, question, submitter, email, context) {
+    $('#answer_faq_id').val(id);
+    $('#questionDisplay').text(question);
+    $('#submitterDisplay').html(`
+        ${submitter || 'Unknown'} ${email ? `(${email})` : ''}
+    `);
+    
+    if (context && context.trim()) {
+        $('#contextContent').text(context);
+        $('#contextDisplay').show();
+    } else {
+        $('#contextDisplay').hide();
+    }
+    
+    $('#answer_text').val('');
+    $('#make_public').prop('checked', true);
+    $('#answerModal').modal('show');
+}
+
+function handleAnswerSubmit(e) {
+    e.preventDefault();
+    
+    const formData = $('#answerForm').serialize() + '&action=answer_question';
+    const questionId = $('#answer_faq_id').val();
+    
+    $.post('ajax/faqManager.php', formData)
+        .done(function(response) {
+            if (response.success) {
+                $('#answerModal').modal('hide');
+                showAlert('✅ ' + response.message, 'success');
+                
+                // Remove from pending list
+                $(`.pending-question-card[data-question-id="${questionId}"]`).fadeOut();
+                
+                // Refresh tables and counters
+                faqsTable.ajax.reload();
+                loadPendingCount();
+                
+                // If we're viewing pending tab, reload it
+                if ($('#pending-tab').hasClass('active')) {
+                    setTimeout(() => loadPendingQuestions(), 500);
+                }
+            } else {
+                showAlert('❌ Error: ' + (response.message || 'Failed to save answer'), 'danger');
+            }
+        })
+        .fail(function() {
+            showAlert('❌ Network error. Please try again.', 'danger');
+        });
+}
+
+function resetAnswerForm() {
+    $('#answerForm')[0].reset();
+    $('#answer_faq_id').val('');
+    $('#contextDisplay').hide();
+}
+
+// Helper function to escape HTML
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text ? text.replace(/[&<>"']/g, function(m) { return map[m]; }) : '';
+}
+
+// Keep all your existing functions with same names and functionality
 function loadCategories() {
     $.get('ajax/faqManager.php?action=get_categories')
         .done(function(response) {
@@ -719,6 +1095,7 @@ function deleteFaq(id) {
             if (response.success) {
                 showAlert(response.message, 'success');
                 faqsTable.ajax.reload();
+                loadPendingCount();
             } else {
                 showAlert(response.message, 'danger');
             }

@@ -1,0 +1,253 @@
+body {
+  font-family: "times new roman", times, serif;
+  font-size: 13pt;
+}
+
+.ui-sortable-handle {
+  cursor: move;
+  border: 1px solid #eee;
+  margin: 5px 0px;
+  position: relative;
+}
+.selectedBlock {
+  border-bottom: 2px solid green !important;
+  margin-bottom: 20px;
+  position: relative;
+}
+.selectedBlock:after {
+  content: url(/js-css/css/fonts/fontawesome/svgs/solid/caret-down-green.svg);
+  display: inline-block;
+  position: absolute;
+  left: 50%;
+  bottom: -10px;
+  width: 24px;
+  height: 24px;
+  stroke: green;
+  z-index: 100000;
+}
+body,
+table,
+th {
+  text-align: left;
+}
+td,
+th {
+  padding: 5px 10px;
+  vertical-align: top;
+}
+tr,
+th,
+td {
+  height: auto !important;
+}
+td,
+th,
+.page_title,
+.sub_title,
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+input,
+select,
+textarea {
+  width: auto;
+  box-sizing: border-box;
+  font-family: "times new roman", times, serif;
+  font-size: 13pt;
+}
+h2 {
+  font-size: 24pt;
+  line-height: 24pt;
+}
+h3 {
+  font-size: 18pt;
+  line-height: 18pt;
+}
+h1 {
+  font-size: 30pt;
+  line-height: 30pt;
+}
+h4 {
+  font-size: 16pt;
+}
+ul,
+ol,
+li {
+  display: default !important;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.mce-window {
+  z-index: 1000000 !important;
+}
+input[type="hidden-input"] {
+  background: orange;
+  min-height: auto !important;
+  padding: 0px 5px !important;
+  border: 0px;
+  width: 60px;
+}
+input[type="button"],
+input[type="reset"],
+input[type="submit"],
+.button,
+button,
+a.button,
+.inline-button,
+.inlineButton,
+label.file-button {
+  background-color: darkred;
+  padding: 6px 20px !important;
+  margin: 5px;
+  border: 1px solid darkred;
+  text-decoration: none;
+  display: inline-block;
+  height: 30px !important;
+  color: white;
+  cursor: pointer;
+  text-transform: uppercase;
+  box-shadow: none;
+  font-weight: normal;
+}
+
+input[type="button"]:hover,
+input[type="reset"]:hover,
+input[type="submit"]:hover,
+.button:hover,
+button:hover,
+.ui-dialog .ui-dialog-buttonpane button:hover,
+.inline-button:hover,
+.inlineButton:hover,
+label.file-button:hover,
+label.file-button:hover > * {
+  background: white !important;
+  color: darkred !important;
+}
+
+input[type="file"]::file-selector-button {
+  border: 2px solid darkred;
+  padding: 0.2em 0.4em;
+  border-radius: 0.2em;
+  background-color: darkred;
+  color: white;
+  transition: 1s;
+}
+input[type="file-input"] {
+  background: gold;
+  border: 0px;
+  width: 60px;
+}
+input[type="form-start"],
+input[type="form-end"] {
+  background: #ffeb3b;
+  min-height: auto !important;
+  padding: 0px 5px !important;
+  border: 0px;
+  width: 50px;
+}
+input,
+select,
+textarea {
+  background: aliceblue;
+  border: 1px solid #abb;
+  font-size: 13pt;
+  padding: 5px 10px;
+  min-height: 30px;
+  margin-right: 5px;
+}
+textarea {
+  width: 100%;
+}
+input[type="checkbox"],
+input[type="radio"] {
+  min-height: auto;
+}
+p input,
+p select,
+p textarea {
+  margin-bottom: 5px;
+}
+p:last-child {
+  margin-bottom: 0px;
+}
+span.phpcode {
+  color: firebrick;
+  font-size: 12px !important;
+}
+info,
+.info {
+  color: darkcyan;
+  font-style: italic;
+}
+.selectedInputForEdit {
+  position: relative;
+  border-left: 10px solid green;
+}
+.selectedRadioCheckboxForEdit {
+  position: relative;
+}
+.selectedRadioCheckboxForEdit:before {
+  content: "";
+  border: 2px solid green;
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  width: 10px;
+  height: 10px;
+  border-radius: 4px;
+  background: green;
+}
+.selectedElEdited {
+  border-color: orange;
+}
+
+.selectedElEdited:before {
+  background: orange;
+  border-color: orange;
+}
+
+.editBlockTools {
+  position: absolute;
+  right: 10px;
+  bottom: 0px;
+  font-weight: normal;
+  font-size: 14px;
+}
+
+.editBlockTools i.far.fa-trash-alt {
+  color: red;
+  cursor: pointer;
+  font-size: 16px !important;
+}
+fieldset {
+  border: 1px solid darkcyan;
+  margin: 10px 0;
+  padding: 10px;
+  width: 98% !important;
+}
+
+legend {
+  font-weight: bold;
+}
+
+fieldset[data-type="inline-explanation"] {
+  color: dimgray;
+  border-color: dimgray;
+  width: auto;
+  display: inline-block;
+}
+
+fieldset[data-type="instructions"] {
+  color: brown;
+  border-color: brown;
+  background: beige;
+  display: inline-block;
+}
+
+.selectedEl{color:green}

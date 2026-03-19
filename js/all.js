@@ -22,14 +22,14 @@ function removeFileFromHostAndGdrive(hostpath, gdrivepath) {
     data: {
       deleteId: gdrivepath.substring(
         gdrivepath.indexOf("file/d/") + 7,
-        gdrivepath.indexOf("/view")
+        gdrivepath.indexOf("/view"),
       ),
       deleteName: hostpath,
     },
     success: function (result) {},
     error: function (jqXHR, status, message) {
       alert(
-        "Error deleting the file (" + message + ").\nIt probably doesn't exist"
+        "Error deleting the file (" + message + ").\nIt probably doesn't exist",
       );
     },
   });
@@ -148,7 +148,6 @@ function unformatInglist(cellValue, options, cellObject) {
 }
 
 // formatter for cv link
-
 function formatDoclink(cellValue, options, rowObject) {
   var linkHtml = "";
   try {
@@ -238,6 +237,26 @@ function formatDoclink(cellValue, options, rowObject) {
       attendance_certificates: "attendance_certificates",
       invoice_inbound: "invoice_inbound",
       travel_invoices: "travel_invoices",
+      commercial_registration_certificate:
+        "commercial_registration_certificate",
+      upload_product_information: "upload_product_information",
+      invoice: "invoice",
+      proof_of_payment: "proof_of_payment",
+      additional_documents: "additional_documents",
+      sfda_shipment_certificate: "sfda_shipment_certificate",
+      sfda_facility_certificate: "sfda_facility_certificate",
+      // Halal Slaughtering fields
+      halal_slaughtering_documents: "halal_slaughtering_documents",
+      halal_slaughtering_data: "halal_slaughtering_data",
+      upload_live_animals_documents: "upload_live_animals_documents",
+      upload_pictures_after_cleaning: "upload_pictures_after_cleaning",
+      upload_halal_slaughtering_video: "upload_halal_slaughtering_video",
+      upload_additional_pictures: "upload_additional_pictures",
+      upload_halal_stock: "upload_halal_stock",
+      invoice_travel_expenses: "invoice_travel_expenses",
+      // Halal Batch Certificate fields
+      upload_consignment_details: "upload_consignment_details",
+      halal_batch_certificate: "halal_batch_certificate",
     }[options.colModel.index];
 
     if (folderType == "cert") {
@@ -292,7 +311,7 @@ function unformatDoclink(cellValue, options, cellObject) {
 
 // formtter for assigned tasks flag column
 function formatTasksFlag(cellValue, options, rowObject) {
-  var idi = rowObject[1].replace("RMC_", "");
+  var idi = rowObject[2].replace("RMC_", "");
   if (cellValue == 1) {
     return (
       '<div class="action-buttons center"><i class="fa fa-flag red bigger-130 ingred-tooltip" data-idi="' +
@@ -482,7 +501,7 @@ function delDocClick(e) {
         year +
         " by " +
         $("#navUserName").html() +
-        ")</strong> "
+        ")</strong> ",
     );
     el.hide();
   } else {
@@ -693,7 +712,7 @@ function formatTaskStatus(cellValue, options, cellObject) {
 // formattor for tasks list
 // formattor for shared status
 function formatTaskDelete(cellValue, options, cellObject) {
-  return '<button type="button" class="btn btn-xs btn-success edit-task" aria-pressed="true" style="width:49%;float:left;padding:10px 10px;" title="Press to edit the task">Edit</button> <button style="width:49%;float:right;padding:10px 10px;" type="button" class="btn btn-xs btn-danger delete-task" aria-pressed="true" title="Press to delete the task">Delete</button>';
+  return '<button type="button" class="btn btn-xs btn-success edit-task" aria-pressed="true" style="width:49%;float:left;padding:10px;" title="Press to edit the task"><i class="fas fa-edit"></i></button> <button type="button" class="btn btn-xs btn-danger delete-task" aria-pressed="true" style="width:49%;float:right;padding:10px;" title="Press to delete the task"><i class="fas fa-trash-alt"></i></button>';
 }
 
 // formattor for done/undone button for active tasks grid
@@ -756,9 +775,9 @@ function formatAuditReportStatus(cellValue, options, cellObject) {
 function formatProcessStatus(cellValue, options, cellObject) {
   if (cellValue == 0) {
     return (
-      '<button type="button" class="btn btn-xs btn-danger confirm-action" data-data="' +
+      '<button type="button" class="confirm-button confirm-action" data-data="' +
       cellValue +
-      '" title="Press to confirm the task"><i class="ace-icon fa fa-exclamation-triangle"></i>Confirm</button>'
+      '" title="Press to confirm the task">Confirm</button>'
     );
   } else
     return '<span class="label label-warning label-white"><i class="ace-icon fa fa-check bigger-120"></i>Confirmed</span>';
@@ -812,7 +831,7 @@ const DefaultFileUploadSuccessHandler = function (
   e,
   data,
   progressSelector,
-  afterSuccess
+  afterSuccess,
 ) {
   // hide loader and add new li with new file info
   $(e.target).parent().siblings(progressSelector).hide();
@@ -834,7 +853,7 @@ const DefaultFileUploadSuccessHandler = function (
     var filename = $(
       '<li class="uploaded-file-name" originalname="' +
         encodeURI(jsonstring) +
-        '"></li>'
+        '"></li>',
     );
     filename.append($("<span>", { text: ell }));
     filename.append(
@@ -844,10 +863,10 @@ const DefaultFileUploadSuccessHandler = function (
           file.googleDriveId +
           " hostpath=" +
           encodeURI(file.url) +
-          ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+          ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
       ).bind("click", function (e) {
         delDocClick(e);
-      })
+      }),
     );
     // add li to the list of the appropriate ul - class from folderType
     $("#ul" + file.folderType).append(filename);
@@ -859,7 +878,7 @@ const DefaultFileUploadSuccessHandler = function (
 };
 const DefaultFileUploadStartHandler = function (
   e,
-  progressSelector = ".progress"
+  progressSelector = ".progress",
 ) {
   $(e.target)
     .parent()
@@ -872,7 +891,7 @@ const DefaultFileUploadStartHandler = function (
 const DefaultFileUploadFailHandler = function (
   e,
   data,
-  progressSelector = ".progress"
+  progressSelector = ".progress",
 ) {
   // kill all progress bars awaiting for showing
   $(e.target).parent().siblings(progressSelector).hide();
@@ -882,7 +901,7 @@ const DefaultFileUploadFailHandler = function (
 const DefaultFileUploadProgressHandler = function (
   e,
   data,
-  progressSelector = ".progress"
+  progressSelector = ".progress",
 ) {
   $(e.target)
     .parent()
@@ -894,7 +913,7 @@ const DefaultFileUploadAddHandler = function (
   e,
   data,
   dataValidator,
-  dataModifier
+  dataModifier,
 ) {
   const validationResult = dataValidator(e, data);
 
@@ -1003,7 +1022,7 @@ function initFileUploader(options) {
         e,
         data,
         options.fileValidator,
-        options.dataModifier
+        options.dataModifier,
       );
     };
   }
@@ -1014,7 +1033,7 @@ function initFileUploader(options) {
         e,
         data,
         options.progressSelector,
-        options.afterSuccess
+        options.afterSuccess,
       );
     };
   }
@@ -1096,7 +1115,7 @@ var Utils = {
     var value = jQuery("#" + gridName).jqGrid(
       "getCell",
       jQuery("#" + gridName).jqGrid("getGridParam", "selrow"),
-      columnName
+      columnName,
     );
     if (value.length > 0) {
       var arr = JSON.parse(value);
@@ -1114,7 +1133,7 @@ var Utils = {
             cl +
             '" originalname="' +
             encodeURI(JSON.stringify(a)) +
-            '"></li>'
+            '"></li>',
         );
         filename.append($("<span>", { text: ell }));
 
@@ -1124,7 +1143,7 @@ var Utils = {
               a.deleted_at +
               " by " +
               a.deleted_by +
-              ")</strong> "
+              ")</strong> ",
           );
         } else {
           //if (a.glink) {
@@ -1138,10 +1157,10 @@ var Utils = {
                   (a.glink ? a.glink.substring(start, end) : "") +
                   " hostpath=" +
                   encodeURI(a.hostpath) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
           }
         }
@@ -1159,18 +1178,18 @@ var Utils = {
     stateColName,
     dropzone,
     isClientField,
-    isClient
+    isClient,
   ) {
     $("#" + elementName).empty();
     var value = grid.jqGrid(
       "getCell",
       grid.jqGrid("getGridParam", "selrow"),
-      columnName
+      columnName,
     );
     var state = grid.jqGrid(
       "getCell",
       grid.jqGrid("getGridParam", "selrow"),
-      stateColName
+      stateColName,
     );
     if (state === "0") {
       $("#" + dropzone).hide();
@@ -1191,7 +1210,7 @@ var Utils = {
             cl +
             '" originalname="' +
             encodeURI(JSON.stringify(a)) +
-            '"></li>'
+            '"></li>',
         );
         filename.append($("<span>", { text: ell, title: a.name }));
         if (state === "1" && ((isClient && isClientField) || !isClient)) {
@@ -1205,10 +1224,10 @@ var Utils = {
                 a.glink.substring(start, end) +
                 " hostpath=" +
                 encodeURI(a.hostpath) +
-                ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
             ).bind("click", function (e) {
               delDocClick(e);
-            })
+            }),
           );
         }
         $("#" + elementName).append(filename);
@@ -1246,7 +1265,7 @@ var Common = {
       "ui-icon-seek-end": "ace-icon fa fa-angle-double-right bigger-140",
     };
     $(
-      ".ui-pg-table:not(.navtable) > tbody > tr > .ui-pg-button > .ui-icon"
+      ".ui-pg-table:not(.navtable) > tbody > tr > .ui-pg-button > .ui-icon",
     ).each(function () {
       var icon = $(this);
       var $class = $.trim(icon.attr("class").replace("ui-icon", ""));
@@ -1264,7 +1283,7 @@ var Common = {
     var response = JSON.parse(data);
     $(".clientslist").empty();
     $(".clientslist").append(
-      $("<option>", { text: "Select client", value: "-1", selected: true })
+      $("<option>", { text: "Select client", value: "-1", selected: true }),
     );
     response.data.clients.forEach(function (cl) {
       $(".clientslist").append(
@@ -1272,7 +1291,7 @@ var Common = {
           value: cl.id,
           "data-clientname": cl.name + " (" + cl.prefix + cl.id + ")",
           text: cl.name + " - " + cl.prefix + cl.id,
-        })
+        }),
       );
     });
     if ($("#filter-idclient").length && $("#filter-idclient").val().length)
@@ -1318,16 +1337,16 @@ var DP = {
     $(window).on("resize.jqGrid", function () {
       $("#certificatesGrid").jqGrid(
         "setGridWidth",
-        $("#certificates-container").width()
+        $("#certificates-container").width(),
       );
       $("#filesGrid").jqGrid("setGridWidth", $("#files-container").width());
       $("#clientActionsGrid").jqGrid(
         "setGridWidth",
-        $("#clientactions-container").width()
+        $("#clientactions-container").width(),
       );
       $("#activeTasksGrid").jqGrid(
         "setGridWidth",
-        $("#activetasks-container").width()
+        $("#activetasks-container").width(),
       );
     });
 
@@ -1337,7 +1356,7 @@ var DP = {
         DP.loadData(DP.populateData);
         $("#prod-clientid").data(
           "clientname",
-          $("#prod-clientid option:selected").data("clientname")
+          $("#prod-clientid option:selected").data("clientname"),
         );
         // refresh certificates grid
         $("#certificatesGrid").jqGrid("setGridParam", {
@@ -1504,7 +1523,7 @@ var DP = {
       if ($(document.activeElement).is("[data-dismiss]"));
       removeFileFromHostAndGdrive(
         $("#certificateModal .hostpath").val(),
-        $("#certificateModal .gdrivepath").val()
+        $("#certificateModal .gdrivepath").val(),
       );
     });
   },
@@ -1687,7 +1706,7 @@ var DP = {
           label: "Status",
           name: "status",
           index: "status",
-          width: 55,
+          width: 70,
           align: "center",
           search: false,
           formatter: DP.isAdminSession()
@@ -1716,7 +1735,7 @@ var DP = {
       gridComplete: function () {
         $("#activeTasksGrid").jqGrid(
           "setGridWidth",
-          $("#activetasks-container").width()
+          $("#activetasks-container").width(),
         );
       },
       beforeSelectRow: function (rowid, e) {
@@ -1805,7 +1824,7 @@ var DP = {
           label: "Status",
           name: "status",
           index: "status",
-          width: 30,
+          width: 70,
           align: "center",
           search: false,
           formatter: formatClientActionStatus,
@@ -1821,7 +1840,7 @@ var DP = {
       gridComplete: function () {
         $("#clientActionsGrid").jqGrid(
           "setGridWidth",
-          $("#clientactions-container").width()
+          $("#clientactions-container").width(),
         );
       },
       beforeSelectRow: function (rowid, e) {
@@ -1885,6 +1904,7 @@ var DP = {
           width: 50,
           search: false,
         },
+        /*
         {
           label: "Status",
           name: "status",
@@ -1894,6 +1914,7 @@ var DP = {
           search: false,
           formatter: formatProcessStatus,
         },
+        */
       ],
       rowNum: 20,
       rowList: [20, 60, 100, 500],
@@ -1905,7 +1926,7 @@ var DP = {
       gridComplete: function () {
         $("#processStatusGrid").jqGrid(
           "setGridWidth",
-          $("#clientactions-container").width()
+          $("#clientactions-container").width(),
         );
       },
       beforeSelectRow: function (rowid, e) {
@@ -2008,7 +2029,7 @@ var DP = {
           label: "Status",
           name: "Status",
           index: "Status",
-          width: 50,
+          width: 70,
           align: "center",
           search: false,
           formatter: formatAuditReportStatus,
@@ -2024,7 +2045,7 @@ var DP = {
       gridComplete: function () {
         $("#auditReportGrid").jqGrid(
           "setGridWidth",
-          $("#auditreport-container").width()
+          $("#auditreport-container").width(),
         );
       },
       beforeSelectRow: function (rowid, e) {
@@ -2085,7 +2106,7 @@ var DP = {
           name: "status",
           index: "status",
           align: "center",
-          width: 100,
+          width: 70,
           sortable: false,
           formatter: formatStatusFromExpDate,
         },
@@ -2109,7 +2130,7 @@ var DP = {
         Common.updatePagerIcons(this);
         $("#certificatesGrid").jqGrid(
           "setGridWidth",
-          $("#certificates-container").width()
+          $("#certificates-container").width(),
         );
       },
       beforeSelectRow: function (rowid, e) {
@@ -2190,7 +2211,7 @@ var DP = {
     if ($("#certificateModal .expdate").val().trim() == "") {
       Utils.notifyInput(
         $("#certificateModal .expdate"),
-        "No Expiry Date specified"
+        "No Expiry Date specified",
       );
       return false;
     }
@@ -2437,8 +2458,8 @@ var DP = {
       data.ingredConfirmed,
       Math.floor(
         (100 * data.ingredConfirmed) /
-          (data.ingredPublished == 0 ? 1 : data.ingredPublished)
-      )
+          (data.ingredPublished == 0 ? 1 : data.ingredPublished),
+      ),
     );
     if (data.ingredPublished > data.ingredNumber) {
       DP.setIngredPublished(data.ingredPublished, 100);
@@ -2447,23 +2468,23 @@ var DP = {
         data.ingredPublished - data.ingredNumber,
         Math.floor(
           (100 * (data.ingredPublished - data.ingredNumber)) /
-            (data.ingredNumber == 0 ? 1 : data.ingredNumber)
-        )
+            (data.ingredNumber == 0 ? 1 : data.ingredNumber),
+        ),
       );
     } else {
       DP.setIngredPublished(
         data.ingredPublished,
         Math.floor(
           (100 * data.ingredPublished) /
-            (data.ingredNumber == 0 ? 1 : data.ingredNumber)
-        )
+            (data.ingredNumber == 0 ? 1 : data.ingredNumber),
+        ),
       );
       DP.setIngredRemained(
         data.ingredNumber - data.ingredPublished,
         Math.floor(
           (100 * (data.ingredNumber - data.ingredPublished)) /
-            (data.ingredNumber == 0 ? 1 : data.ingredNumber)
-        )
+            (data.ingredNumber == 0 ? 1 : data.ingredNumber),
+        ),
       );
       DP.setIngredExceeded(0, 0);
     }
@@ -2472,8 +2493,8 @@ var DP = {
       data.prodConfirmed,
       Math.floor(
         (100 * data.prodConfirmed) /
-          (data.prodPublished == 0 ? 1 : data.prodPublished)
-      )
+          (data.prodPublished == 0 ? 1 : data.prodPublished),
+      ),
     );
     if (data.prodPublished > data.prodNumber) {
       DP.setProdPublished(data.prodPublished, 100);
@@ -2482,23 +2503,23 @@ var DP = {
         data.prodPublished - data.prodNumber,
         Math.floor(
           (100 * (data.prodPublished - data.prodNumber)) /
-            (data.prodNumber == 0 ? 1 : data.prodNumber)
-        )
+            (data.prodNumber == 0 ? 1 : data.prodNumber),
+        ),
       );
     } else {
       DP.setProdPublished(
         data.prodPublished,
         Math.floor(
           (100 * data.prodPublished) /
-            (data.prodNumber == 0 ? 1 : data.prodNumber)
-        )
+            (data.prodNumber == 0 ? 1 : data.prodNumber),
+        ),
       );
       DP.setProdRemained(
         data.prodNumber - data.prodPublished,
         Math.floor(
           (100 * (data.prodNumber - data.prodPublished)) /
-            (data.prodNumber == 0 ? 1 : data.prodNumber)
-        )
+            (data.prodNumber == 0 ? 1 : data.prodNumber),
+        ),
       );
       DP.setProdExceeded(0, 0);
     }
@@ -2532,11 +2553,11 @@ var DP = {
   onEditCertificateExpDate: function (rowid) {
     DP.clearCertificateModalForm();
     DP.setFileNameToModal(
-      $("#certificatesGrid").jqGrid("getCell", rowid, "filename")
+      $("#certificatesGrid").jqGrid("getCell", rowid, "filename"),
     );
     DP.setIdToModal($("#certificatesGrid").jqGrid("getCell", rowid, "id"));
     DP.setExpdateToModal(
-      new Date($("#certificatesGrid").jqGrid("getCell", rowid, "expdate"))
+      new Date($("#certificatesGrid").jqGrid("getCell", rowid, "expdate")),
     );
     $("#certificateModal").modal("show");
   },
@@ -2546,10 +2567,10 @@ var DP = {
     DP.hideEmailLoader();
     DP.setEmailEmailModal($("#prod-clientid").data("email"));
     DP.setEmailAttachModal(
-      $("#certificatesGrid").jqGrid("getCell", rowid, "filename")
+      $("#certificatesGrid").jqGrid("getCell", rowid, "filename"),
     );
     DP.setEmailAttachHostPathModal(
-      $("#certificatesGrid").jqGrid("getCell", rowid, "hostpath")
+      $("#certificatesGrid").jqGrid("getCell", rowid, "hostpath"),
     );
     $("#emailModal").modal("show");
   },
@@ -2561,7 +2582,7 @@ var DP = {
     // remove from the file GDrive and host
     removeFileFromHostAndGdrive(
       $("#certificatesGrid").jqGrid("getCell", rowid, "hostpath"),
-      $("#certificatesGrid").jqGrid("getCell", rowid, "gdrivepath")
+      $("#certificatesGrid").jqGrid("getCell", rowid, "gdrivepath"),
     );
 
     $.post("ajax/ajaxHandler.php", {
@@ -2634,7 +2655,7 @@ var DP = {
     $("#file-name").val("");
     $("#file-link").val("");
     $("#files-container .success-string").text(
-      "The file info successfully added"
+      "The file info successfully added",
     );
     setTimeout(function () {
       $("#files-container .success-string").text("");
@@ -2666,7 +2687,7 @@ var DP = {
         }
         DP.showLoaderById("#file-add");
         DP.hideLoaderById("#file-loader");
-      }
+      },
     );
   },
 
@@ -2732,12 +2753,12 @@ var PP = {
     Common.setMainMenuItem("prodItem");
 
     PP.multiselect = true;
-    (PP.enableMultiselect = function (isEnable) {
+    ((PP.enableMultiselect = function (isEnable) {
       jQuery("#prodGrid").jqGrid("setGridParam", {
         multiselect: isEnable ? true : false,
       });
     }),
-      (PP.events = null);
+      (PP.events = null));
     PP.originalReloadGrid = null;
 
     $("input").focus(function () {
@@ -2782,7 +2803,7 @@ var PP = {
         },
         error: function () {
           $("#additionalItemsCycleId").html(
-            '<option value="">Error loading data</option>'
+            '<option value="">Error loading data</option>',
           );
         },
       });
@@ -2807,7 +2828,7 @@ var PP = {
       PP.loadIngredientsForProductData(PP.populateIngredientsForProduct);
       $("#prod-clientid").data(
         "clientname",
-        $("#prod-clientid option:selected").data("clientname")
+        $("#prod-clientid option:selected").data("clientname"),
       );
       $("#filter-conformed").trigger("change");
     });
@@ -2824,15 +2845,17 @@ var PP = {
 
     PP.gridMode = 0; // removed records mode. if 1 - show removed records only;
 
+    /*
     $("#prod-form #ingredients").select2({
       closeOnSelect: false,
     });
+    */
 
     // initialize file uploaders in product modal
     initFileUploader({
       fileUploadSelector: "#prodModal .fileupload",
       dropzoneSelector: "#prodModal .dropzone",
-      progressSelector: "#prodModal .progress",
+      //progressSelector: "#prodModal .progress",
 
       dataModifier: function (e, data) {
         data.formData = {
@@ -2849,7 +2872,7 @@ var PP = {
         PP.filesUploaded.push({ file: file.name });
       },
     });
-
+    /*
     $(document).on("keyup", "#prod-form #item", function (e) {
       if (PP.checkBannedWords()) {
         Utils.notifyInput(
@@ -2861,16 +2884,16 @@ var PP = {
         Utils.notifyInput($("#prod-form #item"), "");
       }
     });
+    */
 
     PP.loadIngredientsForProductData(PP.populateIngredientsForProduct);
   },
 
   loadClientsList: function () {
-    $.get("ajax/ajaxHandler.php", { uid: 0, rtype: "clients" }).done(function (
-      data
-    ) {
-      new Promise(function (resolve) {
-        /*
+    $.get("ajax/ajaxHandler.php", { uid: 0, rtype: "clients" }).done(
+      function (data) {
+        new Promise(function (resolve) {
+          /*
         var response = JSON.parse(data);        
         $(".clientslist").empty();
         $(".clientslist").append(
@@ -2888,11 +2911,12 @@ var PP = {
         if ($("#filter-idclient").length && $("#filter-idclient").val().length)
           $(".clientslist").val($("#filter-idclient").val());
         */
-        resolve("resolve loaded");
-      }).then(function (res) {
-        PP.initGrid();
-      });
-    });
+          resolve("resolve loaded");
+        }).then(function (res) {
+          PP.initGrid();
+        });
+      },
+    );
   },
 
   isAdminSession: function () {
@@ -2986,7 +3010,7 @@ var PP = {
             name: "Label",
             index: "label",
             align: "left",
-            width: 120,
+            width: 100,
             formatter: formatDoclink,
             unformat: unformatDoclink,
             cellattr: function (rowId, val, rawObject, cm, rdata) {
@@ -3012,6 +3036,12 @@ var PP = {
             index: "deleted_at",
             editable: false,
             hidden: !PP.isAdminSession(),
+          },
+          {
+            index: "group_ids",
+            name: "group_ids",
+            align: "left",
+            hidden: true,
           },
         ],
         rowNum: -1,
@@ -3099,7 +3129,7 @@ var PP = {
         subGridRowExpanded: function (subgrid_id, row_id) {
           var subgridTableId = subgrid_id + "_t";
           $("#" + subgrid_id).html(
-            "<table id='" + subgridTableId + "' class='scroll'></table>"
+            "<table id='" + subgridTableId + "' class='scroll'></table>",
           );
           $("#" + subgridTableId).jqGrid({
             datatype: "json",
@@ -3163,7 +3193,7 @@ var PP = {
                 name: "Supplier",
                 index: "supplier",
                 align: "left",
-                width: 220,
+                width: 200,
               },
               {
                 label: "Source of raw material",
@@ -3187,7 +3217,7 @@ var PP = {
                 name: "Certificate",
                 index: "cert",
                 align: "left",
-                width: 220,
+                width: 200,
                 formatter: formatDoclink,
               },
               {
@@ -3248,7 +3278,7 @@ var PP = {
                 name: "Specification",
                 index: "spec",
                 align: "left",
-                width: 220,
+                width: 200,
                 formatter: formatDoclink,
               },
               {
@@ -3256,7 +3286,7 @@ var PP = {
                 name: "Questionnaire",
                 index: "quest",
                 align: "left",
-                width: 220,
+                width: 200,
                 formatter: formatDoclink,
               },
               {
@@ -3264,7 +3294,7 @@ var PP = {
                 name: "Statement",
                 index: "statement",
                 align: "left",
-                width: 220,
+                width: 200,
                 formatter: formatDoclink,
               },
               {
@@ -3272,7 +3302,7 @@ var PP = {
                 name: "Addocs",
                 index: "addoc",
                 align: "left",
-                width: 220,
+                width: 200,
                 formatter: formatDoclink,
               },
               {
@@ -3280,7 +3310,7 @@ var PP = {
                 name: "Label",
                 index: "label",
                 align: "left",
-                width: 220,
+                width: 200,
                 formatter: formatDoclink,
               },
               { name: "Note", index: "note", align: "left", width: 300 },
@@ -3327,7 +3357,7 @@ var PP = {
           document
             .querySelectorAll(".upload-area")
             .forEach((area) =>
-              area.addEventListener("dragover", handleDragOver)
+              area.addEventListener("dragover", handleDragOver),
             );
           document
             .querySelectorAll(".upload-area")
@@ -3335,7 +3365,7 @@ var PP = {
           document
             .querySelectorAll(".upload-area")
             .forEach((area) =>
-              area.addEventListener("dragleave", handleDragLeave)
+              area.addEventListener("dragleave", handleDragLeave),
             );
           document
             .querySelectorAll(".upload-area")
@@ -3455,24 +3485,42 @@ var PP = {
           PP.onExportGridToAdditionalItems("pdf");
         },
       });
-      /*
-      $('#prodGrid').navButtonAdd('#prodPager', {
-        caption: '',
-        title: 'Add to Additional Items Application Excel',
-        buttonicon: 'ace-icon fa fa-file',
+
+      $("#prodGrid").navButtonAdd("#prodPager", {
+        caption: "",
+        title: "Manage Groups",
+        buttonicon: "ace-icon fa fa-tags",
         onClickButton: function () {
-          PP.onExportGridToAdditionalItems('xls');
+          openGroupsModal();
         },
       });
-      $('#prodGrid').navButtonAdd('#prodGrid_toppager', {
-        caption: '',
-        title: 'Add to Additional Items Application Excel',
-        buttonicon: 'ace-icon fa fa-file',
+
+      $("#prodGrid").navButtonAdd("#prodGrid_toppager", {
+        caption: "",
+        title: "Manage Groups",
+        buttonicon: "ace-icon fa fa-tags",
         onClickButton: function () {
-          PP.onExportGridToAdditionalItems('xls');
+          openGroupsModal();
         },
       });
-      */
+
+      $("#prodGrid").navButtonAdd("#prodPager", {
+        caption: "",
+        title: "Bulk Assign Groups",
+        buttonicon: "ace-icon fa fa-exchange",
+        onClickButton: function () {
+          openBulkAssignModal();
+        },
+      });
+
+      $("#prodGrid").navButtonAdd("#prodGrid_toppager", {
+        caption: "",
+        title: "Bulk Assign Groups",
+        buttonicon: "ace-icon fa fa-exchange",
+        onClickButton: function () {
+          openBulkAssignModal();
+        },
+      });
 
       resolve("grid inited");
     }).then(function (res) {
@@ -3570,9 +3618,62 @@ var PP = {
       return item.text.trim() !== "";
     });
 
+    var $select = $("#prod-form #ingredients");
+
+    // Store current selections before rebuilding
+    var currentSelections = $select.val() || [];
+
+    // Clear and rebuild options
+    $select.empty();
+
+    filteredIngredients.forEach(function (item) {
+      $select.append(
+        $("<option>", {
+          value: item.id,
+          text: item.text,
+        }),
+      );
+    });
+
+    // Restore selections
+    if (currentSelections.length > 0) {
+      $select.val(currentSelections);
+    }
+
+    // Initialize or refresh
+    if ($select.data("bootstrap-duallistbox")) {
+      $select.bootstrapDualListbox("refresh");
+    } else {
+      $select.bootstrapDualListbox({
+        nonSelectedListLabel: "Available Ingredients",
+        selectedListLabel: "Selected Ingredients",
+        preserveSelectionOnMove: "moved",
+        moveOnSelect: false,
+        filterPlaceHolder: "Search ingredients...",
+        filterTextClear: "Show all",
+        selectorMinimalHeight: 250,
+        showFilterInputs: true,
+        infoText: "Showing all {0}",
+        infoTextFiltered:
+          '<span class="label label-warning">Filtered</span> {0} from {1}',
+        infoTextEmpty: "Empty list",
+      });
+    }
+  },
+  populateIngredientsForProductOLD: function (data) {
+    var response = JSON.parse(data);
+    if (response.status == 0) {
+      alert(response.statusDescription);
+      return;
+    }
+
+    var filteredIngredients = response.data.ingredients.filter(function (item) {
+      return item.text.trim() !== "";
+    });
+
     // $("#prod-form #ingredients").select2().empty();
     // $("#prod-form #ingredients").select2("open");
-    $("#prod-form #ingredients")
+    $("#prod-form #ingredients-")
       .select2({
         dropdownParent: $("#prodModal .modal-content"),
         scrollAfterSelect: false,
@@ -3717,12 +3818,12 @@ var PP = {
     $("#ullabel").empty();
     $("#prod-form input").val("");
     $("#prod-form select").val(null).trigger("change");
+    $("#productGroups").val([]);
   },
 
   clearAlerts: function () {
     $(".alert-string").text("");
   },
-
   fillForm: function (data) {
     var response = JSON.parse(data);
     if (response.status == 0) {
@@ -3733,6 +3834,7 @@ var PP = {
       $("#prod-form #hcpid").val("HCP_" + response.data.id);
       $("#prod-form #hcpid").attr("data-id", response.data.id);
       $("#prod-form #hcpid").attr("data-new", 1);
+      populateProductGroupDropdown([]);
     } else {
       var prod = response.data.product;
       $("#prod-form #hcpid").val("HCP_" + prod.id);
@@ -3740,13 +3842,71 @@ var PP = {
       $("#prod-form #hcpid").attr("data-new", 0);
       $("#prod-form #item").val(prod.item);
       $("#prod-form #ean").val(prod.ean);
+
+      // Set selected ingredients and refresh the dual listbox
       $("#prod-form #ingredients").val(prod.ingredients);
+      $("#prod-form #ingredients").bootstrapDualListbox("refresh");
+
+      PP.loadProductGroups(prod.id);
     }
     $("#prodModal").prop("submit", 0);
     PP.filesUploaded = [];
     $("#prodModal").modal("show");
   },
+  bulkMoveToGroups: function (groupIds) {
+    var selectedRows = jQuery("#prodGrid").jqGrid("getGridParam", "selarrrow");
+    if (selectedRows.length === 0) {
+      alert("Please select products to move");
+      return;
+    }
 
+    if (
+      confirm(
+        "Update group assignments for " + selectedRows.length + " products?",
+      )
+    ) {
+      var requests = selectedRows.map(function (rowId) {
+        return $.post("ajax/ajax_groups.php", {
+          action: "saveProductGroups",
+          product_id: rowId,
+          group_ids: groupIds,
+          idclient: $("#prod-clientid").val(),
+        });
+      });
+
+      Promise.all(requests)
+        .then(function () {
+          Utils.notify("success", "Product groups updated successfully");
+          jQuery("#prodGrid").jqGrid().trigger("reloadGrid");
+        })
+        .catch(function () {
+          Utils.notify("error", "Error updating product groups");
+        });
+    }
+  },
+  // NEW: Function to load product's groups
+  loadProductGroups: function (productId) {
+    // First populate the dropdown with all available groups
+    populateProductGroupDropdown([]);
+
+    // Then get the product's current group assignments
+    $.post(
+      "ajax/ajax_groups.php",
+      {
+        action: "getProductGroups",
+        product_id: productId,
+      },
+      function (response) {
+        if (response.success) {
+          // Set the selected groups after dropdown is populated
+          setTimeout(function () {
+            $("#productGroups").val(response.data);
+          }, 100);
+        }
+      },
+      "json",
+    );
+  },
   getNextProdId: function (callback) {
     var prod = {};
     prod.idclient = $("#prod-clientid").val();
@@ -3764,6 +3924,8 @@ var PP = {
     }
     PP.clearForm();
 
+    $("#prod-form #ingredients").bootstrapDualListbox("refresh");
+
     $("#prodModal-label").text("New product");
     PP.getNextProdId(PP.fillForm);
   },
@@ -3773,7 +3935,7 @@ var PP = {
       jQuery("#prodGrid").jqGrid(
         "getCell",
         jQuery("#prodGrid").jqGrid("getGridParam", "selrow"),
-        "id"
+        "id",
       ) == null
     ) {
       alert("Please select product");
@@ -3782,47 +3944,46 @@ var PP = {
     PP.clearForm();
 
     $("#prodModal-label").text("Edit Product");
+    var selectedRow = jQuery("#prodGrid").jqGrid("getGridParam", "selrow");
+
     $("#prod-form #hcpid").val(
-      jQuery("#prodGrid").jqGrid(
-        "getCell",
-        jQuery("#prodGrid").jqGrid("getGridParam", "selrow"),
-        "hcpid"
-      )
+      jQuery("#prodGrid").jqGrid("getCell", selectedRow, "hcpid"),
     );
     $("#prod-form #hcpid").attr(
       "data-id",
-      jQuery("#prodGrid").jqGrid(
-        "getCell",
-        jQuery("#prodGrid").jqGrid("getGridParam", "selrow"),
-        "id"
-      )
+      jQuery("#prodGrid").jqGrid("getCell", selectedRow, "id"),
     );
     $("#prod-form #hcpid").attr("data-new", 0);
     $("#prod-form #item").val(
-      jQuery("#prodGrid").jqGrid(
-        "getCell",
-        jQuery("#prodGrid").jqGrid("getGridParam", "selrow"),
-        "Item"
-      )
+      jQuery("#prodGrid").jqGrid("getCell", selectedRow, "Item"),
     );
     $("#prod-form #ean").val(
-      jQuery("#prodGrid").jqGrid(
-        "getCell",
-        jQuery("#prodGrid").jqGrid("getGridParam", "selrow"),
-        "EAN"
-      )
+      jQuery("#prodGrid").jqGrid("getCell", selectedRow, "EAN"),
     );
-    $("#prod-form #ingredients").val(
-      jQuery("#prodGrid")
-        .jqGrid(
-          "getCell",
-          jQuery("#prodGrid").jqGrid("getGridParam", "selrow"),
-          "ingred"
-        )
-        .replace(", ", ",")
-        .split(",")
+
+    // Set selected ingredients and refresh the dual listbox
+    var ingredientIds = jQuery("#prodGrid")
+      .jqGrid("getCell", selectedRow, "ingred")
+      .replace(", ", ",")
+      .split(",");
+
+    $("#prod-form #ingredients").val(ingredientIds);
+    $("#prod-form #ingredients").bootstrapDualListbox("refresh");
+
+    // NEW: Get group IDs and populate multi-select
+    var groupIdsStr = jQuery("#prodGrid").jqGrid(
+      "getCell",
+      selectedRow,
+      "group_ids",
     );
-    $("#prod-form #ingredients").trigger("change");
+    var groupIds = groupIdsStr
+      ? groupIdsStr.split(",").map(function (id) {
+          return id.trim();
+        })
+      : [];
+
+    populateProductGroupDropdown(groupIds);
+
     Utils.filesToList("ulspec", "prodGrid", "Specification");
     Utils.filesToList("uladd", "prodGrid", "Addocs");
     Utils.filesToList("ullabel", "prodGrid", "Label");
@@ -3836,7 +3997,7 @@ var PP = {
       jQuery("#prodGrid").jqGrid(
         "getCell",
         jQuery("#prodGrid").jqGrid("getGridParam", "selrow"),
-        "id"
+        "id",
       ) == null
     ) {
       alert("Please select product");
@@ -3857,6 +4018,10 @@ var PP = {
     doc.spec = Utils.filesToJSON("ulspec");
     doc.addoc = Utils.filesToJSON("uladd");
     doc.label = Utils.filesToJSON("ullabel");
+
+    // NEW: Get array of selected group IDs
+    doc.group_ids = $("#productGroups").val() || [];
+
     return doc;
   },
 
@@ -3868,7 +4033,7 @@ var PP = {
     if (PP.checkBannedWords()) {
       Utils.notifyInput(
         $("#prod-form #item"),
-        "Item contains forbidden words. Please review and correct."
+        "Item contains forbidden words. Please review and correct.",
       );
       return;
     }
@@ -3883,7 +4048,7 @@ var PP = {
     if ($("#prod-form #fileupload1").get(0).files.length === 0) {
       // Check if there are elements marked as selected but not deleted
       var selectedNotDeleted = $("#prod-form .uploaded-file-name").not(
-        ".deleted"
+        ".deleted",
       );
       if (selectedNotDeleted.length === 0) {
         $("#prod-form #dropzone1")
@@ -3948,6 +4113,8 @@ var PP = {
       }
       $("#prodModal").prop("submit", 1);
       $("#prodModal").modal("hide");
+      // NEW: Reload grid to reflect group changes
+      jQuery("#prodGrid").jqGrid().trigger("reloadGrid");
     });
   },
 
@@ -3980,6 +4147,8 @@ var PP = {
 
       $("#prodModal").prop("submit", 1);
       $("#prodModal").modal("hide");
+      // NEW: Reload grid to reflect new product with group
+      jQuery("#prodGrid").jqGrid().trigger("reloadGrid");
     });
   },
 
@@ -4005,7 +4174,7 @@ var PP = {
       id: jQuery("#prodGrid").jqGrid(
         "getCell",
         jQuery("#prodGrid").jqGrid("getGridParam", "selrow"),
-        "id"
+        "id",
       ),
     };
     $.post("ajax/ajaxHandler.php", {
@@ -4074,8 +4243,32 @@ function userDetails() {
   });
   return tooltiptext;
 }
+
+function userDetailsSync(idingredient) {
+  return;
+  var tooltiptext = "";
+
+  $.ajax({
+    type: "POST",
+    url: "ajax/ajaxHandler.php",
+    data: {
+      rtype: "sendAllTasksToolTipRequest",
+      uid: 0,
+      data: { idingredient: idingredient },
+    },
+    async: false,
+    success: function (data) {
+      var response = JSON.parse(data);
+      tooltiptext = response.data ? response.data.trim() : "";
+    },
+  });
+
+  return tooltiptext;
+}
+
 var dynamic = false;
 let jqGridRequest;
+var ingredientTasksData = {};
 
 var IP = {
   onDocumentReady: function () {
@@ -4107,11 +4300,11 @@ var IP = {
     $('[data-toggle="tooltip"]').tooltip();
 
     $("input").focus(function () {
-      IP.clearAlerts();
+      //IP.clearAlerts();
     });
 
     $("select").change(function () {
-      IP.clearAlerts();
+      //IP.clearAlerts();
     });
 
     $(".datepicker").datepicker({
@@ -4124,13 +4317,17 @@ var IP = {
     $(".datepicker")
       .datepicker()
       .on("changeDate", function (e) {
-        IP.clearAlerts();
+        //IP.clearAlerts();
       });
 
     $("#ingred-clientid").on("change", function () {
       if (jqGridRequest) {
         jqGridRequest.abort();
       }
+
+      var postData = jQuery("#ingredGrid").jqGrid("getGridParam", "postData");
+      postData.facilityId = ""; // or delete postData.rmid;
+
       const gridParams = {
         url:
           "ajax/getIngred.php?displaymode=" +
@@ -4139,6 +4336,7 @@ var IP = {
           this.value,
         // If we are viewing single client's records - disable pagination
         rowNum: isNaN(parseInt(this.value)) ? 20 : 1000000,
+        postData: postData,
       };
 
       $(".ui-paging-pager").toggle(isNaN(parseInt(this.value)));
@@ -4147,7 +4345,7 @@ var IP = {
 
       $("#ingred-clientid").data(
         "clientname",
-        $("#ingred-clientid option:selected").data("clientname")
+        $("#ingred-clientid option:selected").data("clientname"),
       );
 
       jQuery("#ingredGrid").jqGrid("setGridParam", gridParams);
@@ -4160,7 +4358,6 @@ var IP = {
     initFileUploader({
       fileUploadSelector: "#ingred-form .fileupload",
       dropzoneSelector: "#ingred-form .dropzone",
-      progressSelector: "#ingred-form .progress",
 
       dataModifier: function (e, data) {
         data.formData = {
@@ -4215,6 +4412,7 @@ var IP = {
     });
 
     $(document).on("keyup", "#ingred-form #name", function (e) {
+      /*
       if (IP.checkBannedWords()) {
         Utils.notifyInput(
           $("#ingred-form #name"),
@@ -4224,6 +4422,7 @@ var IP = {
       } else {
         Utils.notifyInput($("#ingred-form #name"), "");
       }
+        */
     });
 
     $("#ingredModal").on("hide.bs.modal", function (e) {
@@ -4244,14 +4443,14 @@ var IP = {
       $(window).on("resize.jqGrid", function () {
         $("#tasksGrid").jqGrid(
           "setGridWidth",
-          $("#tasksModal .tasks-container").width()
+          $("#tasksModal .tasks-container").width(),
         );
       });
 
       $("#tasksModal").on("shown.bs.modal", function (e) {
         $("#tasksGrid").jqGrid(
           "setGridWidth",
-          $("#tasksModal .tasks-container").width()
+          $("#tasksModal .tasks-container").width(),
         );
       });
     } else {
@@ -4260,35 +4459,64 @@ var IP = {
       $("#ingredModal").on("shown.bs.modal", function (e) {
         $("#activeTasksGrid").jqGrid(
           "setGridWidth",
-          $("#activetasks-container").width()
+          $("#activetasks-container").width(),
         );
       });
     }
 
     $("#ingred-form #conformed").prop(
       "disabled",
-      $("select#ingred-clientid").length == 0
+      $("select#ingred-clientid").length == 0,
     );
 
     $("#ingred-form #certified").on("change", function (e) {
-      $("#ingred-form #cert-filegroup input").prop(
-        "disabled",
-        !$(e.target).prop("checked")
-      );
-      $("#ingred-form #cert-filegroup").attr(
-        "disabled",
-        !$(e.target).prop("checked")
-      );
-      $("#ingred-form #cert-filegroup *").attr(
-        "disabled",
-        !$(e.target).prop("checked")
-      );
-      $("#ingred-form #cb").prop("disabled", !$(e.target).prop("checked"));
-      $("#ingred-form #date").prop("disabled", !$(e.target).prop("checked"));
-      $("#ingred-form #rmposition").prop(
-        "disabled",
-        !$(e.target).prop("checked")
-      );
+      const isChecked = $(e.target).prop("checked");
+
+      // Function to toggle label styling
+      function toggleLabelStyle(fieldSelector, enabled) {
+        const field = $(fieldSelector);
+
+        // Find associated label(s) - handle different hierarchies
+        let labels = $();
+
+        // Method 1: Label with 'for' attribute pointing to field ID
+        if (field.attr("id")) {
+          labels = labels.add($('label[for="' + field.attr("id") + '"]'));
+        }
+
+        // Method 2: Label as previous sibling in same row/form-group
+        labels = labels.add(field.closest(".form-group, .row").find("label"));
+
+        // Method 3: Label as parent or ancestor
+        labels = labels.add(field.closest("label"));
+        labels = labels.add(field.parents().find("label").first());
+
+        // Apply styling
+        if (enabled) {
+          labels.css("font-weight", "bold");
+          labels.addClass("field-enabled");
+        } else {
+          labels.css("font-weight", "normal");
+          labels.removeClass("field-enabled");
+        }
+      }
+
+      // Toggle disabled state and label styling for each field
+      $("#ingred-form .cert-fileupload").prop("disabled", !isChecked);
+      toggleLabelStyle(".cert-fileupload", isChecked);
+
+      $("#ingred-form #cert-filegroup").attr("disabled", !isChecked);
+      $("#ingred-form #cert-filegroup *").attr("disabled", !isChecked);
+      toggleLabelStyle("#cert-filegroup", isChecked);
+
+      $("#ingred-form #cb").prop("disabled", !isChecked);
+      toggleLabelStyle("#cb", isChecked);
+
+      $("#ingred-form #date").prop("disabled", !isChecked);
+      toggleLabelStyle("#date", isChecked);
+
+      $("#ingred-form #rmposition").prop("disabled", !isChecked);
+      toggleLabelStyle("#rmposition", isChecked);
     });
 
     // subingredient switch
@@ -4300,6 +4528,7 @@ var IP = {
     });
 
     $("#ingred-form #ingredients").select2({
+      closeOnSelect: false,
       dropdownParent: $("#ingredModal .modal-content"),
       scrollAfterSelect: false,
       closeOnSelect: false,
@@ -4311,11 +4540,10 @@ var IP = {
   },
 
   loadClientsList: function () {
-    $.get("ajax/ajaxHandler.php", { uid: 0, rtype: "clients" }).done(function (
-      data
-    ) {
-      new Promise(function (resolve) {
-        /*
+    $.get("ajax/ajaxHandler.php", { uid: 0, rtype: "clients" }).done(
+      function (data) {
+        new Promise(function (resolve) {
+          /*
         var response = JSON.parse(data);
         $(".clientslist").empty();
 
@@ -4341,11 +4569,12 @@ var IP = {
         if ($("#filter-idclient").length && $("#filter-idclient").val().length)
           $(".clientslist").val($("#filter-idclient").val());
         */
-        resolve("resolve loaded");
-      }).then(function (res) {
-        IP.initGrid();
-      });
-    });
+          resolve("resolve loaded");
+        }).then(function (res) {
+          IP.initGrid();
+        });
+      },
+    );
   },
 
   initGrid: function () {
@@ -4379,6 +4608,15 @@ var IP = {
             frozen: true,
           },
           {
+            label: "Facilities",
+            index: "user_name",
+            name: "user_name",
+            align: "left",
+            frozen: true,
+            width: 150,
+            hidden: false,
+          },
+          {
             label: "RMC_ID",
             name: "rmid",
             index: "rmid",
@@ -4394,6 +4632,7 @@ var IP = {
             search: true,
             align: "left",
             frozen: true,
+            editable: true,
           },
           {
             name: "Name",
@@ -4585,6 +4824,26 @@ var IP = {
             },
           },
           {
+            label: "Stmt. Exp. Date",
+            name: "stmt_exp_date",
+            index: "stmt_exp_date",
+            align: "center",
+            width: 120,
+            sorttype: "date",
+            formatter: "date",
+            formatoptions: { srcformat: "ISO8601Long", newformat: "j M Y" },
+            searchoptions: {
+              dataInit: function (element) {
+                $(element).datepicker({
+                  autoUpdateInput: false,
+                  autoclose: true,
+                  format: "dd M yyyy",
+                  orientation: "bottom",
+                });
+              },
+            },
+          },
+          {
             label: "Additional Documents",
             name: "Addocs",
             index: "addoc",
@@ -4617,6 +4876,16 @@ var IP = {
           {
             index: "id_paingred",
             name: "id_paingred",
+            hidden: true,
+          },
+          {
+            index: "facility_ids",
+            name: "facility_ids",
+            hidden: true,
+          },
+          {
+            index: "task_html",
+            name: "task_html",
             hidden: true,
           },
         ],
@@ -4699,16 +4968,16 @@ var IP = {
                 .on("click", function (e) {
                   var isCbValid = validateField(
                     "#ingred-forms #cb",
-                    "Please enter HC Body Name"
+                    "Please enter HC Body Name",
                   );
                   var isDateValid = validateField(
                     "#ingred-forms #date",
                     "Please enter HC Expiry Date",
-                    true
+                    true,
                   ); // true to activate date check
                   var isRmPositionValid = validateField(
                     "#ingred-forms #rmposition",
-                    "Please enter RM Position"
+                    "Please enter RM Position",
                   );
                   if (!isCbValid || !isDateValid || !isRmPositionValid) {
                     // Do not close the modal window if there are errors
@@ -4782,6 +5051,7 @@ var IP = {
               IP.filesUploaded?.push({ file: data.result.files[0].name });
             },
           });
+          checkFacilities();
         },
 
         beforeSelectRow: function (rowid, e) {
@@ -4799,6 +5069,7 @@ var IP = {
             if (!dynamic && $("input#gs_rmid").val() != "") {
               IP.filterGrid();
             }
+            /*
             $(".ingred-tooltip").tooltip({
               container: ".page-content",
               placement: "left",
@@ -4806,18 +5077,35 @@ var IP = {
               offset: { top: 50 },
               html: true,
             });
+            */
+            console.log("Tasks Data: ", ingredientTasksData);
+
+            $(".ingred-tooltip").each(function () {
+              var tooltiptext = ingredientTasksData[$(this).data("idi")];
+              if (tooltiptext === "") {
+                $(this).hide();
+              } else {
+                $(this).tooltip({
+                  container: ".page-content",
+                  placement: "left",
+                  title: tooltiptext,
+                  offset: { top: 50 },
+                  html: true,
+                });
+              }
+            });
           }, 500);
 
           // add event listeners to upload areas to change their appearance when a file is dragged
           document
             .querySelectorAll(".upload-area")
             .forEach((area) =>
-              area.addEventListener("dragover", handleDragOver)
+              area.addEventListener("dragover", handleDragOver),
             );
           document
             .querySelectorAll(".upload-area")
             .forEach((area) =>
-              area.addEventListener("dragleave", handleDragLeave)
+              area.addEventListener("dragleave", handleDragLeave),
             );
           document
             .querySelectorAll(".upload-area")
@@ -4835,6 +5123,8 @@ var IP = {
         // Ingredient row color
         rowattr: function (rd) {
           //console.log(rd.name+"="+rd.Conformed+"\n");
+          var idi = rd.rmid.replace("RMC_", "");
+          ingredientTasksData[idi] = rd.task_html;
           var rowclass = "";
           if (rd.deleted === "1") rowclass += "deleted ";
           else {
@@ -5103,6 +5393,24 @@ var IP = {
         },
       });
 
+      $("#ingredGrid").navButtonAdd("#ingredPager", {
+        caption: "",
+        title: "Bulk assign ingredients to multiple facilities",
+        buttonicon: "ace-icon fa fa-exchange",
+        onClickButton: function () {
+          IP.onBulkAssignToFacilities();
+        },
+      });
+
+      $("#ingredGrid").navButtonAdd("#ingredGrid_toppager", {
+        caption: "",
+        title: "Bulk assign ingredients to multiple facilities",
+        buttonicon: "ace-icon fa fa-exchange",
+        onClickButton: function () {
+          IP.onBulkAssignToFacilities();
+        },
+      });
+
       resolve("grid inited");
     }).then(function () {
       document
@@ -5123,7 +5431,7 @@ var IP = {
 
     if (!selectedRows || selectedRows.length === 0) {
       alert(
-        "Please select one or more ingredients using the checkboxes to update their halal certificates."
+        "Please select one or more ingredients using the checkboxes to update their halal certificates.",
       );
       return;
     }
@@ -5200,7 +5508,7 @@ var IP = {
         $("#bulk-halal-cert-upload-box .progress").show();
         $("#bulk-halal-cert-upload-box .progress-bar").css(
           "width",
-          progress + "%"
+          progress + "%",
         );
       },
       fail: function (e, data) {
@@ -5293,7 +5601,7 @@ var IP = {
       $("#error-list").empty();
       response.data.failed_rows.forEach(function (row) {
         $("#error-list").append(
-          "<tr><td>" + row.name + "</td><td>" + row.error + "</td></tr>"
+          "<tr><td>" + row.name + "</td><td>" + row.error + "</td></tr>",
         );
       });
       $("#error-details").show();
@@ -5309,7 +5617,209 @@ var IP = {
     if (response.data.success > 0) {
       Utils.notify(
         "success",
-        response.data.success + " ingredients updated successfully!"
+        response.data.success + " ingredients updated successfully!",
+      );
+    }
+  },
+
+  onBulkAssignToFacilities: function () {
+    // Check if any ingredients are selected
+    var selectedRows = $("#ingredGrid").jqGrid("getGridParam", "selarrrow");
+
+    if (!selectedRows || selectedRows.length === 0) {
+      alert("Please select at least one ingredient to assign to facilities.");
+      return;
+    }
+
+    // Check if current client has facilities
+    var currentClientId = $("#ingred-clientid").val();
+    if (!currentClientId || currentClientId === "-1") {
+      alert("Please select a client first.");
+      return;
+    }
+
+    // Check if the current client has facilities (child users)
+    var hasFacilities = false;
+    $("#ingred-facilityid option").each(function () {
+      var parentId = $(this).data("idparent");
+      if (parentId == currentClientId && $(this).val() !== "") {
+        hasFacilities = true;
+        return false; // break the loop
+      }
+    });
+
+    if (!hasFacilities) {
+      alert(
+        "The selected client does not have any facilities to assign ingredients to.",
+      );
+      return;
+    }
+
+    // Update selected ingredients count
+    $("#selected-ingredients-count").text(selectedRows.length);
+
+    // Populate facilities dropdown
+    IP.populateFacilitiesForBulkAssign(currentClientId);
+
+    // Reset form
+    $("#bulkAssignFacilities").val([]);
+    $("#replaceExistingAssignments").prop("checked", false);
+    $("#bulk-assign-progress").hide();
+    $("#bulk-assign-results").hide();
+
+    // Show modal
+    $("#bulkAssignModal").modal("show");
+  },
+
+  populateFacilitiesForBulkAssign: function (clientId) {
+    var facilitiesSelect = $("#bulkAssignFacilities");
+    facilitiesSelect.empty();
+
+    // Get facilities from the existing facility dropdown
+    $("#ingred-facilityid option").each(function () {
+      var parentId = $(this).data("idparent");
+      var facilityId = $(this).val();
+      var facilityName = $(this).text();
+
+      if (parentId == clientId && facilityId !== "") {
+        facilitiesSelect.append(new Option(facilityName, facilityId));
+      }
+    });
+  },
+
+  processBulkAssign: function () {
+    var selectedIngredients = $("#ingredGrid").jqGrid(
+      "getGridParam",
+      "selarrrow",
+    );
+    var selectedFacilities = $("#bulkAssignFacilities").val();
+    var replaceExisting = $("#replaceExistingAssignments").prop("checked");
+
+    // Validation
+    if (!selectedIngredients || selectedIngredients.length === 0) {
+      alert("No ingredients selected.");
+      return;
+    }
+
+    if (!selectedFacilities || selectedFacilities.length === 0) {
+      alert("Please select at least one facility.");
+      return;
+    }
+
+    // Disable button and show progress
+    $("#processBulkAssignBtn").prop("disabled", true);
+    $("#bulk-assign-progress").show();
+    $("#bulk-assign-results").hide();
+
+    var totalOperations = selectedIngredients.length;
+    var completedOperations = 0;
+    var successCount = 0;
+    var failedCount = 0;
+    var errors = [];
+
+    // Process each ingredient
+    selectedIngredients.forEach(function (ingredientId, index) {
+      var ingredientName =
+        $("#ingredGrid").jqGrid("getCell", ingredientId, "Name") || "Unknown";
+
+      $.ajax({
+        url: "ajax/ajaxHandler.php",
+        type: "POST",
+        dataType: "json",
+        data: {
+          rtype: "bulkAssignIngredientToFacilities",
+          uid: 0,
+          data: {
+            ingredient_id: ingredientId,
+            facility_ids: selectedFacilities,
+            replace_existing: replaceExisting ? 1 : 0,
+            assigned_by: userId, // Global variable from the page
+          },
+        },
+        success: function (response) {
+          if (response.status === 1) {
+            successCount++;
+          } else {
+            failedCount++;
+            errors.push({
+              ingredient: ingredientName,
+              error: response.statusDescription || "Unknown error",
+            });
+          }
+        },
+        error: function (xhr, status, error) {
+          failedCount++;
+          errors.push({
+            ingredient: ingredientName,
+            error: "Ajax error: " + error,
+          });
+        },
+        complete: function () {
+          completedOperations++;
+
+          // Update progress
+          var progressPercent = Math.round(
+            (completedOperations / totalOperations) * 100,
+          );
+          $("#bulk-assign-progress .progress-bar").css(
+            "width",
+            progressPercent + "%",
+          );
+          $("#bulk-assign-progress .progress-text").text(progressPercent + "%");
+          $("#assign-progress-details").text(
+            `Processing: ${completedOperations}/${totalOperations}`,
+          );
+
+          // Check if all operations completed
+          if (completedOperations === totalOperations) {
+            IP.completeBulkAssign(successCount, failedCount, errors);
+          }
+        },
+      });
+    });
+  },
+
+  completeBulkAssign: function (successCount, failedCount, errors) {
+    // Hide progress and show results
+    $("#bulk-assign-progress").hide();
+    $("#bulk-assign-results").show();
+
+    // Update result summary
+    $("#assign-result-total").text(successCount + failedCount);
+    $("#assign-result-success").text(successCount);
+    $("#assign-result-failed").text(failedCount);
+
+    // Show error details if there are failures
+    if (failedCount > 0) {
+      $("#assign-error-details").show();
+      var errorList = $("#assign-error-list");
+      errorList.empty();
+
+      errors.forEach(function (error) {
+        errorList.append(
+          `<tr><td>${error.ingredient}</td><td>${error.error}</td></tr>`,
+        );
+      });
+    } else {
+      $("#assign-error-details").hide();
+    }
+
+    // Re-enable button
+    $("#processBulkAssignBtn").prop("disabled", false);
+
+    // Reload grid if any assignments were successful
+    if (successCount > 0) {
+      $("#ingredGrid").jqGrid().trigger("reloadGrid");
+      Utils.notify(
+        "success",
+        `Successfully assigned ${successCount} ingredients to facilities.`,
+      );
+    }
+
+    if (failedCount > 0) {
+      Utils.notify(
+        "warning",
+        `${failedCount} assignments failed. Check the details below.`,
       );
     }
   },
@@ -5393,7 +5903,7 @@ var IP = {
         {
           label: "Status",
           name: "flag",
-          width: 40,
+          width: 70,
           align: "center",
           formatter: formatTaskStatus,
         },
@@ -5489,7 +5999,7 @@ var IP = {
         {
           label: "Status",
           name: "status",
-          width: 40,
+          width: 70,
           align: "center",
           formatter: formatActiveTaskStatus,
         },
@@ -5650,7 +6160,7 @@ var IP = {
       $modal
         .off("hidden.bs.modal")
         .on("hidden.bs.modal", () =>
-          $("#ingredGrid").jqGrid().trigger("reloadGrid")
+          $("#ingredGrid").jqGrid().trigger("reloadGrid"),
         );
 
       const $documentUploadBox = $("#group-document-upload-box");
@@ -5678,7 +6188,7 @@ var IP = {
         .on("change", function () {
           var documentTypeValue = $(this).val();
           $(
-            "#document-none, #document-certificate, #document-statement"
+            "#document-none, #document-certificate, #document-statement",
           ).hide();
           if (documentTypeValue === "certificate") {
             $("#document-certificate").show();
@@ -5696,10 +6206,10 @@ var IP = {
 
           $("#group-document-upload-box").toggle($(this).val() !== "none");
           $("#bulkingredient .certificate-fields").toggle(
-            $(this).val() === "certificate"
+            $(this).val() === "certificate",
           );
           $("#bulkingredient .statement-fields").toggle(
-            $(this).val() === "statement"
+            $(this).val() === "statement",
           );
         });
       $("#bulkingredient .resetBtn")
@@ -5776,7 +6286,7 @@ var IP = {
               if (!$modal.find(`#step1 input[name="${f}"]`).val().trim()) {
                 errorMessage = "Please fill in all required fields.";
               }
-            }
+            },
           );
         }
 
@@ -5807,7 +6317,7 @@ var IP = {
       FD.append("client_id", $("#ingred-clientid").val());
       FD.append(
         "document_type",
-        $('#bulkingredient input[name="documentType"]:checked').val()
+        $('#bulkingredient input[name="documentType"]:checked').val(),
       );
       FD.append("document_file", $("#documentFile").val());
       FD.append("spreadsheet_file", $("#spreadsheetFile").val());
@@ -5835,7 +6345,7 @@ var IP = {
             status: "error",
             message:
               "Something went wrong during the import. Please try again later.",
-          })
+          }),
         )
         .finally(() => $("#bulk-ingredient-upload-progress").hide());
     }
@@ -5944,7 +6454,7 @@ var IP = {
 
     function createFileNameElement(filename, $uploadBox) {
       const $uploadedFilesInput = $uploadBox.find(
-        ".uploaded-file-hidden-input"
+        ".uploaded-file-hidden-input",
       );
 
       const $li = $('<li class="uploaded-file-name"></li>');
@@ -5965,7 +6475,7 @@ var IP = {
     function updateDropzone($uploadBox) {
       const $uploadedFilesContainer = $uploadBox.find(".uploaded-files");
       const $uploadedFilesInput = $uploadBox.find(
-        ".uploaded-file-hidden-input"
+        ".uploaded-file-hidden-input",
       );
       const $dropzoneElement = $uploadBox.find(".bulkingred-dropzone");
 
@@ -6002,7 +6512,7 @@ var IP = {
 
       const $uploadBox = $(e.target).closest(".upload-box");
       const $uploadedFilesInput = $uploadBox.find(
-        ".uploaded-file-hidden-input"
+        ".uploaded-file-hidden-input",
       );
 
       $uploadedFilesInput.val(JSON.stringify(fileinfo)).trigger("change");
@@ -6036,7 +6546,7 @@ var IP = {
     // initialize file upload for excel/csv
     initFileUploadArea(
       $("#ingredient-spreadsheet-upload-box"),
-      validateSpreadsheet
+      validateSpreadsheet,
     );
   },
 
@@ -6140,7 +6650,7 @@ var IP = {
 
     $("#tasksModal .id").val(ingredId);
     $("#tasksModal #tasksModal-label").text(
-      "Tasks for the ingredient " + ingredId
+      "Tasks for the ingredient " + ingredId,
     );
     $("#tasksGrid").jqGrid("setGridParam", {
       url: "ajax/getIngredTasks.php?idingredient=" + ingredId,
@@ -6155,7 +6665,7 @@ var IP = {
       jQuery("#ingredGrid").jqGrid(
         "getCell",
         jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
-        "id"
+        "id",
       ) == null
     ) {
       alert("Please select ingredient");
@@ -6254,7 +6764,7 @@ var IP = {
           $("#task-edit").hide();
           $("#task-cancel").hide();
           $("#tasksModal .success-string").text(
-            "The task successfully updated"
+            "The task successfully updated",
           );
           setTimeout(function () {
             $("#tasksModal .success-string").text("");
@@ -6341,7 +6851,7 @@ var IP = {
     var id_paingred = jQuery("#ingredGrid").jqGrid(
       "getCell",
       jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
-      "id_paingred"
+      "id_paingred",
     );
     if (id_paingred && id_paingred > 0) {
       alert("Pre-approved ingredients are not editable.");
@@ -6351,7 +6861,7 @@ var IP = {
       jQuery("#ingredGrid").jqGrid(
         "getCell",
         jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
-        "id"
+        "id",
       ) == null
     ) {
       alert("Please select ingredient");
@@ -6360,84 +6870,114 @@ var IP = {
     IP.clearForm();
 
     $("#ingredModal-label").text("Edit Ingredient");
+
+    var facilityIdsString = jQuery("#ingredGrid").jqGrid(
+      "getCell",
+      jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
+      "facility_ids",
+    );
+
+    // Convert comma-separated string to array and set multi-select values
+    if (facilityIdsString && facilityIdsString.trim() !== "") {
+      // Split the comma-separated string into an array
+      var facilityIdsArray = facilityIdsString
+        .split(",")
+        .map(function (id) {
+          return id.trim(); // Remove any whitespace
+        })
+        .filter(function (id) {
+          return id !== ""; // Remove empty values
+        });
+
+      // Set the multi-select values
+      $("#ingred-form #facilityIds").val(facilityIdsArray);
+
+      // If using select2 or similar plugin, trigger change event
+      $("#ingred-form #facilityIds").trigger("change");
+    } else {
+      // Clear the multi-select if no facility IDs
+      $("#ingred-form #facilityIds").val([]);
+      $("#ingred-form #facilityIds").trigger("change");
+    }
+
     $("#ingred-form #rmid").val(
       jQuery("#ingredGrid").jqGrid(
         "getCell",
         jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
-        "rmid"
-      )
+        "rmid",
+      ),
     );
     $("#ingred-form #rmid").attr(
       "data-id",
       jQuery("#ingredGrid").jqGrid(
         "getCell",
         jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
-        "id"
-      )
+        "id",
+      ),
     );
     $("#ingred-form #rmid").attr("data-new", 0);
     $("#ingred-form #name").val(
       jQuery("#ingredGrid").jqGrid(
         "getCell",
         jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
-        "Name"
-      )
+        "Name",
+      ),
     );
     $("#ingred-form #code").val(
       jQuery("#ingredGrid").jqGrid(
         "getCell",
         jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
-        "rmcode"
-      )
+        "rmcode",
+      ),
     );
     $("#ingred-form #supplier").val(
       jQuery("#ingredGrid").jqGrid(
         "getCell",
         jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
-        "Supplier"
-      )
+        "Supplier",
+      ),
     );
     $("#ingred-form #producer").val(
       jQuery("#ingredGrid").jqGrid(
         "getCell",
         jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
-        "producer"
-      )
+        "producer",
+      ),
     );
     $("#ingred-form #material").val(
       jQuery("#ingredGrid").jqGrid(
         "getCell",
         jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
-        "material"
-      )
+        "material",
+      ),
     );
     $("#ingred-form #cb").val(
       jQuery("#ingredGrid").jqGrid(
         "getCell",
         jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
-        "CB"
-      )
+        "CB",
+      ),
     );
     $("#ingred-form #date").val(
       jQuery("#ingredGrid").jqGrid(
         "getCell",
         jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
-        "Date"
-      )
+        "Date",
+      ),
     );
     $("#ingred-form #rmposition").val(
       jQuery("#ingredGrid").jqGrid(
         "getCell",
         jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
-        "rmposition"
-      )
+        "rmposition",
+      ),
     );
     $("#ingred-form #note").val(
       jQuery("#ingredGrid").jqGrid(
         "getCell",
         jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
-        "Note"
-      )
+        "Note",
+      ),
     );
     $("#ingred-form #ingredients")
       .val(
@@ -6445,10 +6985,10 @@ var IP = {
           .jqGrid(
             "getCell",
             jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
-            "ingred"
+            "ingred",
           )
           .replace(", ", ",")
-          .split(",")
+          .split(","),
       )
       .trigger("change");
 
@@ -6457,8 +6997,8 @@ var IP = {
       jQuery("#ingredGrid").jqGrid(
         "getCell",
         jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
-        "Certified"
-      ) == 1
+        "Certified",
+      ) == 1,
     );
     $("#ingred-form #certified").trigger("change");
 
@@ -6467,8 +7007,8 @@ var IP = {
       jQuery("#ingredGrid").jqGrid(
         "getCell",
         jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
-        "Conformed"
-      ) == 1
+        "Conformed",
+      ) == 1,
     );
     $("#ingred-form #conformed").trigger("change");
 
@@ -6477,10 +7017,17 @@ var IP = {
       jQuery("#ingredGrid").jqGrid(
         "getCell",
         jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
-        "sub"
-      ) == 1
+        "sub",
+      ) == 1,
     );
     $("#ingred-form #subingredient").trigger("change");
+    $("#ingred-form #stmt_exp_date").val(
+      jQuery("#ingredGrid").jqGrid(
+        "getCell",
+        jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
+        "stmt_exp_date",
+      ),
+    );
     Utils.filesToList("ulspec", "ingredGrid", "Specification");
     Utils.filesToList("ulquest", "ingredGrid", "Questionnaire");
     Utils.filesToList("ulstate", "ingredGrid", "Statement");
@@ -6492,7 +7039,7 @@ var IP = {
         $("#ingredGrid").jqGrid(
           "getCell",
           $("#ingredGrid").jqGrid("getGridParam", "selrow"),
-          "tasksnumber"
+          "tasksnumber",
         ) > 0
       ) {
         $("#activeTasksGridBox").show();
@@ -6502,7 +7049,7 @@ var IP = {
             $("#ingredGrid").jqGrid(
               "getCell",
               $("#ingredGrid").jqGrid("getGridParam", "selrow"),
-              "id"
+              "id",
             ),
         });
         $("#activeTasksGrid").jqGrid().trigger("reloadGrid");
@@ -6519,7 +7066,7 @@ var IP = {
       jQuery("#ingredGrid").jqGrid(
         "getCell",
         jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
-        "id"
+        "id",
       ) == null
     ) {
       alert("Please select ingredient");
@@ -6535,7 +7082,7 @@ var IP = {
       jQuery("#ingredGrid").jqGrid(
         "getCell",
         jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
-        "id"
+        "id",
       ) == null
     ) {
       alert("Please select ingredient");
@@ -6545,7 +7092,7 @@ var IP = {
       jQuery("#ingredGrid").jqGrid(
         "getCell",
         jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
-        "Certified"
+        "Certified",
       ) == 0
     ) {
       alert("The selected ingredient does not have a certificate");
@@ -6557,30 +7104,30 @@ var IP = {
       jQuery("#ingredGrid").jqGrid(
         "getCell",
         jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
-        "Certified"
-      ) == 1
+        "Certified",
+      ) == 1,
     );
     $("#ingred-form #certified").trigger("change");
     $("#ingred-form #cb").val(
       jQuery("#ingredGrid").jqGrid(
         "getCell",
         jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
-        "CB"
-      )
+        "CB",
+      ),
     );
     $("#ingred-form #date").val(
       jQuery("#ingredGrid").jqGrid(
         "getCell",
         jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
-        "Date"
-      )
+        "Date",
+      ),
     );
     $("#ingred-form #rmposition").val(
       jQuery("#ingredGrid").jqGrid(
         "getCell",
         jQuery("#ingredGrid").jqGrid("getGridParam", "selrow"),
-        "rmposition"
-      )
+        "rmposition",
+      ),
     );
     $("#activeTasksGridBox").hide();
     Utils.filesToList("ulcert", "ingredGrid", "Certificate");
@@ -6609,7 +7156,7 @@ var IP = {
       $("#ulcert").find("li").addClass("deleted");
       //$("#ulcert").empty();
     }
-
+    doc.stmt_exp_date = $("#ingred-form #stmt_exp_date").val().trim();
     doc.note = $("#ingred-form #note").val().trim();
     doc.conf = $("#ingred-form #conformed").prop("checked") ? 1 : 0;
     doc.ingred = $("#ingred-form #ingredients").val();
@@ -6619,6 +7166,28 @@ var IP = {
       })
       .get()
       .join(",");
+
+    // Facility validation and assignment
+    var facilityElement = $("#facilityIds");
+    var facilitiesContainer = facilityElement.closest(".facilities");
+    var isFacilityElementVisible = facilityElement.is(":visible");
+    var isFacilitiesContainerVisible = facilitiesContainer.is(":visible");
+
+    if (isFacilityElementVisible && isFacilitiesContainerVisible) {
+      var selectedFacilities = facilityElement.val();
+
+      // Filter out empty values and validate
+      var validFacilityIds = Array.isArray(selectedFacilities)
+        ? selectedFacilities.filter(function (id) {
+            return id && id.trim() !== "" && id !== "null";
+          })
+        : [selectedFacilities].filter(function (id) {
+            return id && id.trim() !== "" && id !== "null";
+          });
+
+      doc.facilityIds = validFacilityIds;
+    }
+
     doc.spec = Utils.filesToJSON("ulspec");
     doc.addoc = Utils.filesToJSON("uladd");
     doc.quest = Utils.filesToJSON("ulquest");
@@ -6633,6 +7202,49 @@ var IP = {
       $("#ingredModal .form-warning").hide();
     }, 4000);
 
+    // Facility validation and assignment
+    var facilityElement = $("#facilityIds");
+    var facilitiesContainer = facilityElement.closest(".facilities");
+    var isFacilityElementVisible = facilityElement.is(":visible");
+    var isFacilitiesContainerVisible = facilitiesContainer.is(":visible");
+
+    if (isFacilityElementVisible && isFacilitiesContainerVisible) {
+      var selectedFacilities = facilityElement.val();
+
+      // Validation: At least one facility must be selected when visible
+      if (!selectedFacilities || selectedFacilities.length === 0) {
+        // Show error message
+        Utils.notify("error", "At least one facility must be selected.");
+
+        // Highlight the facility selector
+        facilityElement.addClass("has-error");
+        setTimeout(function () {
+          facilityElement.removeClass("has-error");
+        }, 3000);
+
+        // Return null to prevent form submission
+        return null;
+      }
+
+      // Filter out empty values and validate
+      var validFacilityIds = Array.isArray(selectedFacilities)
+        ? selectedFacilities.filter(function (id) {
+            return id && id.trim() !== "" && id !== "null";
+          })
+        : [selectedFacilities].filter(function (id) {
+            return id && id.trim() !== "" && id !== "null";
+          });
+
+      if (validFacilityIds.length === 0) {
+        Utils.notify("error", "At least one valid facility must be selected.");
+        facilityElement.addClass("has-error");
+        setTimeout(function () {
+          facilityElement.removeClass("has-error");
+        }, 3000);
+        return null;
+      }
+    }
+
     if ($("#ingred-form #code").val().trim() == "") {
       Utils.notifyInput($("#ingred-form #code"), "No Code specified");
       $("#ingredModal .form-warning").show();
@@ -6646,7 +7258,7 @@ var IP = {
     if (IP.checkBannedWords()) {
       Utils.notifyInput(
         $("#ingred-form #name"),
-        "Name contains forbidden words. Please review and correct."
+        "Name contains forbidden words. Please review and correct.",
       );
       $("#ingredModal .form-warning").show();
       return;
@@ -6664,7 +7276,7 @@ var IP = {
     if ($("#ingred-form #material").val().trim() == "") {
       Utils.notifyInput(
         $("#ingred-form #material"),
-        "Source of Raw Material is required"
+        "Source of Raw Material is required",
       );
       $("#ingredModal .form-warning").show();
       return;
@@ -6688,7 +7300,7 @@ var IP = {
       if ($("#ingred-form #rmposition").val().trim() == "") {
         Utils.notifyInput(
           $("#ingred-form #rmposition"),
-          "No RM position specified"
+          "No RM position specified",
         );
         $("#ingredModal .form-warning").show();
         return;
@@ -6967,7 +7579,7 @@ var IP = {
           IP.showLoaderById("#task-add");
           IP.hideLoaderById("#task-loader");
         }
-      }
+      },
     );
   },
 };
@@ -7021,7 +7633,7 @@ var QP = {
     $("#qm-clientid").on("change", function () {
       $("#qm-clientid").data(
         "clientname",
-        $("#qm-clientid option:selected").data("clientname")
+        $("#qm-clientid option:selected").data("clientname"),
       );
       jQuery("#qmGrid").jqGrid("setGridParam", {
         url:
@@ -7112,7 +7724,7 @@ var QP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -7122,10 +7734,10 @@ var QP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -7186,7 +7798,7 @@ var QP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -7196,10 +7808,10 @@ var QP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -7260,7 +7872,7 @@ var QP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -7270,10 +7882,10 @@ var QP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -7334,7 +7946,7 @@ var QP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -7344,10 +7956,10 @@ var QP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -7408,7 +8020,7 @@ var QP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -7418,10 +8030,10 @@ var QP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -7482,7 +8094,7 @@ var QP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -7492,10 +8104,10 @@ var QP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -7556,7 +8168,7 @@ var QP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -7566,10 +8178,10 @@ var QP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -7630,7 +8242,7 @@ var QP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -7640,10 +8252,10 @@ var QP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -7704,7 +8316,7 @@ var QP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -7714,10 +8326,10 @@ var QP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -7778,7 +8390,7 @@ var QP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -7788,10 +8400,10 @@ var QP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -7852,7 +8464,7 @@ var QP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -7862,10 +8474,10 @@ var QP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -7926,7 +8538,7 @@ var QP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -7936,10 +8548,10 @@ var QP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -8000,7 +8612,7 @@ var QP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -8010,10 +8622,10 @@ var QP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -8075,7 +8687,7 @@ var QP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -8085,10 +8697,10 @@ var QP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -8150,7 +8762,7 @@ var QP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -8160,10 +8772,10 @@ var QP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -8465,11 +9077,11 @@ var QP = {
             FD.append("data[idclient]", $("#qm-clientid").val());
             FD.append(
               "data[id]",
-              $(e.target).closest("tr").find("td:nth-child(1)").text()
+              $(e.target).closest("tr").find("td:nth-child(1)").text(),
             );
             FD.append(
               "data[dt]",
-              $(e.target).closest("tr").find("td:nth-child(2)").text()
+              $(e.target).closest("tr").find("td:nth-child(2)").text(),
             );
 
             const colName = {
@@ -8524,7 +9136,7 @@ var QP = {
         document
           .querySelectorAll(".upload-area")
           .forEach((area) =>
-            area.addEventListener("dragleave", handleDragLeave)
+            area.addEventListener("dragleave", handleDragLeave),
           );
         document
           .querySelectorAll(".upload-area")
@@ -8637,7 +9249,7 @@ var QP = {
       $("#qmGrid").jqGrid(
         "getCell",
         jQuery("#qmGrid").jqGrid("getGridParam", "selrow"),
-        "id"
+        "id",
       ) == null
     ) {
       alert("Please select record");
@@ -8650,22 +9262,22 @@ var QP = {
       $("#qmGrid").jqGrid(
         "getCell",
         $("#qmGrid").jqGrid("getGridParam", "selrow"),
-        "id"
-      )
+        "id",
+      ),
     );
     $("#qm-form #dt").val(
       $("#qmGrid").jqGrid(
         "getCell",
         $("#qmGrid").jqGrid("getGridParam", "selrow"),
-        "dt"
-      )
+        "dt",
+      ),
     );
     $("#qm-form #note").val(
       $("#qmGrid").jqGrid(
         "getCell",
         $("#qmGrid").jqGrid("getGridParam", "selrow"),
-        "note"
-      )
+        "note",
+      ),
     );
     Utils.filesToList("ulpolicy", "qmGrid", "policy");
     Utils.filesToList("ulhaccp", "qmGrid", "haccp");
@@ -8691,7 +9303,7 @@ var QP = {
       $("#qmGrid").jqGrid(
         "getCell",
         $("#qmGrid").jqGrid("getGridParam", "selrow"),
-        "id"
+        "id",
       ) == null
     ) {
       alert("Please select record");
@@ -8745,7 +9357,7 @@ var QP = {
         Utils.notify("success", "Changes were submitted");
         $("#qmModal").prop("submit", 1);
         $("#qmModal").modal("hide");
-      }
+      },
     );
   },
 
@@ -8771,7 +9383,7 @@ var QP = {
       id: $("#qmGrid").jqGrid(
         "getCell",
         $("#qmGrid").jqGrid("getGridParam", "selrow"),
-        "id"
+        "id",
       ),
     };
     $.post("ajax/ajaxHandler.php", {
@@ -8888,7 +9500,7 @@ var AP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -8898,10 +9510,10 @@ var AP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -8962,7 +9574,7 @@ var AP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -8972,10 +9584,10 @@ var AP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -9036,7 +9648,7 @@ var AP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -9046,10 +9658,10 @@ var AP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -9110,7 +9722,7 @@ var AP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -9120,10 +9732,10 @@ var AP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -9184,7 +9796,7 @@ var AP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -9194,10 +9806,10 @@ var AP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -9357,7 +9969,7 @@ var AP = {
 
   getNextAuditId: function (callback) {
     $.get("ajax/ajaxHandler.php", { uid: 0, rtype: "nextAuditId" }).done(
-      callback
+      callback,
     );
   },
 
@@ -9373,7 +9985,7 @@ var AP = {
       $("#auditGrid").jqGrid(
         "getCell",
         jQuery("#auditGrid").jqGrid("getGridParam", "selrow"),
-        "id"
+        "id",
       ) == null
     ) {
       alert("Please select record");
@@ -9386,36 +9998,36 @@ var AP = {
       $("#auditGrid").jqGrid(
         "getCell",
         $("#auditGrid").jqGrid("getGridParam", "selrow"),
-        "id"
-      )
+        "id",
+      ),
     );
     $("#audit-form #auditnr").val(
       $("#auditGrid").jqGrid(
         "getCell",
         $("#auditGrid").jqGrid("getGridParam", "selrow"),
-        "auditnr"
-      )
+        "auditnr",
+      ),
     );
     $("#audit-form #auditorid").val(
       $("#auditGrid").jqGrid(
         "getCell",
         $("#auditGrid").jqGrid("getGridParam", "selrow"),
-        "auditorid"
-      )
+        "auditorid",
+      ),
     );
     $("#audit-form #auditorname").val(
       $("#auditGrid").jqGrid(
         "getCell",
         $("#auditGrid").jqGrid("getGridParam", "selrow"),
-        "auditorname"
-      )
+        "auditorname",
+      ),
     );
     $("#audit-form #auditeename").val(
       $("#auditGrid").jqGrid(
         "getCell",
         $("#auditGrid").jqGrid("getGridParam", "selrow"),
-        "auditeename"
-      )
+        "auditeename",
+      ),
     );
     Utils.filesToList("ulorder", "auditGrid", "order");
     Utils.filesToList("ulplan", "auditGrid", "plan");
@@ -9431,7 +10043,7 @@ var AP = {
       $("#auditGrid").jqGrid(
         "getCell",
         $("#auditGrid").jqGrid("getGridParam", "selrow"),
-        "id"
+        "id",
       ) == null
     ) {
       alert("Please select record");
@@ -9469,14 +10081,14 @@ var AP = {
     if ($("#audit-form #auditorname").val().trim() == "") {
       Utils.notifyInput(
         $("#audit-form #auditorname"),
-        "No Auditor Name specified"
+        "No Auditor Name specified",
       );
       return false;
     }
     if ($("#audit-form #auditeename").val().trim() == "") {
       Utils.notifyInput(
         $("#audit-form #auditeename"),
-        "No Auditee Name specified"
+        "No Auditee Name specified",
       );
       return false;
     }
@@ -9522,7 +10134,7 @@ var AP = {
       id: $("#auditGrid").jqGrid(
         "getCell",
         $("#auditGrid").jqGrid("getGridParam", "selrow"),
-        "id"
+        "id",
       ),
     };
     $.post("ajax/ajaxHandler.php", {
@@ -9653,15 +10265,14 @@ var SP = {
           stype: "select",
           searchoptions: { value: ":[All];1:Company;2:Facility" },
         },
-        /*
         {
-          label: "Company",
-          name: "company",
-          index: "company",
+          label: "Country",
+          name: "country",
+          index: "country",
           align: "left",
           width: 200,
         },
-        */
+
         {
           label: "Email",
           name: "email",
@@ -9873,19 +10484,19 @@ var SP = {
         if ($(e.target).is("span.isclient")) {
           SP.onChangeProp(
             "IsClient",
-            $(e.target).closest("tr.jqgrow").attr("id")
+            $(e.target).closest("tr.jqgrow").attr("id"),
           );
           return false; // don't select the row on click on the button
         } else if ($(e.target).is("span.application")) {
           SP.onChangeProp(
             "Application",
-            $(e.target).closest("tr.jqgrow").attr("id")
+            $(e.target).closest("tr.jqgrow").attr("id"),
           );
           return false; // don't select the row on click on the button
         } else if ($(e.target).is("span.clients")) {
           SP.onChangeProp(
             "Clients",
-            $(e.target).closest("tr.jqgrow").attr("id")
+            $(e.target).closest("tr.jqgrow").attr("id"),
           );
           return false; // don't select the row on click on the button
         } else if ($(e.target).is("span.audit")) {
@@ -9894,7 +10505,7 @@ var SP = {
         } else if ($(e.target).is("span.canadmin")) {
           SP.onChangeProp(
             "CanAdmin",
-            $(e.target).closest("tr.jqgrow").attr("id")
+            $(e.target).closest("tr.jqgrow").attr("id"),
           );
           return false; // don't select the row on click on the button
         }
@@ -10121,13 +10732,13 @@ var SP = {
                 $("#importStatus").html(
                   '<span class="text-danger">' +
                     response.statusDescription +
-                    "</span>"
+                    "</span>",
                 );
               } else {
                 $("#importStatus").html(
                   '<span class="text-success">Import completed successfully! ' +
                     response.data.processed +
-                    " records processed.</span>"
+                    " records processed.</span>",
                 );
                 $("#adminGrid").trigger("reloadGrid");
                 setTimeout(function () {
@@ -10142,7 +10753,7 @@ var SP = {
 
               Utils.notify("error", "Error during import");
               $("#importStatus").html(
-                '<span class="text-danger">Error during import</span>'
+                '<span class="text-danger">Error during import</span>',
               );
             })
             .always(function () {
@@ -10239,7 +10850,7 @@ var SP = {
 
   getNextAdminId: function (callback) {
     $.get("ajax/ajaxHandler.php", { uid: 0, rtype: "nextAdminId" }).done(
-      callback
+      callback,
     );
   },
 
@@ -10255,7 +10866,7 @@ var SP = {
       $("#adminGrid").jqGrid(
         "getCell",
         jQuery("#adminGrid").jqGrid("getGridParam", "selrow"),
-        "id"
+        "id",
       ) == null
     ) {
       alert("Please select record");
@@ -10266,7 +10877,7 @@ var SP = {
     var id = $("#adminGrid").jqGrid(
       "getCell",
       $("#adminGrid").jqGrid("getGridParam", "selrow"),
-      "id"
+      "id",
     );
 
     $("#adminModal-label").text("Edit User");
@@ -10328,9 +10939,12 @@ var SP = {
       $("#admin-form #contact_person").val(data.contact_person);
       $("#admin-form #phone").val(data.phone);
       $("#admin-form #prodnumber").val(data.prodnumber);
+
+      $("#admin-form #referred_by").val(data.referred_by || "");
+
       $("#admin-form input[name=isclient][value='" + data.isclient + "']").prop(
         "checked",
-        true
+        true,
       );
       $("#admin-form #clients_audit option:selected").prop("selected", false);
       $("#admin-form #sources_audit option:selected").prop("selected", false);
@@ -10338,23 +10952,23 @@ var SP = {
       $(
         "input[name='pork_free_facility'][value='" +
           data.pork_free_facility +
-          "']"
+          "']",
       ).prop("checked", true);
       $(
         "input[name='dedicated_halal_lines'][value='" +
           data.dedicated_halal_lines +
-          "']"
+          "']",
       ).prop("checked", true);
       $("#admin-form #export_regions").val(data.export_regions);
       $(
         "input[name='third_party_products'][value='" +
           data.third_party_products +
-          "']"
+          "']",
       ).prop("checked", true);
       $(
         "input[name='third_party_halal_certified'][value='" +
           data.third_party_halal_certified +
-          "']"
+          "']",
       ).prop("checked", true);
 
       if (data.clients_audit) {
@@ -10362,7 +10976,7 @@ var SP = {
           v = data.clients_audit[i];
           $("#admin-form #clients_audit option[value='" + v + "']").prop(
             "selected",
-            true
+            true,
           );
         }
         $("#admin-form #clients_audit").trigger("chosen:updated");
@@ -10372,39 +10986,40 @@ var SP = {
           v = data.sources_audit[i];
           $("#admin-form #sources_audit option[value='" + v + "']").prop(
             "selected",
-            true
+            true,
           );
         }
         $("#admin-form #sources_audit").trigger("chosen:updated");
       }
       $("#admin-form #dashboard").prop(
         "checked",
-        data.dashboard == 1 ? true : false
+        data.dashboard == 1 ? true : false,
       );
       $("#admin-form #application").prop(
         "checked",
-        data.application == 1 ? true : false
+        data.application == 1 ? true : false,
       );
       $("#admin-form #calendar").prop(
         "checked",
-        data.calendar == 1 ? true : false
+        data.calendar == 1 ? true : false,
       );
       $("#admin-form #products").prop(
         "checked",
-        data.products == 1 ? true : false
+        data.products == 1 ? true : false,
       );
       $("#admin-form #ingredients").prop(
         "checked",
-        data.ingredients == 1 ? true : false
+        data.ingredients == 1 ? true : false,
       );
       $("#admin-form #documents").prop(
         "checked",
-        data.documents == 1 ? true : false
+        data.documents == 1 ? true : false,
       );
       $("#admin-form #canadmin").prop(
         "checked",
-        data.canadmin == 1 ? true : false
+        data.canadmin == 1 ? true : false,
       );
+
       var rel = "isclient" + data.isclient;
       $(".rel").hide();
       $("div[rel*=" + rel + "]").show();
@@ -10511,7 +11126,7 @@ var SP = {
       $("#adminGrid").jqGrid(
         "getCell",
         $("#adminGrid").jqGrid("getGridParam", "selrow"),
-        "id"
+        "id",
       ) == null
     ) {
       alert("Please select record");
@@ -10546,17 +11161,17 @@ var SP = {
     doc.phone = $("#admin-form #phone").val();
 
     doc.pork_free_facility = $(
-      "input[name='pork_free_facility']:checked"
+      "input[name='pork_free_facility']:checked",
     ).val();
     doc.dedicated_halal_lines = $(
-      "input[name='dedicated_halal_lines']:checked"
+      "input[name='dedicated_halal_lines']:checked",
     ).val();
     doc.export_regions = $("#admin-form #export_regions").val();
     doc.third_party_products = $(
-      "input[name='third_party_products']:checked"
+      "input[name='third_party_products']:checked",
     ).val();
     doc.third_party_halal_certified = $(
-      "input[name='third_party_halal_certified']:checked"
+      "input[name='third_party_halal_certified']:checked",
     ).val();
 
     if ($("#admin-form #pass").val().trim() != "")
@@ -10618,14 +11233,14 @@ var SP = {
       if ($("#admin-form #ingrednumber").val().trim() == "") {
         Utils.notifyInput(
           $("#admin-form #ingrednumber"),
-          "No Ingredients number specified"
+          "No Ingredients number specified",
         );
         return false;
       }
       if ($("#admin-form #prodnumber").val().trim() == "") {
         Utils.notifyInput(
           $("#admin-form #prodnumber"),
-          "No Products number specified"
+          "No Products number specified",
         );
         return false;
       }
@@ -10673,7 +11288,7 @@ var SP = {
       id: $("#adminGrid").jqGrid(
         "getCell",
         $("#adminGrid").jqGrid("getGridParam", "selrow"),
-        "id"
+        "id",
       ),
     };
     $.post("ajax/ajaxHandler.php", {
@@ -10738,7 +11353,7 @@ var APP = {
     $("#app-clientid").on("change", function () {
       $("#app-clientid").data(
         "clientname",
-        $("#app-clientid option:selected").data("clientname")
+        $("#app-clientid option:selected").data("clientname"),
       );
       jQuery("#appGrid").jqGrid("setGridParam", {
         url: "ajax/getCycles.php?idclient=" + this.value,
@@ -10828,14 +11443,14 @@ var APP = {
       subGridRowExpanded: function (subgrid_id, row_id) {
         var subgridTableId = subgrid_id + "_t";
         $("#" + subgrid_id).html(
-          "<table id='" + subgridTableId + "' class='scroll'></table>"
+          "<table id='" + subgridTableId + "' class='scroll'></table>",
         );
         $("<div id='" + subgridTableId + "pager" + "'></div>").insertAfter(
-          $("#" + subgrid_id)
+          $("#" + subgrid_id),
         );
         $("#" + subgridTableId).data(
           "cycle",
-          $("#appGrid").jqGrid("getCell", row_id, "Name")
+          $("#appGrid").jqGrid("getCell", row_id, "Name"),
         );
         $("#" + subgridTableId).jqGrid({
           datatype: "json",
@@ -11206,7 +11821,7 @@ var APP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -11216,10 +11831,10 @@ var APP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -11281,7 +11896,7 @@ var APP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -11291,10 +11906,10 @@ var APP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -11356,7 +11971,7 @@ var APP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -11366,10 +11981,10 @@ var APP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -11431,7 +12046,7 @@ var APP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -11441,10 +12056,10 @@ var APP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -11506,7 +12121,7 @@ var APP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -11516,10 +12131,10 @@ var APP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -11581,7 +12196,7 @@ var APP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -11591,10 +12206,10 @@ var APP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -11656,7 +12271,7 @@ var APP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -11666,10 +12281,10 @@ var APP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -11731,7 +12346,7 @@ var APP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -11741,10 +12356,10 @@ var APP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -11806,7 +12421,7 @@ var APP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -11816,10 +12431,10 @@ var APP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -11881,7 +12496,7 @@ var APP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -11891,10 +12506,10 @@ var APP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -11956,7 +12571,7 @@ var APP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -11966,10 +12581,10 @@ var APP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -12031,7 +12646,7 @@ var APP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -12041,10 +12656,10 @@ var APP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -12106,7 +12721,7 @@ var APP = {
             var filename = $(
               '<li class="uploaded-file-name" originalname="' +
                 encodeURI(jsonstring) +
-                '"></li>'
+                '"></li>',
             );
             filename.append($("<span>", { text: ell }));
             filename.append(
@@ -12116,10 +12731,10 @@ var APP = {
                   file.googleDriveId +
                   " hostpath=" +
                   encodeURI(file.url) +
-                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                  ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
               ).bind("click", function (e) {
                 delDocClick(e);
-              })
+              }),
             );
             // add li to the list of the appropriate ul - class from folderType
             $("#ul" + file.folderType).append(filename);
@@ -12137,7 +12752,7 @@ var APP = {
     grid.jqGrid("setSelection", rowid);
     APP.clearForm();
     $("#appModal-cycle").text(
-      grid.data("cycle") + " / " + grid.jqGrid("getCell", rowid, "Name")
+      grid.data("cycle") + " / " + grid.jqGrid("getCell", rowid, "Name"),
     );
     $("#app-form").data("cycle", grid.data("cycle"));
     $("#app-form").data("subcycle", grid.jqGrid("getCell", rowid, "Name"));
@@ -12151,7 +12766,7 @@ var APP = {
       "appstate",
       "dropzone1",
       false,
-      APP.isClient
+      APP.isClient,
     );
     // halal dropzone
     Utils.filesToListForApplication(
@@ -12161,7 +12776,7 @@ var APP = {
       "offerstate",
       "dropzone2",
       false,
-      APP.isClient
+      APP.isClient,
     );
     // ------ client dropzone
     Utils.filesToListForApplication(
@@ -12171,7 +12786,7 @@ var APP = {
       "sofferstate",
       "dropzone3",
       true,
-      APP.isClient
+      APP.isClient,
     );
     // halal dropzone
     Utils.filesToListForApplication(
@@ -12181,11 +12796,11 @@ var APP = {
       "planstate",
       "dropzone4",
       false,
-      APP.isClient
+      APP.isClient,
     );
 
     $("#app-form #auditorname").val(
-      grid.jqGrid("getCell", rowid, "auditorname")
+      grid.jqGrid("getCell", rowid, "auditorname"),
     );
     if (
       grid.jqGrid("getCell", rowid, "planstate") <= 3 &&
@@ -12194,7 +12809,7 @@ var APP = {
       $("#app-form #auditorname").show();
       $("#app-form #auditorname").prop(
         "disabled",
-        grid.jqGrid("getCell", rowid, "planstate") > 1
+        grid.jqGrid("getCell", rowid, "planstate") > 1,
       );
     } else $("#app-form #auditorname").hide();
 
@@ -12205,7 +12820,7 @@ var APP = {
       "checkliststate",
       "dropzone5",
       false,
-      APP.isClient
+      APP.isClient,
     );
     Utils.filesToListForApplication(
       "ulreport",
@@ -12214,7 +12829,7 @@ var APP = {
       "reportstate",
       "dropzone6",
       false,
-      APP.isClient
+      APP.isClient,
     );
     // ------ client dropzone
     Utils.filesToListForApplication(
@@ -12224,7 +12839,7 @@ var APP = {
       "actionstate",
       "dropzone7",
       true,
-      APP.isClient
+      APP.isClient,
     );
     // ------ client dropzone
     Utils.filesToListForApplication(
@@ -12234,7 +12849,7 @@ var APP = {
       "liststate",
       "dropzone8",
       true,
-      APP.isClient
+      APP.isClient,
     );
     // ------ client dropzone
     Utils.filesToListForApplication(
@@ -12244,7 +12859,7 @@ var APP = {
       "paymentstate",
       "dropzone13",
       true,
-      APP.isClient
+      APP.isClient,
     );
     // halal dropzone
     Utils.filesToListForApplication(
@@ -12254,17 +12869,17 @@ var APP = {
       "certstate",
       "dropzone9",
       false,
-      APP.isClient
+      APP.isClient,
     );
     // show certificate issue date only if certificate stage is active
     $("#app-form #issuedate").val(grid.jqGrid("getCell", rowid, "issuedate"));
     $("#app-form #issuedate").prop(
       "disabled",
-      grid.jqGrid("getCell", rowid, "certstate") > 1
+      grid.jqGrid("getCell", rowid, "certstate") > 1,
     );
     $("#app-form #issuedate").prop(
       "activefield",
-      grid.jqGrid("getCell", rowid, "certstate") == 1
+      grid.jqGrid("getCell", rowid, "certstate") == 1,
     );
     if (
       grid.jqGrid("getCell", rowid, "certstate") <= 3 &&
@@ -12280,7 +12895,7 @@ var APP = {
       "newappstate",
       "dropzone10",
       true,
-      APP.isClient
+      APP.isClient,
     );
     // halal dropzone
     Utils.filesToListForApplication(
@@ -12290,13 +12905,13 @@ var APP = {
       "newcertstate",
       "dropzone11",
       false,
-      APP.isClient
+      APP.isClient,
     );
     // halal training  dropzone
     Utils.filesToList(
       "ulhalaltraining",
       $(e.target).data("grid"),
-      "halaltraining"
+      "halaltraining",
     );
 
     if (!APP.isClient) $("#cycleswitch").show();
@@ -12487,7 +13102,7 @@ var APP = {
       if ($("#issuedate").val().trim() == "") {
         Utils.notifyInput(
           $("#issuedate"),
-          "No Certificate issue date specified"
+          "No Certificate issue date specified",
         );
         return;
       }
@@ -12641,14 +13256,14 @@ var CP = {
       "prodnumber",
       "Product number",
       { "text-align": "center" },
-      { title: "Number of products allowed for the certification" }
+      { title: "Number of products allowed for the certification" },
     );
     $("#companyGrid").jqGrid(
       "setLabel",
       "ingrednumber",
       "Ingredients number",
       { "text-align": "center" },
-      { title: "Number of ingredients allowed for the certification" }
+      { title: "Number of ingredients allowed for the certification" },
     );
     /*
     $("#companyGrid").navButtonAdd("#companyPager", {
@@ -12728,7 +13343,7 @@ var CP = {
 
   getNextCompanyId: function (callback) {
     $.get("ajax/ajaxHandler.php", { uid: 0, rtype: "nextCompanyId" }).done(
-      callback
+      callback,
     );
   },
 
@@ -12744,7 +13359,7 @@ var CP = {
       $("#companyGrid").jqGrid(
         "getCell",
         jQuery("#companyGrid").jqGrid("getGridParam", "selrow"),
-        "id"
+        "id",
       ) == null
     ) {
       alert("Please select record");
@@ -12755,7 +13370,7 @@ var CP = {
     var id = $("#companyGrid").jqGrid(
       "getCell",
       $("#companyGrid").jqGrid("getGridParam", "selrow"),
-      "id"
+      "id",
     );
 
     $("#companyModal-label").text("Edit Company");
@@ -12775,7 +13390,7 @@ var CP = {
       $("#company-form #name").val(data.name);
       $("#company-form input[name=active][value='" + data.active + "']").prop(
         "checked",
-        true
+        true,
       );
     });
 
@@ -12788,7 +13403,7 @@ var CP = {
       $("#companyGrid").jqGrid(
         "getCell",
         $("#companyGrid").jqGrid("getGridParam", "selrow"),
-        "id"
+        "id",
       ) == null
     ) {
       alert("Please select record");
@@ -12854,7 +13469,7 @@ var CP = {
       id: $("#companyGrid").jqGrid(
         "getCell",
         $("#companyGrid").jqGrid("getGridParam", "selrow"),
-        "id"
+        "id",
       ),
     };
     $.post("ajax/ajaxHandler.php", {
@@ -13009,19 +13624,19 @@ var BP = {
         if ($(e.target).is("span.isclient")) {
           BP.onChangeProp(
             "IsClient",
-            $(e.target).closest("tr.jqgrow").attr("id")
+            $(e.target).closest("tr.jqgrow").attr("id"),
           );
           return false; // don't select the row on click on the button
         } else if ($(e.target).is("span.application")) {
           BP.onChangeProp(
             "Application",
-            $(e.target).closest("tr.jqgrow").attr("id")
+            $(e.target).closest("tr.jqgrow").attr("id"),
           );
           return false; // don't select the row on click on the button
         } else if ($(e.target).is("span.clients")) {
           BP.onChangeProp(
             "Clients",
-            $(e.target).closest("tr.jqgrow").attr("id")
+            $(e.target).closest("tr.jqgrow").attr("id"),
           );
           return false; // don't select the row on click on the button
         } else if ($(e.target).is("span.audit")) {
@@ -13030,7 +13645,7 @@ var BP = {
         } else if ($(e.target).is("span.canadmin")) {
           BP.onChangeProp(
             "CanAdmin",
-            $(e.target).closest("tr.jqgrow").attr("id")
+            $(e.target).closest("tr.jqgrow").attr("id"),
           );
           return false; // don't select the row on click on the button
         }
@@ -13160,7 +13775,7 @@ var BP = {
 
   getNextAdminId: function (callback) {
     $.get("ajax/ajaxHandler.php", { uid: 0, rtype: "nextAdminId" }).done(
-      callback
+      callback,
     );
   },
 
@@ -13176,7 +13791,7 @@ var BP = {
       $("#adminGrid").jqGrid(
         "getCell",
         jQuery("#adminGrid").jqGrid("getGridParam", "selrow"),
-        "id"
+        "id",
       ) == null
     ) {
       alert("Please select record");
@@ -13187,7 +13802,7 @@ var BP = {
     var id = $("#adminGrid").jqGrid(
       "getCell",
       $("#adminGrid").jqGrid("getGridParam", "selrow"),
-      "id"
+      "id",
     );
 
     $("#adminModal-label").text("Edit Branch");
@@ -13238,7 +13853,7 @@ var BP = {
       $("#admin-form #prodnumber").val(data.prodnumber);
       $("#admin-form input[name=isclient][value='" + data.isclient + "']").prop(
         "checked",
-        true
+        true,
       );
       $("#admin-form #clients_audit option:selected").prop("selected", false);
       $("#admin-form #sources_audit option:selected").prop("selected", false);
@@ -13248,7 +13863,7 @@ var BP = {
           v = data.clients_audit[i];
           $("#admin-form #clients_audit option[value='" + v + "']").prop(
             "selected",
-            true
+            true,
           );
         }
         $("#admin-form #clients_audit").trigger("chosen:updated");
@@ -13258,34 +13873,34 @@ var BP = {
           v = data.sources_audit[i];
           $("#admin-form #sources_audit option[value='" + v + "']").prop(
             "selected",
-            true
+            true,
           );
         }
         $("#admin-form #sources_audit").trigger("chosen:updated");
       }
       $("#admin-form #dashboard").prop(
         "checked",
-        data.dashboard == 1 ? true : false
+        data.dashboard == 1 ? true : false,
       );
       $("#admin-form #application").prop(
         "checked",
-        data.application == 1 ? true : false
+        data.application == 1 ? true : false,
       );
       $("#admin-form #products").prop(
         "checked",
-        data.products == 1 ? true : false
+        data.products == 1 ? true : false,
       );
       $("#admin-form #ingredients").prop(
         "checked",
-        data.ingredients == 1 ? true : false
+        data.ingredients == 1 ? true : false,
       );
       $("#admin-form #documents").prop(
         "checked",
-        data.documents == 1 ? true : false
+        data.documents == 1 ? true : false,
       );
       $("#admin-form #canadmin").prop(
         "checked",
-        data.canadmin == 1 ? true : false
+        data.canadmin == 1 ? true : false,
       );
       var rel = "isclient" + data.isclient;
       $(".rel").hide();
@@ -13393,7 +14008,7 @@ var BP = {
       $("#adminGrid").jqGrid(
         "getCell",
         $("#adminGrid").jqGrid("getGridParam", "selrow"),
-        "id"
+        "id",
       ) == null
     ) {
       alert("Please select record");
@@ -13489,14 +14104,14 @@ var BP = {
       if ($("#admin-form #ingrednumber").val().trim() == "") {
         Utils.notifyInput(
           $("#admin-form #ingrednumber"),
-          "No Ingredients number specified"
+          "No Ingredients number specified",
         );
         return false;
       }
       if ($("#admin-form #prodnumber").val().trim() == "") {
         Utils.notifyInput(
           $("#admin-form #prodnumber"),
-          "No Products number specified"
+          "No Products number specified",
         );
         return false;
       }
@@ -13544,7 +14159,7 @@ var BP = {
       id: $("#adminGrid").jqGrid(
         "getCell",
         $("#adminGrid").jqGrid("getGridParam", "selrow"),
-        "id"
+        "id",
       ),
     };
     $.post("ajax/ajaxHandler.php", {
@@ -13846,19 +14461,19 @@ var FP = {
         if ($(e.target).is("span.isclient")) {
           FP.onChangeProp(
             "IsClient",
-            $(e.target).closest("tr.jqgrow").attr("id")
+            $(e.target).closest("tr.jqgrow").attr("id"),
           );
           return false; // don't select the row on click on the button
         } else if ($(e.target).is("span.application")) {
           FP.onChangeProp(
             "Application",
-            $(e.target).closest("tr.jqgrow").attr("id")
+            $(e.target).closest("tr.jqgrow").attr("id"),
           );
           return false; // don't select the row on click on the button
         } else if ($(e.target).is("span.clients")) {
           FP.onChangeProp(
             "Clients",
-            $(e.target).closest("tr.jqgrow").attr("id")
+            $(e.target).closest("tr.jqgrow").attr("id"),
           );
           return false; // don't select the row on click on the button
         } else if ($(e.target).is("span.audit")) {
@@ -13867,7 +14482,7 @@ var FP = {
         } else if ($(e.target).is("span.canadmin")) {
           FP.onChangeProp(
             "CanAdmin",
-            $(e.target).closest("tr.jqgrow").attr("id")
+            $(e.target).closest("tr.jqgrow").attr("id"),
           );
           return false; // don't select the row on click on the button
         }
@@ -13949,7 +14564,7 @@ var FP = {
 
   getNextAdminId: function (callback) {
     $.get("ajax/ajaxHandler.php", { uid: 0, rtype: "nextAdminId" }).done(
-      callback
+      callback,
     );
   },
 
@@ -13966,7 +14581,7 @@ var FP = {
       $("#adminGrid").jqGrid(
         "getCell",
         jQuery("#adminGrid").jqGrid("getGridParam", "selrow"),
-        "id"
+        "id",
       ) == null
     ) {
       alert("Please select record");
@@ -13977,7 +14592,7 @@ var FP = {
     var id = $("#adminGrid").jqGrid(
       "getCell",
       $("#adminGrid").jqGrid("getGridParam", "selrow"),
-      "id"
+      "id",
     );
 
     $("#adminModal-label").text("Edit Facility");
@@ -14014,7 +14629,7 @@ var FP = {
       $("#admin-form #prodnumber").val(data.prodnumber);
       $("#admin-form input[name=isclient][value='" + data.isclient + "']").prop(
         "checked",
-        true
+        true,
       );
       $("#admin-form #clients_audit option:selected").prop("selected", false);
       $("#admin-form #sources_audit option:selected").prop("selected", false);
@@ -14022,23 +14637,23 @@ var FP = {
       $(
         "input[name='pork_free_facility'][value='" +
           data.pork_free_facility +
-          "']"
+          "']",
       ).prop("checked", true);
       $(
         "input[name='dedicated_halal_lines'][value='" +
           data.dedicated_halal_lines +
-          "']"
+          "']",
       ).prop("checked", true);
       $("#admin-form #export_regions").val(data.export_regions);
       $(
         "input[name='third_party_products'][value='" +
           data.third_party_products +
-          "']"
+          "']",
       ).prop("checked", true);
       $(
         "input[name='third_party_halal_certified'][value='" +
           data.third_party_halal_certified +
-          "']"
+          "']",
       ).prop("checked", true);
 
       if (data.clients_audit) {
@@ -14046,7 +14661,7 @@ var FP = {
           v = data.clients_audit[i];
           $("#admin-form #clients_audit option[value='" + v + "']").prop(
             "selected",
-            true
+            true,
           );
         }
         $("#admin-form #clients_audit").trigger("chosen:updated");
@@ -14056,34 +14671,34 @@ var FP = {
           v = data.sources_audit[i];
           $("#admin-form #sources_audit option[value='" + v + "']").prop(
             "selected",
-            true
+            true,
           );
         }
         $("#admin-form #sources_audit").trigger("chosen:updated");
       }
       $("#admin-form #dashboard").prop(
         "checked",
-        data.dashboard == 1 ? true : false
+        data.dashboard == 1 ? true : false,
       );
       $("#admin-form #application").prop(
         "checked",
-        data.application == 1 ? true : false
+        data.application == 1 ? true : false,
       );
       $("#admin-form #products").prop(
         "checked",
-        data.products == 1 ? true : false
+        data.products == 1 ? true : false,
       );
       $("#admin-form #ingredients").prop(
         "checked",
-        data.ingredients == 1 ? true : false
+        data.ingredients == 1 ? true : false,
       );
       $("#admin-form #documents").prop(
         "checked",
-        data.documents == 1 ? true : false
+        data.documents == 1 ? true : false,
       );
       $("#admin-form #canadmin").prop(
         "checked",
-        data.canadmin == 1 ? true : false
+        data.canadmin == 1 ? true : false,
       );
       var rel = "isclient" + data.isclient;
       $(".rel").hide();
@@ -14191,7 +14806,7 @@ var FP = {
       $("#adminGrid").jqGrid(
         "getCell",
         $("#adminGrid").jqGrid("getGridParam", "selrow"),
-        "id"
+        "id",
       ) == null
     ) {
       alert("Please select record");
@@ -14220,17 +14835,17 @@ var FP = {
     doc.phone = $("#admin-form #phone").val();
 
     doc.pork_free_facility = $(
-      "input[name='pork_free_facility']:checked"
+      "input[name='pork_free_facility']:checked",
     ).val();
     doc.dedicated_halal_lines = $(
-      "input[name='dedicated_halal_lines']:checked"
+      "input[name='dedicated_halal_lines']:checked",
     ).val();
     doc.export_regions = $("#admin-form #export_regions").val();
     doc.third_party_products = $(
-      "input[name='third_party_products']:checked"
+      "input[name='third_party_products']:checked",
     ).val();
     doc.third_party_halal_certified = $(
-      "input[name='third_party_halal_certified']:checked"
+      "input[name='third_party_halal_certified']:checked",
     ).val();
 
     doc.ingrednumber = $("#admin-form #ingrednumber").val();
@@ -14315,7 +14930,7 @@ var FP = {
     if (category === "") {
       Utils.notifyInput(
         $("#admin-form #category"),
-        "Product Category is required."
+        "Product Category is required.",
       );
       return false;
     }
@@ -14342,14 +14957,14 @@ var FP = {
     if ($("#admin-form #ingrednumber").val().trim() == "") {
       Utils.notifyInput(
         $("#admin-form #ingrednumber"),
-        "No Ingredients number specified"
+        "No Ingredients number specified",
       );
       return false;
     }
     if ($("#admin-form #prodnumber").val().trim() == "") {
       Utils.notifyInput(
         $("#admin-form #prodnumber"),
-        "No Products number specified"
+        "No Products number specified",
       );
       return false;
     }
@@ -14413,9 +15028,10 @@ $(document).ready(function () {
     var formData = {
       uid: 0,
       rtype: "createTicket",
-      issueType: $("#reportIssueModal #issueType").val(),
-      issueDescription: $("#reportIssueModal #issueDescription").val(),
-      currentURL: $("#reportIssueModal #currentURL").val(),
+      issueType: $("#issueType").val(),
+      subject: $("#issueSubject").val(),
+      issueDescription: $("#issueDescription").val(),
+      currentURL: $("#currentURL").val(),
       attachments: attachments,
     };
 
@@ -14434,7 +15050,7 @@ $(document).ready(function () {
           $("#reportIssueModal").modal("hide");
           $("#reportIssueForm")[0].reset();
           alert(
-            "Thank You! Your issue has been reported successfully. We will update you as soon as possible."
+            "Thank You! Your issue has been reported successfully. We will update you as soon as possible.",
           );
         }
       },
@@ -14457,7 +15073,7 @@ $(document).ready(function () {
         var uploadFile = data.files[0];
         if (!/\.(jpg|jpeg|png|gif|xls|xlsx|pdf)$/i.test(uploadFile.name)) {
           alert(
-            "You can upload JPG, JPEG, PNG, GIF, PDF, or Excel file(s) only"
+            "You can upload JPG, JPEG, PNG, GIF, PDF, or Excel file(s) only",
           );
           goUpload = false; // Prevent form submission
         }
@@ -14496,7 +15112,7 @@ $(document).ready(function () {
           var filename = $(
             '<li class="uploaded-file-name" originalname="' +
               encodeURI(jsonstring) +
-              '"></li>'
+              '"></li>',
           );
           filename.append($("<span>", { text: ell }));
           filename.append(
@@ -14506,10 +15122,10 @@ $(document).ready(function () {
                 file.googleDriveId +
                 " hostpath=" +
                 encodeURI(file.url) +
-                ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
             ).bind("click", function (e) {
               delDocClick(e);
-            })
+            }),
           );
           // add li to the list of the appropriate ul - class from folderType
           $("#ul" + file.folderType).append(filename);
@@ -14543,7 +15159,7 @@ $(document).ready(function () {
             $("#unviewedBadge").hide();
           }
         }
-      }
+      },
     );
   }
 
@@ -14567,7 +15183,7 @@ $(document).ready(function () {
         var uploadFile = data.files[0];
         if (!/\.(jpg|jpeg|png|gif|xls|xlsx|pdf)$/i.test(uploadFile.name)) {
           alert(
-            "You can upload JPG, JPEG, PNG, GIF, PDF, or Excel file(s) only"
+            "You can upload JPG, JPEG, PNG, GIF, PDF, or Excel file(s) only",
           );
           goUpload = false; // Prevent form submission
         }
@@ -14606,7 +15222,7 @@ $(document).ready(function () {
           var filename = $(
             '<li class="uploaded-file-name" originalname="' +
               encodeURI(jsonstring) +
-              '"></li>'
+              '"></li>',
           );
           filename.append($("<span>", { text: ell }));
           filename.append(
@@ -14616,10 +15232,10 @@ $(document).ready(function () {
                 file.googleDriveId +
                 " hostpath=" +
                 encodeURI(file.url) +
-                ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>'
+                ' title="Remove the document"><i class="glyphicon glyphicon-remove"></i>&nbsp;Delete</span>',
             ).bind("click", function (e) {
               delDocClick(e);
-            })
+            }),
           );
           // add li to the list of the appropriate ul - class from folderType
           $("#ul" + file.folderType).append(filename);
@@ -14651,6 +15267,7 @@ $(document).ready(function () {
       uid: 0,
       rtype: "createCustomerService",
       requestType: $("#customerServiceModal #requestType").val(),
+      subject: $("#customerServiceModal #requestSubject").val(),
       requestDescription: $("#customerServiceModal #requestDescription").val(),
       currentURL: $("#customerServiceModal #currentURL").val(),
       attachments: attachments,
@@ -14672,7 +15289,7 @@ $(document).ready(function () {
           $("#customerServiceModal").modal("hide");
           $("#customerServiceForm")[0].reset();
           alert(
-            "Thank You! Your request has been submitted successfully. We will update you as soon as possible."
+            "Thank You! Your request has been submitted successfully. We will update you as soon as possible.",
           );
         }
       },

@@ -4,7 +4,7 @@ include "$prog_path/config/connect.inc.php";
 extract($_SESSION);
 
 $certFilesDir = $hcp_path . "/iidc/client_data/certificates";
-$dmc_file = '/iidc/data/DMC/reports/dmc-';
+$dmc_file = '/data/DMC/reports/dmc-';
 include_once("$prog_path/config/connect.inc.php");
 if (!isset($_GET['oc']))
 	$status_completed = "and $tbl[prefix]_halal_certificates.invoice_nr = ''";
@@ -187,6 +187,9 @@ if (isset($result) and count($result) > 0) {
 							} else {
 								if (trim($row['url']) != '' && file_exists($certFilesDir . '/' . $row['url'])) { ?>
 									<a target="_new" href="<?php echo $prog_www; ?>/client_data/certificates/<?php echo $row['url']; ?>?act=print&tm=<?php echo time(); ?>"><?php echo $row['certificate_nr']; ?></a>
+								<?php
+								} elseif ($row['printed_on'] > 0) { ?>
+									<a target="_new" href="/iidc/certificates/annual/certificate.pdf.php?crtnr=<?php echo $row['crtNr']; ?>&crtDo=print"><?php echo $row['certificate_nr']; ?></a>
 								<?php
 								} else {
 									echo $row['certificate_nr'];
@@ -379,19 +382,28 @@ if (isset($result) and count($result) > 0) {
 									$qr_color = '#800';
 								}
 							?>
-								<i class="fa fa-th-large load_popup" data-id="company_name" data-url="download_products_list.php?clid=<?php echo $row['clid']; ?>&crtNr=<?php echo $row['crtNr']; ?>" title="Download Certificate's Products list" data-height="180" data-width="500"></i>
-								<i class="fas fa-qrcode load_popup" id="qr_<?php echo $row['crtNr']; ?>" data-url="/iidc/certificates/shared/qr/qr.php?crtNr=<?php echo $row['crtNr']; ?>" title="QR Certificate Status" style="color:<?php echo $qr_color; ?>"></i>
+								<!--<i class="fa fa-th-large load_popup" data-id="company_name" data-url="download_products_list.php?clid=<?php echo $row['clid']; ?>&crtNr=<?php echo $row['crtNr']; ?>" title="Download Certificate's Products list" data-height="180" data-width="500"></i>-->
+								<!-- <i class="fas fa-qrcode load_popup" id="qr_<?php echo $row['crtNr']; ?>" data-url="/iidc/certificates/shared/qr/qr.php?crtNr=<?php echo $row['crtNr']; ?>" title="QR Certificate Status" style="color:<?php echo $qr_color; ?>"></i>-->
 								<?php /* if ($row['country1'] != 'Israel') { ?>
 									<i class="fas fa-recycle" onClick="document.location.href='?inc=certificate_add_edit&act=reissue&crtNr=<?php echo $row['crtNr']; ?>&clid=<?php echo $row['clid']; ?>&offid=<?php echo $row['offid']; ?>'" title="Reissue Certificate"></i>
 								<?php }; */ ?>
 							<?php } ?>
-							<?php if ($user_type != 'hqc_office') { ?>
+
+							<?php /* if ($user_type != 'hqc_office') { ?>
 								<i class="fas fa-paperclip load_popup" id="qr_<?php echo $row['crtNr']; ?>" data-url="/iidc/certificates/annual/certificate_save.php?crtNr=<?php echo $row['crtNr']; ?>&act=internalMemo" title="Internal memo" style="color:<?php echo $qr_color; ?>"></i>
-							<?php }; ?>
+							<?php }; */ ?>
 
 							<img src="/iidc/images/edit.gif" onClick="document.location.href='/iidc/certificates/annual/?inc=certificate_add_edit&act=edit&crtNr=<?php echo $row['crtNr']; ?>&clid=<?php echo $row['clid']; ?>&offid=<?php echo $row['offid']; ?><?php echo (isset($options['verid'])) ? '&verid=' . $options['verid'] : ''; ?><?php echo (isset($options['stid'])) ? '&stid=' . $options['stid'] : ''; ?>'" title="Edit Certificate" />
 
 							<img src="/iidc/images/delete.gif" onClick="deleteCert('<?php echo $row['crtNr']; ?>')" title="Delete Certificate" />
+
+							<?php if ($row['printed_on'] > 0) { ?>
+								<?php
+								$dmcReportFile = $hcp_path . $dmc_file . $row['decid'] . '.pdf';
+								if (file_exists($dmcReportFile)) { ?>
+									<br/><a target="_new" href="/iidc<?php echo $dmc_file . $row['decid']; ?>.pdf" style="color:green;white-space:nowrap"><i class="fas fa-file-pdf" style="color:green"></i> Download DMC Report</a>
+								<?php } ?>
+							<?php } ?>
 						</td>
 					<?php }; ?>
 				</tr>

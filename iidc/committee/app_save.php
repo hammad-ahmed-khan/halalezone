@@ -41,6 +41,17 @@ if (isset($_POST['saveMemo']) && $_POST['saveMemo'] == 'yes' && isset($_POST['de
     exit();
 }
 
+if ($_POST['act'] == 'approveDMC') {
+    if ($dec = $amdb->get_row("SELECT * FROM hqc_committee_decision WHERE decid='" . intval($_POST['decid']) . "'")) {
+        $amdb->update("hqc_committee_decision", array('status' => 'approved'), "decid='" . intval($_POST['decid']) . "'");
+        $amdb->update("acms_halal_certificates", array('approved_by_dmc' => 'yes'), "crtNr='$dec[crtNr]'");
+        echo 'success';
+    } else {
+        echo 'error:DMC meeting not found!';
+    }
+    exit();
+}
+
 if ($_POST['act'] == 'save') {
 
     $decision['decision'] = serialize($_POST);

@@ -4,7 +4,7 @@
 <head>
     <?php include_once('pages/header.php');
     include_once ('includes/func.php');?>
-    <title>Audit - Halal e-Zone</title>
+    <title>Audit - Halal Digital</title>
 </head>
 <?php
 	$db = acsessDb :: singleton();

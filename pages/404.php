@@ -3,7 +3,7 @@
 
 <head>
     <?php include_once('pages/header.php');?>
-    <title>Error 404 - Halal e-Zone</title>
+    <title>Error 404 - Halal Digital</title>
 </head>
 <body>
 <nav class="navbar navbar-default navbar-static-top" role="navigation" style="margin-bottom: 0">

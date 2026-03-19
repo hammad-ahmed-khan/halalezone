@@ -1,7 +1,5 @@
 <?php
-if (!defined("__HQC__")) {
-	exit();
-}
+
 if (!session_id() and !isset($_SESSION['AM_REFFERER']) and $_SESSION['AM_REFFERER'] != $_SERVER['HTTP_HOST']) {
 	exit();
 }
@@ -533,9 +531,9 @@ if (!class_exists('amform')) {
 							if ($type == 'checkbox' or $type == 'radio') {
 
 								if (isset($the_inputs[$name]) && ($the_inputs[$name] == $el->getAttribute('value') or $type == 'checkbox')) {
-									$newEl = $doc->createTextNode('<img src="/images/check-square-checked.svg" style="width:14px;height:14px"/> ');
+									$newEl = $doc->createTextNode('<img src="/iidc/images/check-square-checked.svg" style="width:14px;height:14px"/> ');
 								} else {
-									$newEl = $doc->createTextNode('<img src="/images/square.svg" style="width:14px;height:14px"/> ');
+									$newEl = $doc->createTextNode('<img src="/iidc/images/square.svg" style="width:14px;height:14px"/> ');
 								}
 							} elseif (isset($the_inputs[$name])) {
 								if ($tag == 'select' and isset($the_inputs[$name])) {
@@ -1014,7 +1012,7 @@ if (!class_exists('amform')) {
 			$addPage = false;
 			global $footerY;
 			$footerY = -20;
-			require_once("$prog_path/pdf/tcpdf/hcp_pdf.inc.php");
+			require_once("$prog_path/tools/pdf/hcp_pdf.inc.php");
 
 			if (isset($margins) && strstr($margins, ',')) {
 				$margins = explode(',', $margins);

@@ -14,18 +14,25 @@
   $parent_id = $myuser->userdata['id'];
   $isClient = $myuser->userdata['isclient'] == "1" ? true : false;
   $isAuditor = $myuser->userdata['isclient'] == '2' ? true : false;
+  $isOdAuditor = $isAuditor && $myuser->userdata['is_od_auditor'] == '1';
   $isSuperAdmin = $myuser->userdata['superadmin'] == "1" ? true : false;
   $isAdmin = (!$isClient && !$isAuditor && !$isSuperAdmin);
   
   $hasFacilities = false;
 
 if ($isAuditor) { // Auditor
-    $ids = [-1];
-    $clients_audit = $myuser->userdata['clients_audit'];
-    if ($clients_audit != "") {
-      $ids = json_decode($clients_audit);
+    if ($isOdAuditor) {
+        // OD Auditor sees all clients like an admin
+        $sql = "SELECT id, name, prefix FROM tusers WHERE isclient=1 AND IFNULL(parent_id,'0') = '0' AND deleted = 0 ORDER BY name";
+    } else {
+        // Regular Auditor sees only assigned clients
+        $ids = [-1];
+        $clients_audit = $myuser->userdata['clients_audit'];
+        if ($clients_audit != "") {
+          $ids = json_decode($clients_audit);
+        }
+        $sql = "SELECT id, name, prefix FROM tusers WHERE isclient=1 AND deleted = 0 AND id IN (".implode(",", $ids).") ORDER BY name";
     }
-     $sql = "SELECT id, name, prefix FROM tusers WHERE isclient=1 AND deleted = 0 AND id IN (".implode(",", $ids).") ORDER BY name";
 }
 else if ($isClient) {
   // Get facilities
@@ -155,7 +162,7 @@ if ($stmt->execute()) {
 <link rel='stylesheet' id='fileup-css'  href='css/fileup.css?ver=6.0.1' type='text/css' media='all' />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css" integrity="sha512-1sCRPdkRXhBV2PBLUdRb4tMg1w2YPf37qatUFeS7zlBy7jJI8Lf4VHwWfZZfpXtYSLy85pkm9GaYVYMfw5BC1A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <link rel='stylesheet' id='fileup-css'  href='css/all.css?v=<?php echo rand(); ?>' type='text/css' media='all' />
-<title>Applications and Documents - Halal e-Zone</title>
+<title>Applications and Documents - Halal Digital</title>
 <style>
   #last_login_sent {
   display:block;
@@ -208,14 +215,26 @@ color:#000;
 	
   /*line-height:normal;*/
  }
-.nav-pills li.active  a {
+.nav-app li.active  a {
 	font-weight:bold;
+  background-color:#3B82F6;
+  color:#fff;
 }
-.nav-pills>li>a {
-    border: 1px solid #ddd;
-    background-color:#F9F9F9;
- 
+
+.nav-app li.active i {
+
+  color:#fff !important;
 }
+
+.nav-app li.locked {
+  background: #fff;
+}
+.nav-app li.locked a,
+.nav-app li.locked i {
+color:#9ca3af;
+
+}
+
 .fileup-upload {
 	display: none !important;
 }
@@ -234,6 +253,12 @@ color:#000;
       min-height: 200px;
   }    
 
+  h2 {
+    font-size:24px;
+    font-weight: 600;
+    margin-left:6px; 
+  }
+
     /* Completed Step */
     .nav-pills > li.completed a {
             color: green;
@@ -245,11 +270,11 @@ color:#000;
 
         /* Current Step */
         .nav-pills > li.active a {
-            color: #3498DB ;
+            color: #3B82F6 ;
             font-weight: bold;
         }
         .nav-pills > li.active a .fa {
-            color: #3498DB;
+            color: #3B82F6;
         }
 
         /* Locked Step */
@@ -289,7 +314,7 @@ td[colspan] > div:before {
 <?php if ($disableControls): ?>
      [id^="btn-"],
     .btn-sign,
-    .btn-measure-,
+    .btn-measure,
     .alert {
       display: none !important;
     }
@@ -303,6 +328,199 @@ td[colspan] > div:before {
  .fa.fa-dot-circle {
   color:#4a90e2  !important;
  }
+
+ .rename-cycles-button {
+    background-color: #3B82F6 !important; /* soft neutral grey */
+    padding:7px 12px 6px;
+    margin-left: 10px;
+    color: white;
+     border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.rename-cycles-button:hover {
+    background-color: #3B82F6 !important;
+}
+
+.nav-app {
+  padding:0px;
+  margin:0px;
+}
+
+.nav-app i {
+  font-size: 22px;
+  
+}
+
+.nav-app {
+  border-radius: 6px;
+}
+
+.nav-app li {
+  background: #eafaf1;
+  color:#27ae60;
+  margin:0px 0px 1px !important;
+  
+}
+
+.nav-app li a {
+    font-size: 16px;
+    color: #27ae60;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 25px;
+}
+
+#renameCyclesModal .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  #renameCyclesModal .modal-header .modal-title {
+    margin-bottom: 0;
+  }
+
+  #renameCyclesModal .modal-header .close {
+    margin: 0;
+    padding: 0.5rem;
+    line-height: 1;
+  }
+
+  #renameCyclesModal .modal-header .close::before,
+  #renameCyclesModal .modal-header .close::after {
+    display: none !important; /* neutralize pseudo-elements if they exist */
+    content: none;
+  }
+  .tab-pane h3 {
+    font-weight: 600;
+    font-size: 21px;
+  }
+
+          .app-sidebar {
+            width: 100%;
+            background-color: #ffffff; /* White background */
+            color: #333333; /* Dark text */            
+            padding: 0px 0;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar-header {
+            padding: 0 20px 15px;
+            border-bottom: 1px solid #e0e0e0;
+            margin-bottom: 10px;
+        }
+
+        .sidebar-header h2 {
+            margin: 0;
+            font-size: 1.3rem;
+            color: #333;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar-menu li {
+            padding: 0;
+        }
+
+        .sidebar-menu li a {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            text-decoration: none;
+            color: inherit;
+            border-left: 4px solid transparent;
+            transition: all 0.3s;
+        }
+
+        /* DEFAULT (Inactive) */
+        .sidebar-menu li a {
+            color: #666;
+        }
+
+        /* COMPLETED (Circle checkmark) */
+        .sidebar-menu li.completed a {
+            color: #333;
+            background-color: rgba(76, 175, 80, 0.1);
+            position: relative;
+        }
+        .sidebar-menu li.completed a::before {
+            content: "";
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            margin-right: 10px;
+            background-color: #4CAF50;
+            border-radius: 50%;
+            position: relative;
+        }
+        .sidebar-menu li.completed a::after {
+            content: "\f00c";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            font-size: 10px;
+            color: white;
+            position: absolute;
+            left: 24px;
+            top: 51%;
+            transform: translateY(-50%);
+        }
+
+          /* ACTIVE STATE (When tab is clicked/selected) */
+        .sidebar-menu li.active a {
+            background-color: rgba(67, 160, 71, 0.2);
+            border-left: 4px solid #43a047;
+            color: #333;
+            font-weight: bold;
+        }
+        
+
+        /* CURRENT (Blue with arrow) */
+        .sidebar-menu li.current a {
+            background-color: rgba(76, 201, 240, 0.1); /* Light blue */
+            border-left: 4px solid #4cc9f0;
+            color: #333;
+            font-weight: bold;
+        }
+        .sidebar-menu li.current a::before {
+            content: "\f061"; /* FontAwesome arrow */
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            margin-right: 10px;
+            color: #4cc9f0; /* Blue */
+        }
+
+        /* LOCKED (Gray with padlock) */
+        .sidebar-menu li.locked a {
+            color: #999;
+            cursor: not-allowed;
+        }
+        .sidebar-menu li.locked a::before {
+            content: "\f023"; /* FontAwesome padlock */
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            margin-right: 10px;
+            color: #999;
+        }
+
+        /* Hover effects (excluding locked items) */
+        .sidebar-menu li:not(.locked) a:hover {
+            background-color: #f0f0f0;
+            cursor: pointer;
+        }
+        
+        .sidebar-menu li i {
+          display: none !important;
+        }
 </style>
 </head>
 <body>
@@ -312,7 +530,11 @@ td[colspan] > div:before {
     <div class="main-content-inner">
       <div class="page-content">
         <div class="row no-gutters">
-          <div class="col-xs-12" style="padding-top:25px;">
+          <div class="col-xs-12" style="">
+          <div class="widget-box widget-border" style="margin-top:10px;">
+                        <div class="widget-body">
+                            <div class="widget-main">
+
             <?php if ($isClient && !$hasFacilities): ?>              
               <!--<input type="hidden" id="app-cycleid" value=<?php echo $selCycleId; ?> />-->
               <input type="hidden" id="app-clientid" value=<?php echo $_SESSION['halal']['id']; ?> data-clientname="<?php echo $myuser->userdata['name']," - ",$myuser->userdata['prefix'],$myuser->userdata['id'],""; ?>"/>
@@ -354,7 +576,7 @@ td[colspan] > div:before {
               <div class="form-inline"  style="display:inline !important;">
                <div class="form-group">
                 <label>&nbsp;&nbsp;Cycles&nbsp;&nbsp;
-                <select class="form-control cycleslist" id="app-cycleid" style="min-width:488px;">
+                <select class="form-control cycleslist" id="app-cycleid">
       `              <option value="-1">Select Certification Cycle</option>
                     <?php foreach ($cycles as $cycle): ?>
                         <option value="<?php echo $cycle['id']; ?>" <?php if ($cycle['id'] == $_GET['idcycle'] || (!isset($_GET['idcycle']) && $cycle['state'] == '1')): ?>selected<?php endif; ?>>
@@ -365,32 +587,34 @@ td[colspan] > div:before {
 
                 <?php if ($isSuperAdmin): ?>
                 <!-- Button to trigger modal -->
-<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#renameCyclesModal">
-  Rename Cycles
+ 
+  <button class="rename-cycles-button btn"  data-toggle="modal" data-target="#renameCyclesModal">
+  ✎ Rename Cycles
 </button>
+ 
 
 <!-- Modal -->
 <div class="modal fade" id="renameCyclesModal" tabindex="-1" role="dialog" aria-labelledby="renameCyclesModalLabel" aria-hidden="true">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="renameCyclesModalLabel">Rename Cycles</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+      <div class="modal-header align-items-center" >
+        <h5 class="modal-title mb-0" id="renameCyclesModalLabel">Rename Cycles</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="margin: 0;">
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
       <div class="modal-body">
-      <form id="renameCyclesForm">
-<input type="hidden" name="idclient" value="<?php echo $_GET["idclient"]; ?>" />
-  <?php 
-  $num = 0;
-  foreach ($cycles as $cycle): $num++; ?>
-    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-      <label for="cycle_<?php echo $cycle['id']; ?>" style="white-space: nowrap; min-width: 100px;">Cycle <?php echo $num; ?></label>
-      <input type="text" class="form-control cycle-input" id="cycle_<?php echo $cycle['id']; ?>" name="cycle[<?php echo $cycle['id']; ?>]" value="<?php echo $cycle['name']; ?>" style="flex: 1; width: 100%;" />
-    </div>
-  <?php endforeach; ?>
-</form>
+        <form id="renameCyclesForm">
+          <input type="hidden" name="idclient" value="<?php echo $_GET["idclient"]; ?>" />
+          <?php 
+          $num = 0;
+          foreach ($cycles as $cycle): $num++; ?>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+              <label for="cycle_<?php echo $cycle['id']; ?>" style="white-space: nowrap; min-width: 100px;">Cycle <?php echo $num; ?></label>
+              <input type="text" class="form-control cycle-input" id="cycle_<?php echo $cycle['id']; ?>" name="cycle[<?php echo $cycle['id']; ?>]" value="<?php echo $cycle['name']; ?>" style="flex: 1; width: 100%;" />
+            </div>
+          <?php endforeach; ?>
+        </form>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
@@ -399,14 +623,19 @@ td[colspan] > div:before {
     </div>
   </div>
 </div>
+
 <?php endif; ?>
                 </label>
                </div>
+              </div>
+              </div>
+              </div>
               </div>
               <?php //endif; ?>
 
           </div>
           <div class="col-xs-12">
+        
             <?php if (!$isClient): ?>
               <div id="selectCycle" class="alert alert-info" style="font-size:18px; margin-top:15px; display:none;"><p>No certification cycles have been created yet. Please click <a href="#" class="btn btn-primary" data-toggle="modal" data-target="#certificationModal" style="border:none !important;">here</a> to create a new one.</p></div>
               <?php endif; ?>
@@ -419,11 +648,13 @@ td[colspan] > div:before {
             <!-- PAGE CONTENT BEGINS -->
             <input type="hidden" name="idapp" id="idapp" value="<?php echo $appData ? $appData["id"] : ""; ?>" />
             <input type="hidden" name="appstate" id="appstate" value="" />
-            <div class="row" style="margin-top:30px;">
+            <div class="row" style="margin-top:20px;">
             <div class="col-md-3">
-            <ul class="nav nav-pills nav-stacked nav-app">
+              <div class="app-sidebar">
+            <ul class="sidebar-menu">
               
                 
+                  
                 <li <?php if ($isClient || $isAdmin || $isSuperAdmin): ?> style="display:block;"  <?php else: ?> style="display:none;" <?php endif;?> class="tab_offer"><a data-toggle="tab" href="#offer">Offer <i class="fa"></i></a></li>
                 <li <?php if ($isClient || $isAdmin || $isSuperAdmin): ?> style="display:block;"  <?php else: ?> style="display:none;" <?php endif;?> class="tab_soffer"><a data-toggle="tab" href="#soffer">Signed Offer <i class="fa"></i></a></li>
                 
@@ -465,12 +696,16 @@ Corrective Actions <i class="fa"></i></a></li>
               
                 <li <?php if ($isAdmin || $isClient || $isSuperAdmin): ?> style="display:block;"  <?php else: ?> style="display:none;" <?php endif;?> class="tab_invoiceai"><a data-toggle="tab" id="tinvoiceai" class="multiline" href="#invoiceai">Upload invoice for additional items <i class="fa"></i></a></li>
                 <li <?php if ($isClient || $isAdmin || $isSuperAdmin): ?> style="display:block;"  <?php else: ?> style="display:none;" <?php endif;?> class="tab_popai"><a data-toggle="tab" id="tpopai" class="multiline" href="#popai">Proof of Payment – Additional Items <i class="fa"></i></a></li>
-              
+                    
 
               <li class="tab_extension"><a data-toggle="tab" href="#extension" class="multiline">Certificate Extension <i class="fa"></i></a></li>
             </ul>
+            </div>
           </div>
           <div class="col-md-9">
+          <div class="widget-boxwidget-border">
+                        <div class="widgetbody">
+                            <div class="widgetmain">
             <div class="tab-content">
               <div id="offer" class="tab-pane fade in active">
                 <?php include('partials/offer.php');?>
@@ -548,7 +783,10 @@ Corrective Actions <i class="fa"></i></a></li>
             </div>
               </div>
               </div>
-			</div>            
+			</div> 
+              </div>
+              </div>
+              </div>           
             <!-- PAGE CONTENT ENDS --> 
           </div>
           <!-- /.col --> 
@@ -926,7 +1164,7 @@ Corrective Actions <i class="fa"></i></a></li>
 					$("#appMain").show();
 					$("#selectClient").hide();
 					init();
-					//$('a[data-toggle="tab"]').parent().removeClass('active');
+					//$'a[data-toggle="tab"]').parent().removeClass('active');
 			        //$('.tab-pane.active').removeClass('active');					
 					//$('a[href="#app"]').tab('show');					
 				}
@@ -940,7 +1178,7 @@ Corrective Actions <i class="fa"></i></a></li>
 		<?php // endif; ?>
 
 		$('a[data-toggle="tab"]').on('show.bs.tab', function (e) {
-			if ($(e.target).find(".fa-lock").length) {
+			if ($(e.target).parent().hasClass('locked')) {
 				return false;
 			}
 			var target = $(e.target).attr("href") // activated tab
@@ -1064,14 +1302,15 @@ Corrective Actions <i class="fa"></i></a></li>
 		if (state == "") { 
 			state = "app";
 		}
-		$(".nav-app li").removeClass("locked");
-		$(".nav-app li i").removeClass("fa-lock");		
-		$(".nav-app li i").removeClass("fa-check");	
+		$(".sidebar-menu li").removeClass("locked");
+		$(".sidebar-menu li i").removeClass("fa-lock");		
+		$(".sidebar-menu li i").removeClass("fa-check");	
     
  		$(".tab-content .btn-complete").show();
 		$(".tab-content .btn-skip").show();    
 		var stateFound =false;
-		$(".nav-app li").each(function() { 
+
+    $(".sidebar-menu li").each(function() { 
 			var id = $(this).find('a[data-toggle=tab]').attr('href'); 
 			if ($(this).hasClass('tab_'+state)) { 
 				 stateFound = true;
@@ -1079,21 +1318,23 @@ Corrective Actions <i class="fa"></i></a></li>
 			else { 
   				if ( stateFound ) { 
 					$(this).addClass("locked");
-					$(this).find("i").removeClass("fa-check");
-					$(this).find("i").addClass("fa-lock");
+          $(this).removeClass("completed");
+					//$(this).find("i").removeClass("fa-check-circle");
+					//$(this).find("i").addClass("fa-lock");
 					$(id).find(".btn-complete").show();					
 					$(id).find(".btn-skip").show();									
 				}
 				else {
+					$(this).addClass("completed");					
 					$(this).removeClass("locked");					
 					$(this).find("i").removeClass("fa-lock");
-					$(this).find("i").addClass("fa-check");
+					$(this).find("i").addClass("fa-check-circle");
 					$(id).find(".btn-complete").hide();									
 					$(id).find(".btn-skip").hide();									
 				}
 			}
 		});
-
+ 
 		/*
 		for (i=1;i<state;i++) {
 			//$('#tab_'+i).removeClass("active");
@@ -1162,7 +1403,8 @@ Corrective Actions <i class="fa"></i></a></li>
           var countryOfCompany = response.data.appData.countryOfCompany;
           var PreferredLanguage = response.data.appData.preferred_language;
           var EnglishAcceptable = response.data.appData.english_acceptable;
-          
+          var AuditNotes = response.data.appData.audit_notes;
+
           if (approvedDate1 == '0000-00-00') {
             approvedDate1 = "";
           }
@@ -1316,12 +1558,13 @@ Corrective Actions <i class="fa"></i></a></li>
 				  $("#AuditDate2").val(auditDate2);
 				  $("#AuditDate3").val(auditDate3);
           $("#PreferredLanguage").val(PreferredLanguage) ;
+          $("#AuditNotes").val(AuditNotes) ;          
           if (EnglishAcceptable === "Yes") {
               $("input[name='EnglishAcceptable'][value='Yes']").prop("checked", true);
           } else if (EnglishAcceptable === "No") {
               $("input[name='EnglishAcceptable'][value='No']").prop("checked", true);
           }
-                    
+
           // radio button values
 				  $("#ApprovedDate1").val(auditDate1);
 				  $("#ApprovedDate2").val(auditDate2);
@@ -1484,18 +1727,17 @@ function changeAppState(state, skip) {
 }
 
 <?php if ($disableControls):?>
-
   document.querySelectorAll('[id^="btn-"]').forEach(el => {
-    el.style.display = "none";
-  });
+  el.style.display = "none";
+});
 
-  document.querySelector('.btn-sign').style.display = "none";
-  document.querySelector('.btn-measure').style.display = "block";
-  document.querySelector('.alert').style.display = "none";
+document.querySelector('.btn-sign').style.display = "none";
+document.querySelector('.btn-measure').style.display = "none";
+document.querySelector('.alert').style.display = "none";
 
-  document.querySelector('#popinv #btn-upload').style.display = "block"; 
-  document.querySelector('#pop #btn-upload').style.display = "block"; 
-  document.querySelector('#popai #btn-upload').style.display = "block"; 
+document.querySelector('#popinv #btn-upload').style.display = "block"; 
+document.querySelector('#pop #btn-upload').style.display = "block"; 
+document.querySelector('#popai #btn-upload').style.display = "block"; 
 
 <?php endif; ?>
 
@@ -1541,7 +1783,7 @@ function changeAppState(state, skip) {
         } else {
           $(this).css('border', ''); // Reset border if filled
         }
-      }); 
+      });
 
       if (!isValid) {
         alert('Please fill in all cycle fields.');

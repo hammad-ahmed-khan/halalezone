@@ -4,7 +4,7 @@
 <head>
     <?php include_once('pages/header.php');
     include_once ('includes/func.php');?>
-    <title>Support Tickets - Halal e-Zone</title>
+    <title>Support Tickets - Halal Digital</title>
     <style>
 
     </style>
@@ -65,12 +65,16 @@
             <div class="page-content">
                 <div class="row no-gutters">
                     <div class="col-xs-12">
-                     <h3>Support Tickets</h3>
+
                      <?php if (!$myuser->userdata['isclient']): ?>
+                    <div class="widget-box widget-border" style="margin:15px 0;">
+                        <div class="widget-body">
+                            <div class="widget-main">
+
                      <form id="searchForm" style="height:auto">
-                        <div class="row" style="height:auto">
-                            <div class="form-group col-md-3">
-                                <label for="idclient">Client:</label>
+                     <div class="form-inline">
+                     <div class="form-group">
+                                <label for="idclient">Clients:</label>
                                 <select class="form-control clientslist" id="idclient">
                                     <option value="">All Clients</option>
                                     <?php foreach ($clients as $client): ?>
@@ -78,26 +82,41 @@
                                     <?php endforeach; ?>
                                 </select>
                             </div>
+                                  <label class="right">
+                        <input id="filter-actions-confirmed" class="ace ace-switch ace-switch-4" type="checkbox">
+                        <span class="lbl">&nbsp;&nbsp;Show closed tickets</span>
+                    </label>  
                         </div>
                     </form>
+                </div>
+                              
+                </div>
+                
+                </div>
+
                     <?php elseif ($myuser->userdata['isclient'] == '1'): ?>
                         <input type="hidden" id="idclient" value=<?php echo $_SESSION['halal']['id']; ?> data-clientname="<?php echo $myuser->userdata['name']," (",$myuser->userdata['id'],")"; ?>"/>
                     <?php endif; ?>
                     <input type="hidden" name="ticketId" id="ticketId" value="" />
                     <input type="hidden" name="ticketStatus" id="ticketStatus" value="1" />
-                    <?php // if (!$myuser->userdata['isclient']): ?>
-                    <div class="row gutters">
-                    <label class="right">
-                        <input id="filter-actions-confirmed" class="ace ace-switch ace-switch-4" type="checkbox">
-                        <span class="lbl">&nbsp;&nbsp;Show closed tickets</span>
-                    </label>
-                    </div>  
-                    <?php // endif; ?>
-                    <table id="table_tickets" class="table table-hover table-striped table-bordered w-100" style="width:100%;">
+                    
+                    <?php
+                        if ($myuser->userdata['isclient'] == '1' || $myuser->userdata['isclient'] == '2'):
+                             echo '<div style="display: flex; justify-content: space-between; align-items: center; margin:25px 0 15px;">
+        <h2 style="margin: 0;">My Tickets</h2>
+        <label style="margin: 0;">
+            <input id="filter-actions-confirmed" class="ace ace-switch ace-switch-4" type="checkbox">
+            <span class="lbl">&nbsp;&nbsp;Show closed tickets</span>
+        </label>
+      </div>';
+                        endif;
+                    ?>
+           
+                    <table id="table_tickets" class="table table-hover table-striped= table-bordered w-100" style="width:100%;">
                         <thead>
                             <tr class="tableheader">
                             <?php if ($myuser->userdata['isclient'] != "1"): ?>
-                                <th style="width:14%;">Client</th>
+                                <th style="width:14%;">Created by</th>
                             <?php endif; ?>
                             <th class="no-wrap">Reference #</th>
                             <th class="no-wrap">Type</th>                            
@@ -121,8 +140,10 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h4 class="modal-title" id="notesModalLabel">Reference #<span id="referenceNo"></span></h4>
-            </div>
+<h4 class="modal-title" id="notesModalLabel">
+    Reference #<span id="referenceNo"></span> - 
+    <span id="tIssueSubject"></span>
+</h4>            </div>
             <div class="modal-body">
                 <input type="hidden" name="clientname" id="clientname" value="" />
             <div class="row">
@@ -213,9 +234,9 @@
 <script src="js/all.js"></script>
 
 <script>
+
     
 $(document).ready(function() {
-    
     Common.setMainMenuItem("helpDesk");
 
     var windowHeight = $(window).height();
@@ -239,13 +260,11 @@ $(document).ready(function() {
         serverSide: true,
         //scrollY: calculatedDataTableHeight, // Set scrollY to the calculated height
         scrollX: true,
-
-        <?php if ($myuser->userdata['isclient'] != "1"): ?>        
+        <?php if ($myuser->userdata['isclient'] != "1"): ?>
         order: [[1, 'desc']], // 🟢 Default sort by "id" column in descending order
         <?php else: ?>
         order: [[0, 'desc']], // 🟢 Default sort by "id" column in descending order
         <?php endif; ?>
-      
         ajax: {
             url: "ajax/getTickets.php",
             type: "POST",
@@ -280,6 +299,7 @@ $(document).ready(function() {
         $("#ticketStatus").val($(this).is(":checked") ? '0' : '1');
         table_tickets.ajax.reload(null, false);
     });
+
 
     $('#idclient').on('change', function() {
 		table_tickets.ajax.reload(null, false);
@@ -318,6 +338,7 @@ $(document).ready(function() {
                 $('#postReplyModal #clientname').val(response.clientname);
                 $('#referenceNo').html(response.id);
                 $('#tIssueType').html(response.issue_type);
+                $('#tIssueSubject').html(response.subject);
                 //$('#issueDescription').html(response.issue_description);
                 $('#currentURL').html(response.current_url);
                 $('#attachments').html(response.attachments);
@@ -338,8 +359,7 @@ $(document).ready(function() {
             }
       });        
      }
-
-     $(document).on('click', '.post-reply', function() {
+    $(document).on('click', '.post-reply', function() {
         var id = $(this).attr("id");
         $("#ticketId").val(id);
       getTicketData(id);
@@ -366,6 +386,7 @@ $(document).ready(function() {
           var spanText = $(this).find('span:first').text();
           texts.push(spanText);
       });
+      
       var attachments = texts.join(', ');
 
           var formData = {
@@ -479,7 +500,10 @@ $(document).ready(function() {
   .prop('disabled', !$.support.fileInput)
   .parent()
   .addClass($.support.fileInput ? undefined : 'disabled');
-}); 
+
+   
+});
+ 
 </script>
 </body>
 </html>

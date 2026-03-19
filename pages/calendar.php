@@ -8,6 +8,7 @@ $dbo =  $db->connect(); // Database connection
 
 $myuser = cuser::singleton();
 $myuser->getUserData();
+$isOdAuditor = ($myuser->userdata['isclient'] == '2' && $myuser->userdata['is_od_auditor'] == '1');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -129,7 +130,7 @@ $myuser->getUserData();
             <!-- Enhanced Filters Section -->
             <?php if ($myuser->userdata['isclient'] != '1'): ?>
             <div class="calendar-filters">
-              <!--
+                <!--
               <h4 style="margin-top: 0; margin-bottom: 15px;">
                 <i class="fa fa-filter"></i> Calendar Filters
               </h4>
@@ -137,19 +138,19 @@ $myuser->getUserData();
               
               <div class="row filter-row">
                 <!-- Client Filter -->
-                <div class="<?php echo ($myuser->userdata['isclient'] == '2') ? 'col-md-4' : 'col-md-3'; ?>">
+                <div class="<?php echo ($myuser->userdata['isclient'] == '2' && !$isOdAuditor) ? 'col-md-4' : 'col-md-3'; ?>">
                   <label class="filter-label">Filter by Client</label>
                   <select class="form-control clientslist" id="app-clientid">
                     <option value="-1">All Clients</option>
                     <!-- Options populated by JavaScript -->
                   </select>
                   <div class="filter-info">
-                    <?php echo ($myuser->userdata['isclient'] == '2') ? 'Select from your assigned clients' : 'Select a specific client or view all'; ?>
+                    <?php echo ($myuser->userdata['isclient'] == '2' && !$isOdAuditor) ? 'Select from your assigned clients' : 'Select a specific client or view all'; ?>
                   </div>
                 </div>
                 
                 <!-- Auditor Filter (Only for Admin users) -->
-                <?php if ($myuser->userdata['isclient'] == '0'): ?>
+                <?php if ($myuser->userdata['isclient'] == '0' || $isOdAuditor): ?>
                 <div class="col-md-3">
                   <label class="filter-label">Filter by Auditor</label>
                   <select class="form-control" id="app-auditorid">
@@ -161,7 +162,7 @@ $myuser->getUserData();
                 <?php endif; ?>
                 
                 <!-- Date From -->
-                <div class="<?php echo ($myuser->userdata['isclient'] == '2') ? 'col-md-4' : 'col-md-3'; ?>">
+                <div class="<?php echo ($myuser->userdata['isclient'] == '2' && !$isOdAuditor) ? 'col-md-4' : 'col-md-3'; ?>">
                   <label class="filter-label">From Date</label>
                   <div class="input-group date">
                     <input type="text" class="form-control" id="filter-date-from" placeholder="Limit calendar start" />
@@ -173,7 +174,7 @@ $myuser->getUserData();
                 </div>
                 
                 <!-- Date To -->
-                <div class="<?php echo ($myuser->userdata['isclient'] == '2') ? 'col-md-4' : 'col-md-3'; ?>">
+                <div class="<?php echo ($myuser->userdata['isclient'] == '2' && !$isOdAuditor) ? 'col-md-4' : 'col-md-3'; ?>">
                   <label class="filter-label">To Date</label>
                   <div class="input-group date">
                     <input type="text" class="form-control" id="filter-date-to" placeholder="Limit calendar end" />

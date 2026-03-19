@@ -36,6 +36,16 @@ $routes = array
 	),
 
 	array(
+
+		// паттерн в формате Perl-совместимого реулярного выражения
+		'pattern' => '~^/training_request_form$~',
+		// Имя класса обработчика
+		'class' => 'Register',
+		// Имя метода класса обработчика
+		'method' => 'trainingRequestForm'
+	),
+
+	array(
 	// паттерн в формате Perl-совместимого реулярного выражения
 	'pattern' => '~^/$~',
 	// Имя класса обработчика 
@@ -168,12 +178,33 @@ $routes = array
 		'method' => 'preferences',
 	),
 
+	
 	array(
 		'pattern' => '~^/training$~',
 		'class' => 'Index',
 		'method' => 'training',
 	),
 
+	
+	array(
+		'pattern' => '~^/trainingRequests$~',
+		'class' => 'Index',
+		'method' => 'trainingRequests',
+	),
+
+	array(
+		'pattern' => '~^/notificationsManagement$~',
+		'class' => 'Index',
+		'method' => 'notificationsManagement',
+	),
+
+		array(
+		'pattern' => '~^/notificationsHistory$~',
+		'class' => 'Index',
+		'method' => 'notificationsHistory',
+	),
+
+	
 	array(
 		'pattern' => '~^/faq_manager$~',
 		'class' => 'Index',
@@ -181,10 +212,40 @@ $routes = array
 	),
 
 	array(
-    'pattern' => '~^/support$~',
-    'class' => 'Index',
-    'method' => 'faq',
-),
+		'pattern' => '~^/sfda_applications$~',
+		'class' => 'Index',
+		'method' => 'sfdaApplications',
+	),
 
+	array(
+		'pattern' => '~^/halal_slaughtering$~',
+		'class' => 'Index',
+		'method' => 'halalSlaughtering',
+	),
+
+	array(
+		'pattern' => '~^/support$~',
+		'class' => 'Index',
+		'method' => 'faq',
+	),
+
+	array(
+		'pattern' => '~^/iidc_certificates$~',
+		'class' => 'Index',
+		'method' => 'iidcCertificates',
+	),
+
+	array(
+		'pattern' => '~^/additional_items_applications$~',
+		'class' => 'Index',
+		'method' => 'additionalItemsApplications',
+	),
+
+
+	array(
+		'pattern' => '~^/production_sites$~',
+		'class' => 'Index',
+		'method' => 'productionSites',
+	),	
 );
 ?>

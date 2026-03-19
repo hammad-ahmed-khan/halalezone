@@ -1,10 +1,10 @@
-<h1 style="text-align: center;">Decision Making Report</h1>
+<h1 style="text-align: center; margin:15px 0">Decision Making Report</h1>
 <table width="100%" style="width: 100%;" class="company_data alternate">
     <tbody>
         <tr class="firstTr">
             <td class="th" style="width: 1cm;">1</td>
             <td style="width: 200px;">Date of DMCR:</td>
-            <td style="width: 11cm;"><input type="text" class="date" name="date_of_dmcr" data-required="yes" id="DateOfDmcr"> Valid Until: [date_valid_until]<input type="hidden" name="valid_until" value="[valid_until]"></td>
+            <td style="width: 11cm;"><input type="text" class="date1" name="date_of_dmcr" data-required="yes" id="DateOfDmcr"> Valid Until: [date_valid_until]<input type="hidden" name="valid_until" value="[valid_until]"></td>
         </tr>
         <tr>
             <td class="th">2</td>

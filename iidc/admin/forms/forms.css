@@ -1,0 +1,192 @@
+#style_editor,
+#php_editor,
+#pdf_style_editor,
+#pdf_php_editor {
+  margin: 0;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+#optionTabs {
+  padding-left: 0px;
+  margin-top: 20px;
+}
+
+#toolTabs b.title {
+  display: block;
+  background: var(--color20);
+  color: var(--color80);
+  padding: 10px;
+  border-bottom: 2px solid var(--color30);
+  font-size: 14px;
+  text-transform: uppercase;
+}
+
+#optionTabs ul {
+  display: flex;
+  background: var(--color30);
+}
+#optionTabs li {
+  float: left;
+  min-width: 50px;
+  padding: 10px 20px 5px 10px;
+  cursor: pointer;
+  color: var(--color100);
+  background: var(--color30);
+  border-radius: 0 14px 0 0;
+  border-right: 1px solid var(--color50);
+}
+
+#optionTabs li.active {
+  background: var(--color20);
+  color: #cf2423;
+}
+#optionTabs li i {
+  font-size: 14px !important;
+  color: var(--color80);
+  margin: 0 5px;
+  padding: 0px;
+  line-height: 14px !important;
+}
+
+ul#toolTabs li {
+  background: var(--color20);
+  overflow: hidden;
+  min-height: 450px;
+}
+
+#formDiv input[type="text"],
+#formDiv input[type="email"],
+#formDiv select,
+#formDiv .subTitle,
+#subFormMetas input[type="text"] {
+  width: 8%;
+  display: block;
+  height: 32px;
+  display: inline-block;
+  margin: 3px;
+}
+
+#formDiv select{
+  width: 15%;
+}
+#formDiv .subDiv {
+  padding-bottom: 5px;
+  width: 49.8%;
+  background: #f5f5f5;
+  padding: 5px;
+  box-sizing: border-box;
+}
+
+#formDiv .subTitle {
+  height: 20px;
+}
+
+.ace_content {
+  width: 100% !important;
+}
+
+#toolTabs table {
+  padding: 0px;
+  margin: 10px 0 0 0;
+  width: 100%;
+}
+
+#toolTabs table td {
+  padding: 0px;
+  margin: 5px 0;
+}
+
+#shortcodesTbl ol li {
+  cursor: pointer;
+}
+
+#shortcodesTbl ol li:hover {
+  color: #f59d00;
+}
+
+table.includeFiles td {
+  padding: 3px 5px !important;
+}
+
+table.includeFiles {
+  margin: 0px !important;
+}
+
+#toolTabs table td b {
+  margin: 6px 0;
+  display: inline-block;
+}
+
+#toolTabs table td input[type="text"],
+#toolTabs table td select {
+  width: 100%;
+}
+
+#toolTabs table td {
+  vertical-align: middle;
+}
+
+#subFormMetas input {
+  width: 20% !important;
+  margin: 3px !important;
+}
+
+.formMetas {
+  background: #eee;
+  padding: 5px 10px;
+  overflow: hidden;
+}
+
+.fa-expand-arrows-alt {
+  color: #555;
+  position: absolute;
+  right: 10px;
+  top: 5px;
+  font-size: 16px !important;
+}
+
+table table{
+  border: none;
+}
+
+div#mceu_177 {
+  display: none;
+}
+
+div#tinyMceContent {
+  height: 88%;
+}
+
+div#tinyMceContentDiv {
+  border: 1px solid var(--color20);
+  height: 100%;
+  background: var(--color20);
+  padding: 0px;
+  overflow: hidden;
+}
+
+div#tinyMceContentDiv .footer {
+  text-align: center;
+  background: var(--color20);
+  float: right;
+  margin-right: 50px;
+}
+
+h4.title {
+  padding-left: 50px;
+}
+
+div.tinyMceContentDiv {
+    border: 1px solid var(--color20);
+    height: 100%;
+    position: fixed;
+    top: 0px;
+    width: 100%;
+    left: 0px;
+    z-index: 1000;
+    background: white;
+}

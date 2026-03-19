@@ -16,13 +16,22 @@ try {
     $sortingField = $_POST['sidx'] ?? 'date_of_service';
     $sortingOrder = $_POST['sord'] ?? 'desc';
 
-    // Get filter parameters
+    // Get filter parameters - same pattern as getProd.php
+    $name = getPostParam('name');
     $company_name = getPostParam('company_name');
+    $date_of_service = getPostParam('date_of_service');
     $service_type = getPostParam('service_type');
-    $invoice_number = getPostParam('invoice_number');
-    $paid_status = getPostParam('paid_status');
-    $date_from = getPostParam('date_from');
-    $date_to = getPostParam('date_to');
+    $auditor_type = getPostParam('auditor_type');
+    $standards = getPostParam('standards');
+    $audit_type = getPostParam('audit_type');
+    $audit_category = getPostParam('audit_category');
+    $invoice_number_inbound = getPostParam('invoice_number_inbound');
+    $invoice_date_inbound = getPostParam('invoice_date_inbound');
+    $travel_expenses = getPostParam('travel_expenses');
+    $paid_on = getPostParam('paid_on');
+    $invoice_number_outbound = getPostParam('invoice_number_outbound');
+    $paid = getPostParam('paid');
+    $issuing_invoice = getPostParam('issuing_invoice');
 
     // Handle special idauditor values
     $idauditor = getGetParam('idauditor');
@@ -44,41 +53,68 @@ try {
     if(!is_numeric(getGetParam('displaymode'))) $displaymode = 0;
     else $displaymode = getGetParam('displaymode');
 
-	// Build base filter
-    $filter .= "WHERE IFNULL(a.company_name, '') <> '' AND a.deleted = $displaymode";
+    // Build base filter
+    $filter = "WHERE IFNULL(a.company_name, '') <> '' AND a.deleted = $displaymode";
 
-	// Apply auditor filter
+    // Apply auditor filter
     if ($idauditor != -1) {
         $filter .= " AND a.idauditor = " . intval($idauditor);
     }
 
-    // Handle search parameters
-    $searching = $_POST['_search'] ?? false;
+    // Handle search parameters - same pattern as getProd.php
+    $searching = $_POST['_search'];
     if ($searching) {
+        if ($name != '') {
+            $filter .= ' AND u.name LIKE "%' . $name . '%"';
+        }
         if ($company_name != '') {
             $filter .= ' AND a.company_name LIKE "%' . $company_name . '%"';
         }
+        if ($date_of_service != '') {
+            $filter .= ' AND a.date_of_service LIKE "%' . $date_of_service . '%"';
+        }
         if ($service_type != '') {
-            $filter .= ' AND a.service_type = "' . $service_type . '"';
+            $filter .= ' AND a.service_type LIKE "%' . $service_type . '%"';
         }
-        if ($invoice_number != '') {
-            $filter .= ' AND (a.invoice_number_inbound LIKE "%' . $invoice_number . '%" OR 
-                             a.invoice_number_outbound LIKE "%' . $invoice_number . '%")';
+        if ($auditor_type != '') {
+            $filter .= ' AND a.auditor_type LIKE "%' . $auditor_type . '%"';
         }
-        if ($paid_status != '') {
-            $filter .= ' AND a.paid = "' . $paid_status . '"';
+        if ($standards != '') {
+            $filter .= ' AND a.standards LIKE "%' . $standards . '%"';
         }
-        if ($date_from != '') {
-            $filter .= ' AND a.date_of_service >= "' . date('Y-m-d', strtotime($date_from)) . '"';
+        if ($audit_type != '') {
+            $filter .= ' AND a.audit_type LIKE "%' . $audit_type . '%"';
         }
-        if ($date_to != '') {
-            $filter .= ' AND a.date_of_service <= "' . date('Y-m-d', strtotime($date_to)) . '"';
+        if ($audit_category != '') {
+            $filter .= ' AND a.audit_category LIKE "%' . $audit_category . '%"';
+        }
+        if ($invoice_number_inbound != '') {
+            $filter .= ' AND a.invoice_number_inbound LIKE "%' . $invoice_number_inbound . '%"';
+        }
+        if ($invoice_date_inbound != '') {
+            $filter .= ' AND a.invoice_date_inbound LIKE "%' . $invoice_date_inbound . '%"';
+        }
+        if ($travel_expenses != '') {
+            $filter .= ' AND a.travel_expenses LIKE "%' . $travel_expenses . '%"';
+        }
+        if ($paid_on != '') {
+            $filter .= ' AND a.paid_on LIKE "%' . $paid_on . '%"';
+        }
+        if ($invoice_number_outbound != '') {
+            $filter .= ' AND a.invoice_number_outbound LIKE "%' . $invoice_number_outbound . '%"';
+        }
+        if ($paid != '') {
+            $filter .= ' AND a.paid = "' . $paid . '"';
+        }
+        if ($issuing_invoice != '') {
+            $filter .= ' AND a.issuing_invoice = "' . $issuing_invoice . '"';
         }
     }
 
     // Get total count of records
-    $countSql = 'SELECT COUNT(a.id) AS count FROM ttrainer_activities a 
-                 LEFT JOIN companies c ON a.idauditor = c.id ' . $filter;
+    $countSql = 'SELECT COUNT(a.id) AS count FROM ttrainer_activities a
+                 LEFT JOIN tusers u ON a.idauditor = u.id ' . $filter;
+
     $countStmt = $dbo->prepare($countSql);
     $countStmt->execute();
     $totalRows = $countStmt->fetch(PDO::FETCH_ASSOC);
@@ -99,6 +135,9 @@ SELECT
     a.date_of_service,
     a.service_type,
     a.auditor_type,
+    a.standards,
+    a.audit_type,
+    a.audit_category,
     a.invoice_number_inbound,
     a.invoice_date_inbound,
     a.invoice_inbound,
@@ -107,6 +146,7 @@ SELECT
     a.paid_on,
     a.invoice_number_outbound,    
     a.paid,
+    a.issuing_invoice,
     a.training_request_form,
     a.attendance_list,
     a.customer_feedback_form,
@@ -116,13 +156,11 @@ SELECT
     a.updated_at,
     a.deleted
 FROM ttrainer_activities a
-LEFT JOIN tusers u ON a.created_by = u.id
+LEFT JOIN tusers u ON a.idauditor = u.id
 {$filter}
 ORDER BY {$sortingField} {$sortingOrder}
 {$limit}
 EOL;
-
-//echo $sql;
 
     // Prepare response
     $response = new \stdClass();
@@ -147,7 +185,10 @@ EOL;
             $row['company_name'],
             $row['date_of_service'],
             $row['service_type'],
-            $row['auditor_type'], 
+            $row['auditor_type'],
+            $row['standards'],
+            $row['audit_type'],
+            $row['audit_category'],
             $row['invoice_number_inbound'],
             $row['invoice_date_inbound'],
             $row['invoice_inbound'],
@@ -156,11 +197,12 @@ EOL;
             $row['paid_on'],
             $row['invoice_number_outbound'],
             $row['paid'],
+            $row['issuing_invoice'],
             $row['training_request_form'],
             $row['attendance_list'],
             $row['customer_feedback_form'],
             $row['attendance_certificates'],
-			$row['deleted'],
+            $row['deleted'],
         ];
         $i++;
     }

@@ -26,7 +26,7 @@ try {
 
     $name = getPostParam('name');
     $type = getPostParam('type');
-    $company = getPostParam('company');
+    $country = getPostParam('country');
     $email = getPostParam('email');
     $prefix = getPostParam('prefix');
     $login = getPostParam('login');
@@ -58,7 +58,7 @@ try {
           $filter.=' AND u.parent_id IS NOT NULL';
         }
 
-        if($company!='') $filter.=' AND u.parent_id IN (SELECT id FROM tusers WHERE name LIKE "%'.$company.'%")';
+        if($country!='') $filter.=' AND u.country LIKE "%'.$country.'%"';
         if($email!='') $filter.=' AND u.email LIKE "%'.$email.'%"';
         if($prefix!='') $filter.=' AND u.prefix LIKE "%'.$prefix.'%"';
         if($login!='') $filter.=' AND u.login LIKE "%'.$login.'%"';
@@ -121,6 +121,7 @@ try {
     u.prodnumber, 
     u.contact_person, 
     u.vat, 
+    u.country, 
     u.industry, 
     u.category, 
     u.ingrednumber, 
@@ -220,7 +221,7 @@ $ingredConfirmed=0;
   */
 
   //$response->rows[$i]['cell'] = array($row['id'],$row['name'],$row['company'] .($row['company_admin'] == '1' ? ' <span style="color:blue;">(Company Admin)</span>' : ''), $row['email'],$isclient ? $row['prefix']:"-",$row['login']
-  $response->rows[$i]['cell'] = array($row['id'],$row['name'],$row['type'],  $row['email'],$isclient ? $row['prefix']:"-",$row['login']
+  $response->rows[$i]['cell'] = array($row['id'],$row['name'],$row['type'], $row['country'], $row['email'],$isclient ? $row['prefix']:"-",$row['login']
   
   , $row['isclient'], $row['blocked'], $row['deleted']);
 $i++;

@@ -103,9 +103,9 @@ if ($isClient) {
     $auditors = [];
     
     // Clients query - only show the current client
-    $sql = "SELECT id, name, prefix FROM tusers WHERE isclient=1 AND id = :clientId AND name <> '' AND deleted = 0 ORDER BY name";
+   $sql = "SELECT id, name, prefix FROM tusers WHERE isclient=1 AND id = '".$myuser->userdata['id']."' AND name <> '' AND deleted = 0 ORDER BY name";
     $stmt = $dbo->prepare($sql);
-    $stmt->bindValue(':clientId', $myuser->userdata['id'], PDO::PARAM_INT);
+
     $stmt->setFetchMode(PDO::FETCH_ASSOC);
     if($stmt->execute()) {
         $clients = $stmt->fetchAll();
@@ -184,7 +184,7 @@ $stmt = $dbo->prepare($sql);
  $auditorId = $myuser->userdata["id"]; // Assuming the auditor ID is stored in session
  
  // Query for "Assigned to Me"
- $assignedQuery = "SELECT COUNT(*) AS assigned_count FROM ttasks WHERE status = 1 AND idauditor = :auditor_id";
+ $assignedQuery = "SELECT COUNT(*) AS assigned_count FROM ttasks  WHERE task_type='auditor' AND status = 1 AND idauditor = :auditor_id";
  $assignedStmt = $dbo->prepare($assignedQuery);
  $assignedStmt->bindValue(':auditor_id', $auditorId, PDO::PARAM_INT);
  $assignedStmt->execute();
@@ -626,7 +626,7 @@ $("#btnSubmitTask").on("click", function () {
                     .html("<ul>" + jsonResponse.data.errors + "</ul>");
             } else {
                 $("#tasksModal").modal("hide");
-                $("#taskForm")[0].reset();
+                //$("#taskForm")[0].reset();
                  // Clear the attachment list
                 $("#uladdoc244").empty();
                 

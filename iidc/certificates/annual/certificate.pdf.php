@@ -8,7 +8,6 @@ use PhpOffice\PhpSpreadsheet\Shared\OLE\PPS\File;
 session_start();
 //error_reporting(E_ALL);
 //ini_set('display_errors', 1);
-//ini_set('display_errors', '1');
 //ini_set('display_startup_errors', '1');
 //error_reporting(E_ALL);
 include "../../config/paths.inc.php";
@@ -218,6 +217,9 @@ if ($contentInserts = parse_shortcode('input', $theTemplate)) {
 }
 
 $addPage = false;
+require_once("$prog_path/tools/pdf/tcpdf/tcpdf.php");
+require_once("$prog_path/tools/pdf/FPDI/src/autoload.php");
+require_once("$prog_path/tools/pdf/tcpdf/config/tcpdf_config.php");
 require_once("$prog_path/tools/pdf/hcp_pdf.inc.php");
 $footerY = -8;
 $footerX = 0;

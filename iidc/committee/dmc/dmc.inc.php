@@ -3,8 +3,8 @@ if (!defined("__HQC__"))
     define('__HQC__', 1);
 
 //show php errors
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+//error_reporting(E_ALL);
+//ini_set('display_errors', 1);
 
 $_GET['act'] = 'add';
 ?>
@@ -37,7 +37,22 @@ $_GET['act'] = 'add';
     .company_data td {
         vertical-align: middle;
     }
+
+    label {
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    cursor: pointer !important;
+    transition: none !important;
+}
+#trReviewed td:first-child {
+    width: 35%;
+}
 </style>
+
 <script>
     $("#page_title").html("Decision Making Report");
 
@@ -107,12 +122,12 @@ $_GET['act'] = 'add';
         //check the password if it is empty and if it = decoded base64
         var password = jQuery("#dmc_password").val().trim();
         if (password == '') {
-            alert_message('Please enter your password to generate the report');
+            //alert_message('Please enter your password to generate the report');
             return false;
         }
 
         if (password != mem_password) {
-            alert_message('The password is incorrect');
+            //alert_message('The password is incorrect');
             return false;
         }
         return true;
@@ -142,7 +157,7 @@ function get_user_signature($comemid)
 {
     global $prog_path;
 
-    $image_file = '/data/DMC/signatures/' . $comemid . '_signature';
+    $image_file = '/iidc/data/DMC/signatures/' . $comemid . '_signature';
 
     $image_exts = array('.jpg', '.jpeg', '.png', '.svg');
     foreach ($image_exts as $ext) {
@@ -221,13 +236,13 @@ if (is_array(json_decode($certificate['category'], true))) {
 if (is_array(json_decode($certificate['reference_standards'], true))) {
     $certificate_data['reference_standard'] = '<ol>';
     $reference_standards = implode(',', json_decode($certificate['reference_standards'], true));
-    $amdb->connect_portal();
+    //$amdb->connect_portal();
     if ($certificate_reference_standards = $amdb->get_results("SELECT * FROM hqc_halal_standards WHERE stnid IN ($reference_standards)")) {
         foreach ($certificate_reference_standards as $reference_standard) {
             $certificate_data['reference_standard'] .= '<li>' . $reference_standard['code'] . ' - ' . $reference_standard['description'] . '</li>';
         }
     }
-    $amdb->close_portal();
+    //$amdb->close_portal();
     $certificate_data['reference_standard'] .= '</ol>';
 }
 
@@ -271,25 +286,26 @@ if ($commebersAll = $amdb->get_results("SELECT comemid,uid,offid,bm,member_name,
             }
         }
 
-        if (isset($functions[$member['member_function']]) && get_user_signature($member['comemid']))
+        //if (isset($functions[$member['member_function']]) && get_user_signature($member['comemid']))
+        if (isset($functions[$member['member_function']]) )
             $members[$member['member_function']][$member['comemid']] = $member;
     }
 
     $member_title = '<tr><th style="width:33%">' . $functions['SBM'] . 's <span style="font-weight:normal">(At least 2 Members)</span></th>' . '<th style="width:33%">' . $functions['ABM'] . 's <span style="font-weight:normal">(At least 1 Member)</span></th><th>' . $functions['MBM'] . 's</th></tr>';
     $member_footer = '<tr id="comemSignatures"><td style="vertical-align:top !important"><ul class="table table-striped table-bordered" style="padding:0px">';
     foreach ($members['SBM'] as $member) {
-        $member_footer .= '<li><label><input type="checkbox" class="shariah" name="comemids[]" value="' . $member['comemid'] . '"/>' . $member['member_name'] . '</label></li>';
+        $member_footer .= '<li style="margin:10px 5px"><label><input type="checkbox" class="shariah" name="comemids[]" value="' . $member['comemid'] . '"/>' . $member['member_name'] . '</label></li>';
     }
     $member_footer .= '</ul></td>';
 
     $member_footer .= '<td style="vertical-align:top !important"><ul class="table table-striped table-bordered" style="padding:0px">';
     foreach ($members['ABM'] as $member) {
-        $member_footer .= '<li><label><input type="checkbox" class="auditors" name="comemids[]" value="' . $member['comemid'] . '"/>' . $member['member_name'] . '</label></li>';
+        $member_footer .= '<li style="margin:10px 5px"><label><input type="checkbox" class="auditors" name="comemids[]" value="' . $member['comemid'] . '"/>' . $member['member_name'] . '</label></li>';
     }
     $member_footer .= '</ul></td>';
     $member_footer .= '<td style="vertical-align:top !important"><ul class="table table-striped table-bordered" style="padding:0px">';
     foreach ($members['MBM'] as $member) {
-        $member_footer .= '<li><label><input type="checkbox" class="management" name="comemids[]" value="' . $member['comemid'] . '"/>' . $member['member_name'] . '</label></li>';
+        $member_footer .= '<li style="margin:10px 5px"><label><input type="checkbox" class="management" name="comemids[]" value="' . $member['comemid'] . '"/>' . $member['member_name'] . '</label></li>';
     }
     $member_footer .= '</ul></td>';
     $member_footer .= '</tr>';
@@ -322,7 +338,7 @@ if ($theForm = file_get_contents("templates/dmc.tmpl.php")) {
     <script>
         var mem_password = '<?php echo $mem_password; ?>';
     </script>
-    <div style="text-align:center">
+    <div style="text-align:center; display:none;">
         <span style="color:brown">Note: A password is required to generate the report. You can find the password in your account profile.<br />
             Close this window, open new window by clicking on <strong>new window</strong> on the Menubar and under DMC on my account</span>
     </div>
@@ -349,12 +365,12 @@ if ($theForm = file_get_contents("templates/dmc.tmpl.php")) {
         $data['userSignature'] = '';
         $data['valid_until'] = $certificate['date_of_expiry'];
         $data['date_valid_until'] = date("d/m/Y", $certificate['date_of_expiry']);
-        echo  $amform->get_form(7, $data, 'html');
+        echo  $amform->get_form(45, $data, 'html');
         ?>
         <div style="margin-top:20px; text-align:center;">
-            <input type="password" autocomplete="off" name="dmc_password" id="dmc_password" placeholder="Enter your password to Create the report" value="" />
+            <!--<input type="password" autocomplete="off" name="dmc_password" id="dmc_password" placeholder="Enter your password to Create the report" value="" />-->
             <input type="submit" class="btn btn-primary" id="appSaveButton" value="Create DMC report" /><button type="reset" class="btn btn-default">Reset</button><br />
-            <span style="color:brown">Note: A password is required to generate the report. You can find the password in your account profile.</span>
+            <!--<span style="color:brown">Note: A password is required to generate the report. You can find the password in your account profile.</span>-->
         </div>
     </form>
 <?php
@@ -373,5 +389,15 @@ if ($theForm = file_get_contents("templates/dmc.tmpl.php")) {
         }
         jQuery("#ReviewedTyOfCeDocument,.TyofCeAnnual,.conclusionAgree").prop('checked', true);
         jQuery("#productionSites").find('input[type=checkbox]').prop('checked', false);
+    });
+
+    $(window).load(function(e) {
+		dateFormat= "dd/mm/yyyy";
+		$("#DateOfDmcr").datepicker({
+			changeMonth: true,
+			changeYear: true,
+			format:dateFormat,
+			dateFormat: dateFormat
+		});
     });
 </script>

@@ -28,10 +28,16 @@ function convertDateFormat($date) {
     
     $date = trim($date);
     
-    // Check if date is in mm/dd/yyyy format
+    // Fix for doubled-year bug from jQuery UI datepicker misconfiguration (yyyy instead of yy)
+    // e.g. "09/02/20262026" → "09/02/2026"
+    if (preg_match('#^(\d{1,2})/(\d{1,2})/(\d{4})\d{4}$#', $date, $matches)) {
+        $date = $matches[1] . '/' . $matches[2] . '/' . $matches[3];
+    }
+    
+    // Check if date is in dd/mm/yyyy format (datepicker output format)
     if (preg_match('#^(\d{1,2})/(\d{1,2})/(\d{4})$#', $date, $matches)) {
-        // Convert mm/dd/yyyy to dd.mm.yyyy
-        return str_pad($matches[2], 2, '0', STR_PAD_LEFT) . '.' . str_pad($matches[1], 2, '0', STR_PAD_LEFT) . '.' . $matches[3];
+        // Convert dd/mm/yyyy to dd.mm.yyyy
+        return str_pad($matches[1], 2, '0', STR_PAD_LEFT) . '.' . str_pad($matches[2], 2, '0', STR_PAD_LEFT) . '.' . $matches[3];
     }
     
     // Check if date is in yyyy-mm-dd format
@@ -40,13 +46,7 @@ function convertDateFormat($date) {
         return str_pad($matches[3], 2, '0', STR_PAD_LEFT) . '.' . str_pad($matches[2], 2, '0', STR_PAD_LEFT) . '.' . $matches[1];
     }
     
-    // Check if date is in dd/mm/yyyy format
-    if (preg_match('#^(\d{1,2})/(\d{1,2})/(\d{4})$#', $date, $matches)) {
-        // Convert dd/mm/yyyy to dd.mm.yyyy
-        return str_pad($matches[1], 2, '0', STR_PAD_LEFT) . '.' . str_pad($matches[2], 2, '0', STR_PAD_LEFT) . '.' . $matches[3];
-    }
-    
-    // Return as-is if already in correct format or unknown format
+    // Return as-is if already in correct format (dd.mm.yyyy) or unknown format
     return $date;
 }
 
@@ -281,6 +281,16 @@ if ($act == "add") {
 		$_POST['crtNr'] = $crtNr;
 		// Fall through to common print/authorize handler which updates status
 	} else {
+		// DMC redirect: certificate was just saved, redirect to DMC report with real crtNr
+		if (isset($_POST['dmc_redirect']) && $_POST['dmc_redirect'] == '1' && isset($_POST['decid']) && intval($_POST['decid']) > 0) {
+			$dmcFormUrl = '/iidc/committee/dmc/?crtNr=' . intval($crtNr) 
+				. '&clid=' . intval($_POST['clid']) 
+				. '&offid=' . intval($_POST['offid']) 
+				. '&decid=' . intval($_POST['decid'])
+				. '&ref=cert';
+			header('Location: ' . $dmcFormUrl);
+			exit();
+		}
 		header("Location: index.php?inc=certificates");
 		exit();
 	}
@@ -428,6 +438,17 @@ if (!empty($crtDo) && ($crtDo == "print" || $crtDo == "authorize")) {
 }
 
 /*--End processing--*/
+
+// DMC redirect: certificate was saved/updated, redirect to DMC report with real crtNr
+if (isset($_POST['dmc_redirect']) && $_POST['dmc_redirect'] == '1' && isset($_POST['decid']) && intval($_POST['decid']) > 0) {
+	$dmcFormUrl = '/iidc/committee/dmc/?crtNr=' . intval($crtNr) 
+		. '&clid=' . intval($_POST['clid']) 
+		. '&offid=' . intval($_POST['offid']) 
+		. '&decid=' . intval($_POST['decid'])
+		. '&ref=cert';
+	header('Location: ' . $dmcFormUrl);
+	exit();
+}
 
 // Redirect based on user type and afterPrint setting
 if (isset($_SESSION['user_type']) && $_SESSION['user_type'] == 'client') {

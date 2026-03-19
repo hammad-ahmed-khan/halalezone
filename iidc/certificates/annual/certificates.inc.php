@@ -1,9 +1,9 @@
 <?php if (!defined("_HQC_")) {
 	exit();
 }; ?>
-<?php if (isset($_SESSION['offid']) && (!isset($_GET['offid']) || $_GET['offid'] == '')) {
-	$_GET['offid'] = $_SESSION['offid'];
-};
+<?php
+// Note: Session offid no longer forced - office filter dropdown defaults to "All Offices"
+// Users can select a specific office from the dropdown to filter
 ?>
 <style>
 /* Old Versions Fieldset Styling */
@@ -465,32 +465,9 @@ fieldset.old_versions ul li .far.fa-edit:hover {
 </script>
 
 <?php
-/*if (!isset($_SESSION['offid']) or $_SESSION['offid'] == '0') { ?>
-	<center>
-		<select size="1" name="offid" onchange="document.location='<?php echo $prog_www; ?>/certificates/annual/?inc=certificates&offid='+this.value;">
-			<option value="">Select office</option>
-			<?php
-			$offices = $amdb->query("SELECT * FROM offices WHERE status != 'deleted'");
-			if (count($offices) > 0) {
-				include "$hcp_path/config/countries.code.php";
-				$nr = 1;
-				foreach ($offices as $office) { ?>
-					<option value="<?php echo $office['offid']; ?>" <?php echo (isset($_GET['offid']) && $_GET['offid'] == $office['offid']) ? 'selected' : ''; ?>><?php echo $country[$office['office_country']]; ?> - <?php echo $office['office_name']; ?></option>
-			<?php
-				}
-			}
-			?>
-		</select>
-
-	<?php
-} else {
-	$_GET['offid'] = $_SESSION['offid'];
-}
-*/
-$_GET['offid'] = '0';
-if (!isset($_GET['offid']) or trim($_GET['offid']) == '') {
-	//return;
-}
+// Fetch offices for the filter dropdown
+$filterOffices = $amdb->get_results("SELECT offid, office_name FROM offices WHERE status != 'deleted' ORDER BY office_name ASC");
+$selectedOffid = isset($_GET['offid']) ? $_GET['offid'] : '';
 ?>
  <div class="issue-certificate-section">
     <div class="section-info">
@@ -499,14 +476,15 @@ if (!isset($_GET['offid']) or trim($_GET['offid']) == '') {
         </div>
         <div class="section-text">
             <h3>Annual Halal Certificates</h3>
-            <p>Create and manage halal certification documents</p>
+            <p>Manage halal certification documents</p>
         </div>
     </div>
-    
-    <a href="?inc=certificate_add_edit&offid=<?php echo $_GET['offid']; ?>" class="btn-issue-certificate">
+    <!--
+    <a href="?inc=certificate_add_edit&offid=<?php echo $selectedOffid; ?>" class="btn-issue-certificate">
         <i class="fas fa-plus-circle"></i>
         Issue New Certificate
     </a>
+	-->
 </div>
  
 <table class="table table-striped table-bordered" style="min-width:100% !important" id="annualCertificates">
@@ -519,10 +497,16 @@ if (!isset($_GET['offid']) or trim($_GET['offid']) == '') {
 						<input type="hidden" name="exportExcel" id="exportExcel" value="no" />
 						<input type="hidden" name="st" id="st" value="0" />
 						<input type="hidden" name="lmt" id="lmt" value="50" />
-						<input type="hidden" name="offid" value="<?php echo $_GET['offid']; ?>" />
 						<input type="hidden" name="subSearchField" id="subSearchField" value="" />
 						<input type="hidden" name="subSearchQ" id="subSearchQ" value="" />
 						<span style="color:red;font-weight:normal">For more search options use <i class="fas fa-arrow-right" style="color:red"></i></span>
+						Office:
+						<select size="1" name="offid" id="filterOffice" onchange="loadCertificates(0)">
+							<option value="">All Offices</option>
+							<?php if ($filterOffices) { foreach ($filterOffices as $fo) { ?>
+								<option value="<?php echo $fo['offid']; ?>" <?php echo ($selectedOffid != '' && $selectedOffid == $fo['offid']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($fo['office_name']); ?></option>
+							<?php } } ?>
+						</select>
 						Search for:
 						<select size="1" name="searchField" id="searchField" onchange="showSearchInputs(this.value)">
 							<option value="all_certificates">All certificate</option>

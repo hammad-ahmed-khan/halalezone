@@ -968,6 +968,34 @@ if (!defined("_HQC_")) {
     box-shadow: 0 4px 12px rgba(3, 105, 161, 0.3);
 }
 
+.btn-cert-action.digital {
+    background: linear-gradient(135deg, #334155 0%, #475569 100%);
+    color: #ffffff;
+}
+
+.btn-cert-action.digital:hover {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    box-shadow: 0 4px 12px rgba(51, 65, 85, 0.3);
+}
+
+.btn-cert-action.save-draft {
+    background: linear-gradient(135deg, #b45309 0%, #d97706 100%);
+    color: #ffffff;
+}
+
+.btn-cert-action.save-draft:hover {
+    background: linear-gradient(135deg, #92400e 0%, #b45309 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(180, 83, 9, 0.3);
+}
+
+.btn-cert-action.save-draft:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
 #DownLoadZip {
     padding: 8px 14px;
     background: #fffbeb;
@@ -1189,14 +1217,25 @@ $user_type = $_SESSION["user_type"];
 // Define crtNr and act variables
 $crtNr = isset($_GET['crtNr']) ? $_GET['crtNr'] : '';
 $act = isset($_GET['act']) ? $_GET['act'] : 'add';
+
+// Set $dmc when decid parameter is present (DMC certificate request)
+if (isset($_GET['decid']) && intval($_GET['decid']) > 0) {
+    $dmc = intval($_GET['decid']);
+}
 ?>
 
 <script type="text/javascript">
 	$("#page_title").html("Annual Certificate (Request / Update)")
 </script>
  <?php
-if ($_SESSION['user_type'] == 'client' and !isset($_REQUEST['offid'])) {
-    if ($userOffices = $amdb->get_results("SELECT offid,office_name FROM offices WHERE FIND_IN_SET($_GET[clid],clients) AND status='active'")) { 
+if (!isset($_REQUEST['offid'])) {
+    // Get offices based on user type
+    if ($_SESSION['user_type'] == 'client') {
+        $userOffices = $amdb->get_results("SELECT offid,office_name FROM offices WHERE FIND_IN_SET($_GET[clid],clients) AND status='active'");
+    } else {
+        $userOffices = $amdb->get_results("SELECT offid,office_name FROM offices WHERE status='active' ORDER BY office_name ASC");
+    }
+    if ($userOffices) { 
 ?>
 <div class="office-select-container">
     <div class="office-select-card">
@@ -1205,7 +1244,7 @@ if ($_SESSION['user_type'] == 'client' and !isset($_REQUEST['offid'])) {
         </div>
         <h3>Select Certification Office</h3>
         <p>Choose the office that will process your certificate request</p>
-        <select name="office" onchange="if(this.value) document.location='index.php?inc=certificate_add_edit&act=add&clid=<?php echo $_GET['clid']; ?>&offid='+this.value">
+        <select name="office" onchange="if(this.value) document.location='index.php?inc=certificate_add_edit&act=<?php echo isset($_GET['act']) ? $_GET['act'] : 'add'; ?>&clid=<?php echo isset($_GET['clid']) ? $_GET['clid'] : '0'; ?>&offid='+this.value<?php echo isset($_GET['decid']) ? '+ \'&decid=' . intval($_GET['decid']) . '\'' : ''; ?><?php echo isset($_GET['crtNr']) ? '+ \'&crtNr=' . intval($_GET['crtNr']) . '\'' : ''; ?>">
             <option value="">-- Select an Office --</option>
             <?php foreach ($userOffices as $office) { ?>
                 <option value="<?php echo $office['offid']; ?>"><?php echo htmlspecialchars($office['office_name']); ?></option>
@@ -1838,6 +1877,8 @@ if ($_SESSION['user_type'] == 'client' and !isset($_REQUEST['offid'])) {
 	}
 
 	async function crtDoAct(act) {
+		// === DMC Conducted Check (skip when creating DMC report itself) ===
+
 		formInteracted = true;
 		document.addEditForm.crtDo.value = act;
 		
@@ -1848,6 +1889,11 @@ if ($_SESSION['user_type'] == 'client' and !isset($_REQUEST['offid'])) {
 		var reqs = ['products', 'clid', 'reference_standards', 'scope_of_certification', 'category', 'date_of_issue', 'date_of_expiry', 'initial_issue_date', 'signatory'];
 		
 if (act == "preview") {
+    jQuery("#future_action_when").removeAttr("data-required");
+    document.addEditForm.action = 'certificate.pdf.php';
+    document.addEditForm.target = '_blank';
+    document.addEditForm.method = 'post';
+} else if (act == "digital") {
     jQuery("#future_action_when").removeAttr("data-required");
     document.addEditForm.action = 'certificate.pdf.php';
     document.addEditForm.target = '_blank';
@@ -1985,6 +2031,76 @@ if (act == "preview") {
 		//}
 	}
 
+	/**
+	 * Save progress without validation - AJAX submit, no redirect
+	 */
+	async function saveDraft() {
+		var $btn = jQuery("#saveDraftBtn");
+		var originalHtml = $btn.html();
+		
+		// Disable button and show saving state
+		$btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+		
+		// Set the action to save (draft)
+		document.addEditForm.crtDo.value = 'save';
+
+		// Collect selected products
+		if ($(".product:checked").length > 0) {
+			var selectedProducts = $('.product:checked').map(function() {
+				return this.value;
+			}).get().join(",");
+			jQuery("#selectedProducts").val(selectedProducts);
+		}
+
+		// Build FormData from the form
+		var formData = new FormData(document.addEditForm);
+		formData.append('save_draft', '1');
+
+		try {
+			var response = await fetch('certificate_save.php', {
+				method: 'POST',
+				body: formData
+			});
+
+			if (response.ok) {
+				// Show success feedback
+				$btn.html('<i class="fas fa-check"></i> Saved!');
+				$btn.css('background', 'linear-gradient(135deg, #16a34a 0%, #22c55e 100%)');
+				
+				setTimeout(function() {
+					$btn.html(originalHtml);
+					$btn.css('background', '');
+					$btn.prop('disabled', false);
+				}, 2000);
+			} else {
+				alert_message('Failed to save progress. Please try again.');
+				$btn.html(originalHtml).prop('disabled', false);
+			}
+		} catch (e) {
+			alert_message('Failed to save progress. Please check your connection and try again.');
+			$btn.html(originalHtml).prop('disabled', false);
+		}
+	}
+
+	function openDMCReportForm() {
+		var dmcUrl = jQuery("#DMCUrl");
+		if (!dmcUrl.length || dmcUrl.data('href') == '') {
+			alert_message('DMC Report form URL is not configured. Please ensure a valid DMC decision ID is available.');
+			return;
+		}
+
+		// Set hidden flag so certificate_save.php knows to redirect to DMC after saving
+		if (jQuery("#dmc_redirect").length === 0) {
+			jQuery("#addEditForm").append('<input type="hidden" id="dmc_redirect" name="dmc_redirect" value="1" />');
+		} else {
+			jQuery("#dmc_redirect").val("1");
+		}
+
+		// Trigger save action — this validates and submits the form to certificate_save.php
+		// certificate_save.php will detect dmc_redirect=1 and redirect to the DMC report URL with the saved crtNr
+		crtDoAct('save');
+	}
+
 	function checkForm(reqs) {
 		jQuery("#addEditForm").find("[data-required='yes']").removeAttr("data-required");
 		reqs.forEach(function(item) {
@@ -2014,24 +2130,35 @@ if (act == "preview") {
 	}
 
 	$(window).load(function(e) {
+		dateFormat= "dd/mm/yyyy";
 		$("#date_of_issue").datepicker({
 			changeMonth: true,
 			changeYear: true,
+			format:dateFormat,
 			dateFormat: dateFormat
 		});
 		$("#date_of_expiry").datepicker({
 			changeMonth: true,
 			changeYear: true,
+			format:dateFormat,
 			dateFormat: dateFormat
 		});
 		$("#status_sent_on").datepicker({
 			changeMonth: true,
 			changeYear: true,
+			format:dateFormat,
 			dateFormat: dateFormat
 		});
 		$("#status_recieved_on").datepicker({
 			changeMonth: true,
 			changeYear: true,
+			format:dateFormat,
+			dateFormat: dateFormat
+		});
+		$("#initial_issue_date").datepicker({
+			changeMonth: true,
+			changeYear: true,
+			format:dateFormat,
 			dateFormat: dateFormat
 		});
 		jQuery(".product").on("click", function() {
@@ -2075,10 +2202,10 @@ if (act == "preview") {
 					if (data['surveillance']) {
 						for (var fld in data['surveillance']) {
 							sDate = data['surveillance'][fld];
-							jQuery("#surveillance").append(fld + ' surveillance: <input name="certificate_options[surveillance][]"  type="text" class="date" value="' + sDate + '"/> ');
+							jQuery("#surveillance").append(fld + ' surveillance: <input name="certificate_options[surveillance][]"  type="text" class="date1" value="' + sDate + '"/> ');
 						};
 						rtfDate = data['Recertification'];
-						jQuery("#surveillance").append(' Recertification:' + '<input name="certificate_options[recertification][]"  type="text" class="date disabled" value="' + rtfDate + '"/>');
+						jQuery("#surveillance").append(' Recertification:' + '<input name="certificate_options[recertification][]"  type="text" class="date1 disabled" value="' + rtfDate + '"/>');
 					}
 				};
 			});
@@ -2205,7 +2332,7 @@ if (isset($act) and $act == "edit") {
 	} else {
 		$row = $amdb->get_row("SELECT *,acms_halal_certificates.offid as offid FROM $tbl[prefix]_halal_certificates, companies where  $tbl[prefix]_halal_certificates.clid = companies.clid and $tbl[prefix]_halal_certificates.crtNr='$crtNr'");
 	}
-} elseif ($user_type == "client") {
+} elseif ($clid != "") {
 	$row = $amdb->get_row("SELECT * FROM companies where  clid = '$clid'");
 	$act = "add";
 }
@@ -2241,7 +2368,9 @@ if ($row) {
 	$awarded_to = $row['company_name'];
 	$company_country = $row['country1'];
 	$scope_of_activities = $row['scope_of_activities'];
-	$company = "<b>$row[company_name]</b><br>
+	$company = "
+	<input type='hidden' name='clid' value='$clid' />
+	<b>$row[company_name]</b><br>
 		$row[street1]<br/>
 		$row[zip1], $row[city1]<br />
 		$row[country1]<br />
@@ -2261,7 +2390,7 @@ if ($row) {
 	}
 	$result = get_clients("companies.clid,companies.company_name,companies.scope_of_activities,companies.email1,companies.country1");
 	if (count($result) > 0) {
-		$company = '<select size=1 name="clid" style="max-width:400px" id="clid" name="clid" class="searchable" data-required="yes" onchange="redirectToNewCertificate();"><option value="">Select a company</option>';
+		$company = '<select size=1 name="clid" style="max-width:400px" id="clid" class="searchable" data-required="yes" onchange="redirectToNewCertificate();"><option value="">Select a company</option>';
 
 		foreach ($result as $row) {
 			if ($row['country1'] != 'Israel') {
@@ -2317,6 +2446,43 @@ if (isset($office) && isset($office['office_name'])) {
     $officeName = $office['office_name'];
 }
 
+// === DMC Conducted Check (for blocking HC issuance) ===
+$dmcConducted = false;
+$dmcPending = false;
+$dmcMeeting = null;
+
+
+if (isset($clid) && $clid > 0) {
+
+
+    // First check: if the certificate itself is already approved by DMC, trust that
+    if (isset($row['approved_by_dmc']) && $row['approved_by_dmc'] == 'yes') {
+        $dmcConducted = true;
+    } else {
+        // Second check: look for an approved DMC decision for this client
+        $dmcCheck = $amdb->get_row(
+            "SELECT decid, status, meeting_date, event_details FROM hqc_committee_decision 
+             WHERE clid = '" . intval($clid) . "' AND status = 'approved'
+             ORDER BY decid DESC LIMIT 1"
+        );
+        if ($dmcCheck) {
+            $dmcMeeting = $dmcCheck;
+            $dmcConducted = true;
+        } else {
+            // Check if there's a pending decision
+            $dmcCheckPending = $amdb->get_row(
+                "SELECT decid, status, meeting_date, event_details FROM hqc_committee_decision 
+                 WHERE clid = '" . intval($clid) . "' AND status = 'pending'
+                 ORDER BY decid DESC LIMIT 1"
+            );
+            if ($dmcCheckPending) {
+                $dmcMeeting = $dmcCheckPending;
+                $dmcPending = true;
+            }
+        }
+    }
+}
+
 ?>
 	<form action="" method="post" target="_blank" data-target="fIframe" id="addEditForm" name="addEditForm">
 	
@@ -2328,9 +2494,70 @@ if (isset($office) && isset($office['office_name'])) {
 			</div>
 			<ul class="validation-summary-list" id="validationSummaryList"></ul>
 		</div>
+
+		<?php /* if (isset($clid) && $clid > 0 && !$dmcConducted) { ?>
+		<?php if ($dmcPending && $dmcMeeting) { 
+			$dmcEventDetails = json_decode($dmcMeeting['event_details'], true);
+		?>
+		<div id="dmcWarningBanner" style="
+			background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+			border: 1px solid #93c5fd;
+			border-radius: 8px;
+			padding: 14px 20px;
+			margin: 10px 0 16px;
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			flex-wrap: wrap;
+		">
+			<i class="fas fa-clock" style="color: #2563eb; font-size: 22px;"></i>
+			<div style="flex:1; min-width:200px;">
+				<strong style="color: #1e40af;">DMC Meeting Pending Approval</strong><br/>
+				<span style="color: #1e3a5f; font-size: 13px;">
+					A DMC meeting has been scheduled<?php if (is_array($dmcEventDetails) && isset($dmcEventDetails['date'])) { echo ' on <strong>' . date("d/m/Y", strtotime($dmcEventDetails['date'])) . '</strong>'; } ?>. Print and Authorize actions are blocked until the meeting is conducted and approved.
+				</span>
+			</div>
+			<a href="/iidc/committee/index.php?inc=meetings" 
+			   style="display:inline-flex; align-items:center; gap:6px; padding:8px 16px; 
+			          background:linear-gradient(135deg, #2563eb, #3b82f6); color:#fff; 
+			          border-radius:6px; text-decoration:none; font-weight:600; font-size:13px; white-space:nowrap;">
+				<i class="fas fa-eye"></i> View DMC Meeting
+			</a>
+		</div>
+		<?php } else { ?>
+		<div id="dmcWarningBanner" style="
+			background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+			border: 1px solid #fed7aa;
+			border-radius: 8px;
+			padding: 14px 20px;
+			margin: 10px 0 16px;
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			flex-wrap: wrap;
+		">
+			<i class="fas fa-exclamation-triangle" style="color: #ea580c; font-size: 22px;"></i>
+			<div style="flex:1; min-width:200px;">
+				<strong style="color: #9a3412;">DMC Meeting Not Yet Conducted</strong><br/>
+				<span style="color: #78350f; font-size: 13px;">
+					Print and Authorize actions are blocked until a DMC meeting is conducted and approved for this client.
+				</span>
+			</div>
+			<a href="/iidc/committee/index.php?inc=schedule_committee&act=add&clid=<?php echo $clid; ?>&offid=<?php echo $_GET['offid']; ?>" 
+			   style="display:inline-flex; align-items:center; gap:6px; padding:8px 16px; 
+			          background:linear-gradient(135deg, #ea580c, #f97316); color:#fff; 
+			          border-radius:6px; text-decoration:none; font-weight:600; font-size:13px; white-space:nowrap;">
+				<i class="fas fa-calendar-plus"></i> Schedule DMC Meeting
+			</a>
+		</div>
+		<?php } ?>
+		<?php } */ ?>
 	
 		<input type="hidden" name="act" id="act" value="<?php echo (isset($_GET['act']) && $_GET['act'] == 'reissue') ? "add" : $act ?>" />
 		<input type="hidden" value="" name="crtDo" />
+		<?php if (isset($dmc)) { ?>
+		<input type="hidden" value="<?php echo $dmc; ?>" name="decid" />
+		<?php } ?>
 		<input type="hidden" value="certsList" name="afterPrint" id="afterPrint" />
 		<input type="hidden" value="" name="products" id="selectedProducts" />
 		<input type="hidden" data-check=".product" value=".product" data-min='1' data-error="Please select at least one product" />
@@ -2728,28 +2955,28 @@ if (isset($office) && isset($office['office_name'])) {
 					?>
 					<?php
 					if ($_GET['act'] == 'edit')
-						$disabled = 'disabled class="disabled"';
+						$disabled = 'readonly class="disabled"';
 					else
 						$disabled = '';
  					?>
 					<tr>
 						<th>Issue & Expiry Dates:*</th>
 						<td>
-							<b>Issue:</b> <input type="text" name="date_of_issue" class="date" id="date_of_issue" onchange="nextYear()" value="<?php echo ($_GET['act'] == 'edit' and $row['date_of_issue'] != 0) ? web_date($row['date_of_issue']) : ''; ?>" <?php echo $disabled; ?> 
-							<b>Expiry:</b> <input type="text" name="date_of_expiry" class="date" id="date_of_expiry" value="<?php echo ($act == 'edit' and $row['date_of_expiry'] != 0) ? web_date($row['date_of_expiry']) : ''; ?>" />
+							<b>Issue:</b> <input type="text" name="date_of_issue" class="date1" id="date_of_issue" onchange="nextYear()" value="<?php echo ($_GET['act'] == 'edit' and $row['date_of_issue'] != 0) ? web_date($row['date_of_issue']) : ''; ?>" <?php echo $disabled; ?> 
+							<b>Expiry:</b> <input type="text" name="date_of_expiry" class="date1" id="date_of_expiry" value="<?php echo ($act == 'edit' and $row['date_of_expiry'] != 0) ? web_date($row['date_of_expiry']) : ''; ?>" />
 							<b>Validity:</b>
 							<input type="number" name="certificate_options[cert_validity]" id="cert_validity" onchange="nextYear()" max="<?php echo $certificate_validity; ?>" min="1" value="<?php echo isset($certificate_options['cert_validity']) ? $certificate_options['cert_validity'] : 1; ?>" <?php echo $disabled; ?> style="width:50px;" /> years
 							<span id="maxPeriod"><i>(Maximum <?php echo $certificate_validity; ?> year<?php echo $certificate_validity != 1 ? 's' : ''; ?></i>)</span>
-							<b>Initial issue date:</b> <input type="text" class="date" name="initial_issue_date" id="initial_issue_date" value="<?php echo ($act == 'edit') ? web_date($row['initial_issue_date']) : ''; ?>" />
+							<b>Initial issue date:</b> <input type="text" class="date1" name="initial_issue_date" id="initial_issue_date" value="<?php echo ($act == 'edit') ? web_date($row['initial_issue_date']) : ''; ?>" />
 							<div style="margin-top: 5px;" id="surveillance">
 								<?php if (isset($certificate_options['surveillance']) and count($certificate_options['surveillance']) > 0) {
 									$preSur = array('1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th');
 									$surveillance = $certificate_options['surveillance'];
 									foreach ($surveillance as $key => $sur) {
-										echo $preSur[$key] . ' Surveillance: <input type="text" class="date" name="certificate_options[surveillance][]" value="' . $sur . '" />';
+										echo $preSur[$key] . ' Surveillance: <input type="text" class="date1" name="certificate_options[surveillance][]" value="' . $sur . '" />';
 									};
 								?>
-									Recertification: <input type="text" class="date disabled" name="" value="<?php echo ($_GET['act'] == 'edit' and $row['date_of_expiry'] != 0) ? web_date($row['date_of_expiry']) : ''; ?>" disabled />
+									Recertification: <input type="text" class="date1 disabled" name="" value="<?php echo ($_GET['act'] == 'edit' and $row['date_of_expiry'] != 0) ? web_date($row['date_of_expiry']) : ''; ?>" disabled />
 								<?php }; ?>
 							</div>
 						</td>
@@ -2757,7 +2984,7 @@ if (isset($office) && isset($office['office_name'])) {
 					<tr id="ApprovalTr">
 						<th>Signatory:</th>
 						<td colspan="4" id="approval">
-							<select name="signatory" id="signatory">
+							<select name="signatory" class="searchable" id="signatory">
 								<option value="">Select Signatory</option>
 								<?php
 								$signatories = get_signatories('annual', $_GET['offid']);
@@ -3063,20 +3290,37 @@ if (isset($office) && isset($office['office_name'])) {
 						<input name="revision[insert]" value="yes" type="checkbox" <?php echo isset($revision['insert']) ? 'checked' : ''; ?> onclick="autoAnnexNumber(this)">Insert: </label> <b>Annex number:</b> <input type="number" min="1" name="certificate_option[annex_number]" style="width:60px" value="<?php echo isset($certificate_options['annex_number']) ? $certificate_options['annex_number'] : '1'; ?>" />
 						<label style="padding: 6px 10px;background:lightblue;display:" <?php echo isset($certificate_options['annex_number']) ? 'none' : 'none'; ?>" id="auto_annex_number"><input type="checkbox" name="certificate_option[auto_annex_number]" <?php echo (isset($certificate_options['auto_annex_number'])) ? 'checked' : ''; ?> /> Auto-number</label>
 						<b style="width:auto">Revision number:</b> <input type="text" name="revision[number]" style="width:40px" value="<?php echo isset($revision['number']) ? $revision['number'] : '1.0'; ?>" />
-						<b>Revision date:</b> <input type="text" class="date" name="revision[date]" value="<?php echo isset($revision['date']) ? $revision['date'] : date("d.m.Y"); ?>" />
+						<b>Revision date:</b> <input type="text" class="date1" name="revision[date]" value="<?php echo isset($revision['date']) ? $revision['date'] : date("d.m.Y"); ?>" />
 					</td>
 				</tr>
+				<?php if (isset($dmc)) { ?>
+				<tr>
+					<td colspan="5" style="text-align:center; padding: 12px 20px;">
+						<div style="color: #dc2626; font-weight: 700; font-size: 14px; text-transform: uppercase; margin-bottom: 8px;">
+							TO ISSUE OR RE-ISSUE A CERTIFICATE, A VALID DMC REPORT IS REQUIRED.
+						</div>
+						<!--
+						<div style="color: #991b1b; font-size: 13px;">
+							Note: A password is required to generate the report. You can find the password in your account profile.<br/>
+							Click on new window on the Menubar and under DMC on my account
+						</div>
+-->
+					</td>
+				</tr>
+				<?php } ?>
 				<tr>
     <td colspan="5">
 	  <div class="annual-cert-form-footer">
+        <?php /* if (isset($dmc)) { ?>
+            <button type="button" class="btn-cert-action digital" onclick="crtDoAct('digital')">
+                <i class="fas fa-mouse-pointer"></i>
+                Digital
+            </button>
+        <?php } */ ?>
+        
         <button type="reset" class="btn-cert-action reset">
             <i class="fas fa-undo"></i>
             Reset
-        </button>
-        
-        <button type="button" class="btn-cert-action secondary" onclick="crtDoAct('preview')">
-            <i class="fas fa-eye"></i>
-            Preview
         </button>
         
         <?php
@@ -3085,23 +3329,48 @@ if (isset($office) && isset($office['office_name'])) {
         $buttonIcon = ($_GET['act'] == "edit") ? "fa-save" : ($_GET['act'] == "reissue" ? "fa-redo" : "fa-paper-plane");
         ?>
         
+        <button type="button" class="btn-cert-action save-draft" id="saveDraftBtn" onclick="saveDraft()">
+            <i class="fas fa-save"></i>
+            Save
+        </button>
+
+        <!--
         <button type="button" class="btn-cert-action primary" id="addUpdateReissue" onclick="crtDoAct('save')">
             <i class="fas <?php echo $buttonIcon; ?>"></i>
             <?php echo $buttonText; ?>
         </button>
+		-->
         
-        <?php if ($_SESSION['user_type'] == "admin") { ?>
-            <?php if ($user_type == "admin" && $_GET['offid'] != '0') { ?>
-                <button type="button" class="btn-cert-action authorize" onclick="crtDoAct('authorize')">
+        <button type="button" class="btn-cert-action secondary" onclick="crtDoAct('preview')">
+            <i class="fas fa-eye"></i>
+            Preview
+        </button>
+        
+        <?php if ($_SESSION['user_type'] == "admin" || isset($dmc)) { ?>
+            <?php if ($user_type == "admin" && $_GET['offid'] != '0' && !isset($dmc)) { ?>
+                <button type="button" class="btn-cert-action authorize" onclick="crtDoAct('authorize')"
+                    <?php if (!$dmcConducted) { ?>
+                    disabled title="DMC meeting must be conducted before authorizing" style="opacity:0.5; cursor:not-allowed;"
+                    <?php } ?>>
                     <i class="fas fa-check-double"></i>
                     Authorize
                 </button>
             <?php } ?>
             
-            <button type="button" class="btn-cert-action print" id="printActionButton" onclick="crtDoAct('print')">
-                <i class="fas <?php echo isset($dmc) ? 'fa-file-alt' : 'fa-print'; ?>"></i>
-                <?php echo isset($dmc) ? 'Create DMC Report' : 'Print'; ?>
+            <?php if (isset($dmc)) { ?>
+            <button type="button" class="btn-cert-action print" id="printActionButton" onclick="openDMCReportForm()">
+                <i class="fas fa-file-alt"></i>
+                Create DMC Report
             </button>
+            <?php } else { ?>
+            <button type="button" class="btn-cert-action print" id="printActionButton" onclick="crtDoAct('print')"
+                <?php if (!$dmcConducted) { ?>
+                disabled title="DMC meeting must be conducted before printing" style="opacity:0.5; cursor:not-allowed;"
+                <?php } ?>>
+                <i class="fas fa-print"></i>
+                Print
+            </button>
+            <?php } ?>
             
             <span id="DownLoadZip" style="display:none;">
                 <label>
@@ -3117,7 +3386,16 @@ if (isset($office) && isset($office['office_name'])) {
 	   </table>
 </div>
 
-		<?php if ($act == 'add') { ?>
+		<?php if (isset($dmc)) { ?>
+			<?php
+			$dmcFormUrl = '/iidc/committee/dmc/?crtNr=' . intval($_GET['crtNr']) 
+				. '&clid=' . intval($_GET['clid']) 
+				. '&offid=' . intval($_GET['offid']) 
+				. '&decid=' . intval($dmc)
+				. '&ref=cert';
+			?>
+			<input type="hidden" id="DMCUrl" data-href="<?php echo $dmcFormUrl; ?>" title="Create DMC Report" data-resize="true" data-width="1080" data-height="700" onclick="doIframe(this)"></input>
+		<?php } elseif ($act == 'add') { ?>
 			<input type="hidden" id="DMCUrl" data-href="" title="Create DMC Report" data-resize="true" onclick="doIframe(this)"></input>
 		<?php }; ?>
 	</form>

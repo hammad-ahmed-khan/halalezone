@@ -1,15 +1,22 @@
 <?php
-if (!isset($user_type) or $user_type != 'committee_member' or !isset($_SESSION['comemid'])) {
+$user_type  = $_SESSION["user_type"];
+$allowedTypes = array('committee_member', 'admin', 'hqc_office');
+if (!isset($user_type) or !in_array($user_type, $allowedTypes)) {
     exit();
 }
 
-if (!isset($_SESSION['comemid']))
-    $comemid = 2;
-else
+if (isset($_SESSION['comemid']))
     $comemid = $_SESSION['comemid'];
+elseif ($user_type == 'admin' || $user_type == 'hqc_office')
+    $comemid = 0;
+else
+    $comemid = 2;
 
 include "committee.func.php";
-$verification_codes = get_sms_codes();
+$verification_codes = array();
+if (isset($_SESSION['comemid'])) {
+    $verification_codes = get_sms_codes();
+}
 ?>
 <script>
     $("#page_title").html("Application form");
@@ -94,7 +101,7 @@ $verification_codes = get_sms_codes();
             jQuery("#appSaveButton").val('Save draft');
         }
     }
-    <?php if ($_SESSION['comemid'] == 2) { ?>
+    <?php if (isset($_SESSION['comemid']) && $_SESSION['comemid'] == 2) { ?>
 
         function theCodeInputByAdmin() {
             jQuery(".signature_holder li").css("display", "none")
@@ -108,7 +115,7 @@ function get_user_signature($comemid)
 {
     global $prog_path;
 
-    $image_file = '/data/DMC/signatures/' . $comemid . '_signature';
+    $image_file = '/iidc/data/DMC/signatures/' . $comemid . '_signature';
 
     $image_exts = array('.jpg', '.jpeg', '.png', '.svg');
     foreach ($image_exts as $ext) {
@@ -126,7 +133,8 @@ if ($certificate = $amdb->get_row("SELECT * FROM acms_halal_certificates
 JOIN hqc_committee_decision ON hqc_committee_decision.crtNr = acms_halal_certificates.crtNr
 WHERE acms_halal_certificates.crtNr='" . $_REQUEST['crtNr'] . "' AND acms_halal_certificates.clid='" . $_REQUEST['clid'] . "' AND hqc_committee_decision.decid='" . $_REQUEST['decid'] . "'")) {
     $sms_codes = json_decode($certificate['sms_codes'], true);
-    $hoc = ($certificate['hoc'] == $_SESSION['comemid']) ? true : false;
+    $hoc = (isset($_SESSION['comemid']) && $certificate['hoc'] == $_SESSION['comemid']) ? true : false;
+    if ($user_type == 'admin' || $user_type == 'hqc_office') $hoc = true;
     $certificate_data['scope'] = $certificate['scope_of_certification'];
     $certificate_data['category'] = '';
     $certificate_data['reference_standard'] = '';
@@ -206,7 +214,7 @@ WHERE acms_halal_certificates.crtNr='" . $_REQUEST['crtNr'] . "' AND acms_halal_
                         <?php
                         };
                         ?>
-                        <?php if ($_SESSION['comemid'] == 2 && !isset($Signature_not_found)) { ?>
+                        <?php if (isset($_SESSION['comemid']) && $_SESSION['comemid'] == 2 && !isset($Signature_not_found)) { ?>
                             <li class="theCodeInputByAdmin" style="display:none;text-align:center;">
                                 <input type="number" name="sms_code" id="admin_sms_code_<?php echo $member['comemid']; ?>" placeholder="Verification code" value="<?php echo $verification_codes[$member['comemid']]['code']; ?>" />
                                 <input type="button" onclick="verifyTheCode(<?php echo $member['comemid']; ?>,true)" value="Verify" />
@@ -225,7 +233,7 @@ WHERE acms_halal_certificates.crtNr='" . $_REQUEST['crtNr'] . "' AND acms_halal_
 }
 
 include "forms.class.php";
-$amdb->connect_portal();
+//$amdb->connect_portal();
 $_SESSION['offid'] = 0;
 
 if ($theForm = $amdb->get_row("SELECT * FROM hqc_forms where foid='7' ")) {
@@ -240,7 +248,7 @@ if ($theForm = $amdb->get_row("SELECT * FROM hqc_forms where foid='7' ")) {
     if (trim($certificate['internal_memo']) != '' && is_array(unserialize($certificate['internal_memo']))) {
         $internal_memos = unserialize($certificate['internal_memo']);
         foreach ($internal_memos as $key => $memo) {
-            if ($key == $_SESSION['comemid'])
+            if (isset($_SESSION['comemid']) && $key == $_SESSION['comemid'])
                 $internal_memo = trim($memo);
             else
                 $all_memos .= '<li style="border:1px solid #ccc;padding:5px;margin:5px 0"><b>' . $commebers[$key]['member_name'] . ':</b> ' . $memo . '</li>';
@@ -259,7 +267,7 @@ if ($theForm = $amdb->get_row("SELECT * FROM hqc_forms where foid='7' ")) {
         <input type="hidden" name="comemid" value="<?php echo $comemid; ?>" />
         <input type="hidden" name="act" value="save" />
         <?php
-        if ($certificate['hoc'] == $comemid) {
+        if ($hoc) {
         ?> <?php
             echo  $amform->get_form(7, $data, 'html');
             ?>
@@ -287,6 +295,7 @@ if ($theForm = $amdb->get_row("SELECT * FROM hqc_forms where foid='7' ")) {
         } else {
             echo  $amform->view_form(7, $data, 'html');
         ?>
+        
             <input type="hidden" name="saveMemo" value="yes" />
             <div>
                 <fieldset>
